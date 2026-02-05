@@ -106,121 +106,158 @@ export default function DynamicBookingPage() {
     const buttonTextColor = isPrimaryLight ? '#000000' : '#ffffff';
 
     return (
-        <div className="min-h-screen text-white font-display relative overflow-hidden bg-[#09090b]">
-            <div className="absolute -top-24 -right-24 size-96 blur-[120px] rounded-full opacity-20 pointer-events-none" style={{ backgroundColor: primaryColor }}></div>
+        <div className="min-h-screen text-white font-display relative overflow-hidden bg-[#09090b] selection:bg-yellow-500/30">
+            {/* Decorative background */}
+            <div className="absolute -top-24 -right-24 size-96 blur-[120px] rounded-full opacity-20 pointer-events-none transition-all duration-1000" style={{ backgroundColor: primaryColor }}></div>
+            <div className="absolute bottom-0 -left-24 size-96 blur-[150px] rounded-full opacity-10 pointer-events-none" style={{ backgroundColor: primaryColor }}></div>
 
-            <header className="p-6 border-b border-white/5 flex justify-between items-center bg-black/20 backdrop-blur-xl sticky top-0 z-50">
-                <button onClick={() => router.push(`/${slug}`)} className="text-xl font-black italic tracking-tighter uppercase">
+            <header className="px-4 md:px-8 py-4 md:py-6 border-b border-white/5 flex justify-between items-center bg-black/40 backdrop-blur-2xl sticky top-0 z-50">
+                <button onClick={() => router.push(`/${slug}`)} className="text-lg md:text-xl font-black italic tracking-tighter uppercase transition-all hover:opacity-70 active:scale-95">
                     FASTBEAUTY <span style={{ color: primaryColor }}>PRO</span>
                 </button>
-                <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[14px]" style={{ color: primaryColor }}>location_on</span>
-                    <span className="text-[10px] uppercase font-black tracking-widest opacity-60">{tenant.name}</span>
+                <div className="flex items-center gap-2 max-w-[50%]">
+                    <span className="material-symbols-outlined text-sm md:text-base hidden sm:block" style={{ color: primaryColor }}>location_on</span>
+                    <span className="text-[8px] md:text-[10px] uppercase font-black tracking-widest opacity-60 truncate">{tenant.name}</span>
                 </div>
             </header>
 
-            <main className="max-w-xl mx-auto p-6 py-12 relative z-10">
+            <main className="max-w-xl mx-auto px-4 sm:px-6 py-8 md:py-12 relative z-10 min-h-[calc(100vh-80px)] flex flex-col">
                 {/* Progress Bar */}
-                <div className="flex gap-3 mb-12">
+                <div className="flex gap-2.5 md:gap-3 mb-10 md:mb-14">
                     {[1, 2, 3, 4].map(s => (
-                        <div key={s} className="h-1.5 flex-1 rounded-full transition-all duration-500" style={{ backgroundColor: step >= s ? primaryColor : 'rgba(255,255,255,0.05)', boxShadow: step >= s ? `0 0 10px ${primaryColor}40` : 'none' }}></div>
+                        <div key={s} className="h-1.5 flex-1 rounded-full transition-all duration-700 ease-out" style={{ backgroundColor: step >= s ? primaryColor : 'rgba(255,255,255,0.05)', boxShadow: step >= s ? `0 0 15px ${primaryColor}40` : 'none' }}></div>
                     ))}
                 </div>
 
-                {/* Step 1: Services */}
-                {step === 1 && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <h2 className="text-4xl font-black italic uppercase tracking-tight">O que vamos <br /> fazer <span style={{ color: primaryColor }}>hoje?</span></h2>
-                        <div className="grid gap-4">
-                            {services.length > 0 ? services.map(s => (
-                                <button
-                                    key={s.id}
-                                    onClick={() => { setSelection({ ...selection, service: s.name, price: s.price }); nextStep(); }}
-                                    className="p-6 rounded-[2rem] border-2 text-left flex justify-between items-center transition-all group bg-white/5 backdrop-blur-md relative overflow-hidden"
-                                    style={{ borderColor: selection.service === s.name ? primaryColor : 'rgba(255,255,255,0.05)' }}
-                                >
-                                    <div className="relative z-10"><span className="font-black text-xl italic uppercase tracking-tighter block">{s.name}</span></div>
-                                    <span className="text-2xl font-black italic tracking-tighter relative z-10" style={{ color: primaryColor }}>R$ {s.price}</span>
-                                </button>
-                            )) : (
-                                <p className="opacity-50 italic">Nenhum serviço disponível no momento.</p>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 2: Professionals */}
-                {step === 2 && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <h2 className="text-4xl font-black italic uppercase tracking-tight">Com <br /> <span style={{ color: primaryColor }}>quem?</span></h2>
-                        <div className="grid gap-4">
-                            {barbers.map(b => (
-                                <button
-                                    key={b.id}
-                                    onClick={() => { setSelection({ ...selection, barber: b.name }); nextStep(); }}
-                                    className="p-6 rounded-[2rem] border-2 text-left flex items-center gap-6 transition-all bg-white/5 backdrop-blur-md"
-                                    style={{ borderColor: selection.barber === b.name ? primaryColor : 'rgba(255,255,255,0.05)' }}
-                                >
-                                    <div className="size-16 rounded-full bg-white/10 flex items-center justify-center text-2xl font-black uppercase italic" style={{ color: primaryColor }}>
-                                        {b.name[0]}
+                <div className="flex-1">
+                    {/* Step 1: Services */}
+                    {step === 1 && (
+                        <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
+                            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">O que vamos <br /> fazer <span style={{ color: primaryColor }}>hoje?</span></h2>
+                            <div className="grid gap-3 md:gap-4">
+                                {services.length > 0 ? services.map(s => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => { setSelection({ ...selection, service: s.name, price: s.price }); nextStep(); }}
+                                        className="p-4 md:p-6 rounded-[1.8rem] md:rounded-[2.5rem] border-2 text-left flex justify-between items-center transition-all group bg-white/[0.03] backdrop-blur-md active:scale-[0.98]"
+                                        style={{ borderColor: selection.service === s.name ? primaryColor : 'rgba(255,255,255,0.05)' }}
+                                    >
+                                        <div className="min-w-0 pr-4">
+                                            <span className="font-black text-lg md:text-xl italic uppercase tracking-tighter block truncate group-hover:text-yellow-500/80 transition-colors">{s.name}</span>
+                                        </div>
+                                        <div className="shrink-0 text-right">
+                                            <span className="text-xl md:text-2xl font-black italic tracking-tighter" style={{ color: primaryColor }}>RS {s.price}</span>
+                                        </div>
+                                    </button>
+                                )) : (
+                                    <div className="py-12 text-center bg-white/5 rounded-[2rem] border border-white/5 opacity-50">
+                                        <span className="material-symbols-outlined text-4xl mb-2 opacity-30">inventory_2</span>
+                                        <p className="text-xs font-bold uppercase tracking-widest italic">Nenhum serviço disponível</p>
                                     </div>
-                                    <div>
-                                        <span className="font-black text-xl italic uppercase tracking-tighter block">{b.name}</span>
-                                        <span className="text-xs opacity-50 uppercase font-bold tracking-widest">{b.role}</span>
-                                    </div>
-                                </button>
-                            ))}
+                                )}
+                            </div>
                         </div>
-                        <button onClick={prevStep} className="opacity-50 font-bold uppercase tracking-widest text-xs">Voltar</button>
-                    </div>
-                )}
+                    )}
 
-                {/* Step 3: Time */}
-                {step === 3 && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <h2 className="text-4xl font-black italic uppercase tracking-tight">Qual <br /> <span style={{ color: primaryColor }}>horário?</span></h2>
-                        <div className="grid grid-cols-3 gap-3">
-                            {times.map(t => (
+                    {/* Step 2: Professionals */}
+                    {step === 2 && (
+                        <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Com <br /> <span style={{ color: primaryColor }}>quem?</span></h2>
+                                <button onClick={prevStep} className="size-10 rounded-full bg-white/5 flex items-center justify-center transition-all active:scale-95 border border-white/5">
+                                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                </button>
+                            </div>
+                            <div className="grid gap-3 md:gap-4">
+                                {barbers.map(b => (
+                                    <button
+                                        key={b.id}
+                                        onClick={() => { setSelection({ ...selection, barber: b.name }); nextStep(); }}
+                                        className="p-4 md:p-6 rounded-[1.8rem] md:rounded-[2.5rem] border-2 text-left flex items-center gap-4 md:gap-6 transition-all bg-white/[0.03] backdrop-blur-md active:scale-[0.98]"
+                                        style={{ borderColor: selection.barber === b.name ? primaryColor : 'rgba(255,255,255,0.05)' }}
+                                    >
+                                        <div className="size-14 md:size-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xl md:text-2xl font-black uppercase italic shrink-0" style={{ color: primaryColor }}>
+                                            {b.name[0]}
+                                        </div>
+                                        <div className="min-w-0">
+                                            <span className="font-black text-lg md:text-xl italic uppercase tracking-tighter block truncate leading-none mb-1">{b.name}</span>
+                                            <span className="text-[8px] md:text-[10px] opacity-40 uppercase font-black tracking-[0.2em]">{b.role}</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 3: Time */}
+                    {step === 3 && (
+                        <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Qual <br /> <span style={{ color: primaryColor }}>horário?</span></h2>
+                                <button onClick={prevStep} className="size-10 rounded-full bg-white/5 flex items-center justify-center transition-all active:scale-95 border border-white/5">
+                                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 md:gap-3">
+                                {times.map(t => (
+                                    <button
+                                        key={t}
+                                        onClick={() => { setSelection({ ...selection, time: t }); nextStep(); }}
+                                        className="py-3.5 md:py-5 rounded-2xl md:rounded-[1.5rem] border-2 font-black italic transition-all bg-white/[0.03] active:scale-95"
+                                        style={{
+                                            borderColor: selection.time === t ? primaryColor : 'rgba(255,255,255,0.05)',
+                                            color: selection.time === t ? primaryColor : 'white',
+                                            backgroundColor: selection.time === t ? `${primaryColor}10` : 'rgba(255,255,255,0.03)'
+                                        }}
+                                    >
+                                        <span className="text-sm md:text-base">{t}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Step 4: Contact */}
+                    {step === 4 && (
+                        <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quase <br /> <span style={{ color: primaryColor }}>lá!</span></h2>
+                                <button onClick={prevStep} className="size-10 rounded-full bg-white/5 flex items-center justify-center transition-all active:scale-95 border border-white/5">
+                                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                </button>
+                            </div>
+                            <div className="space-y-4 bg-white/[0.03] backdrop-blur-3xl p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 shadow-2xl">
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Seu Nome</label>
+                                    <input type="text" placeholder="Ex: Roberto Carlos" className="w-full bg-black/40 border-2 border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 text-white font-black italic focus:outline-none focus:border-[#f2b90d]/30 transition-all placeholder:opacity-20 text-sm md:text-base" value={selection.name} onChange={(e) => setSelection({ ...selection, name: e.target.value })} />
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Seu WhatsApp</label>
+                                    <input type="tel" placeholder="(00) 00000-0000" className="w-full bg-black/40 border-2 border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 text-white font-black italic focus:outline-none focus:border-[#f2b90d]/30 transition-all placeholder:opacity-20 text-sm md:text-base" value={selection.phone} onChange={(e) => setSelection({ ...selection, phone: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="pt-2">
                                 <button
-                                    key={t}
-                                    onClick={() => { setSelection({ ...selection, time: t }); nextStep(); }}
-                                    className="py-4 rounded-2xl border-2 font-black italic transition-all bg-white/5"
-                                    style={{ borderColor: selection.time === t ? primaryColor : 'rgba(255,255,255,0.05)', color: selection.time === t ? primaryColor : 'white' }}
+                                    disabled={!selection.name || !selection.phone}
+                                    onClick={finishBooking}
+                                    className="w-full font-black py-5 md:py-7 rounded-[1.8rem] md:rounded-[2.5rem] text-lg md:text-2xl transition-all shadow-2xl uppercase italic tracking-tighter disabled:opacity-30 active:scale-95 flex items-center justify-center gap-3"
+                                    style={{ backgroundColor: primaryColor, color: buttonTextColor, boxShadow: `0 20px 40px ${primaryColor}30` }}
                                 >
-                                    {t}
+                                    <span>CONFIRMAR AGENDAMENTO</span>
+                                    <span className="material-symbols-outlined font-bold">check_circle</span>
                                 </button>
-                            ))}
+                            </div>
                         </div>
-                        <button onClick={prevStep} className="opacity-50 font-bold uppercase tracking-widest text-xs">Voltar</button>
-                    </div>
-                )}
+                    )}
+                </div>
 
-                {/* Step 4: Contact */}
-                {step === 4 && (
-                    <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                        <h2 className="text-4xl font-black italic uppercase tracking-tight">Quase <br /> <span style={{ color: primaryColor }}>lá!</span></h2>
-                        <div className="space-y-4 bg-white/5 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/5">
-                            <input type="text" placeholder="Nome Completo" className="w-full bg-black/40 border-2 border-white/5 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-white/20 transition-all" value={selection.name} onChange={(e) => setSelection({ ...selection, name: e.target.value })} />
-                            <input type="tel" placeholder="WhatsApp" className="w-full bg-black/40 border-2 border-white/5 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-white/20 transition-all" value={selection.phone} onChange={(e) => setSelection({ ...selection, phone: e.target.value })} />
-                        </div>
-                        <div className="flex gap-4">
-                            <button onClick={prevStep} className="p-6 rounded-[2rem] border-2 border-white/5 font-black uppercase italic">Voltar</button>
-                            <button
-                                disabled={!selection.name || !selection.phone}
-                                onClick={finishBooking}
-                                className="flex-1 font-black py-6 rounded-[2rem] text-lg transition-all shadow-2xl uppercase italic tracking-tight disabled:opacity-50"
-                                style={{ backgroundColor: primaryColor, color: buttonTextColor, boxShadow: `0 20px 40px ${primaryColor}30` }}
-                            >
-                                CONFIRMAR
-                            </button>
-                        </div>
+                <footer className="py-12 mt-auto text-center opacity-20">
+                    <div className="flex flex-col items-center gap-2">
+                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em]">Powered by FastBeauty Pro</p>
+                        <div className="h-px w-8 bg-white/20" />
                     </div>
-                )}
+                </footer>
             </main>
-
-            <footer className="p-12 text-center opacity-20">
-                <p className="text-[10px] font-black uppercase tracking-[0.5em]">Powered by FastBeauty Pro</p>
-            </footer>
         </div>
     );
 }

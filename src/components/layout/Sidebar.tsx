@@ -20,9 +20,11 @@ interface SidebarProps {
         border: string;
     };
     businessType: 'barber' | 'salon';
+    isOpen?: boolean;
+    onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType }) => {
+const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, onClose }) => {
     const pathname = usePathname();
     const router = useRouter();
     const sidebarNavRef = useRef<HTMLElement>(null);
@@ -77,59 +79,82 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType }) => {
     const isSalon = businessType === 'salon';
 
     return (
-        <aside className="w-64 border-r flex flex-col backdrop-blur-md sticky top-0 h-screen hidden md:flex shrink-0 z-50 overflow-hidden transition-colors duration-500" style={{ backgroundColor: `${theme.sidebarBg}d9`, borderColor: theme.border }}>
-            <div className="p-8 pb-6 shrink-0">
-                <h1 className="text-2xl font-black italic tracking-tighter uppercase leading-none" style={{ color: theme.text }}>
-                    FASTBEAUTY <span style={{ color: theme.primary }}>PRO</span>
-                </h1>
-                <p className="font-black tracking-[0.3em] text-[10px] uppercase opacity-80 mt-1" style={{ color: theme.primary }}>
-                    PLATAFORMA SAAS
-                </p>
-            </div>
+        <>
+            {/* Mobile Overlay */}
+            {isOpen && (
+                <div
+                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] md:hidden animate-in fade-in duration-300"
+                    onClick={onClose}
+                />
+            )}
 
-            <nav
-                ref={sidebarNavRef}
-                onScroll={handleSidebarScroll}
-                className="flex-1 px-6 space-y-2 elite-nav-container custom-scrollbar pb-10 overflow-y-auto"
+            <aside
+                className={`fixed md:sticky top-0 h-screen w-64 border-r flex flex-col backdrop-blur-md shrink-0 z-[100] transition-all duration-300 ease-in-out ${isOpen ? 'left-0 translate-x-0' : '-translate-x-full md:translate-x-0 md:flex'} overflow-hidden md:flex`}
+                style={{ backgroundColor: `${theme.sidebarBg}f2`, borderColor: theme.border }}
             >
-                {menuItems.map(item => {
-                    const isActive = pathname === item.path;
-                    return (
-                        <Link
-                            key={item.path}
-                            href={item.path}
-                            className={`flex items-center p-3.5 rounded-xl transition-all relative group ${isActive ? 'font-extrabold' : 'font-semibold opacity-60 hover:opacity-100'}`}
-                            style={{
-                                backgroundColor: isActive ? `${theme.primary}1a` : 'transparent',
-                                color: isActive ? theme.primary : theme.text
-                            }}
-                        >
-                            <span className="material-symbols-outlined text-[24px] mr-4">{item.icon}</span>
-                            <span className="text-sm tracking-tight">{item.label}</span>
-                            {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 rounded-r-full shadow-lg" style={{ backgroundColor: theme.primary, boxShadow: `0 0 15px ${theme.primary}` }}></div>}
-                        </Link>
-                    );
-                })}
-            </nav>
-
-            <div className="p-6 border-t shrink-0 relative z-[100]" style={{ borderColor: theme.border, backgroundColor: `${theme.sidebarBg}cc` }}>
-                <div className="p-4 border rounded-[1.25rem] mb-6 shadow-inner pointer-events-none select-none" style={{ backgroundColor: theme.sidebarBg, borderColor: theme.border }}>
-                    <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-1" style={{ color: theme.primary }}>
-                        {user?.role?.toUpperCase() || 'ACESSO'}
-                    </p>
-                    <p className="text-xs font-black truncate" style={{ color: theme.text }}>{user?.full_name || 'Membro FastBeauty'}</p>
+                <div className="p-8 pb-6 shrink-0 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-xl font-black italic tracking-tighter uppercase leading-none" style={{ color: theme.text }}>
+                            FASTBEAUTY <span style={{ color: theme.primary }}>PRO</span>
+                        </h1>
+                        <p className="font-black tracking-[0.3em] text-[8px] uppercase opacity-80 mt-1" style={{ color: theme.primary }}>
+                            PLATAFORMA SAAS
+                        </p>
+                    </div>
+                    {onClose && (
+                        <button onClick={onClose} className="md:hidden p-2 rounded-lg opacity-60 hover:opacity-100" style={{ color: theme.text }}>
+                            <span className="material-symbols-outlined text-[20px]">close</span>
+                        </button>
+                    )}
                 </div>
 
-                <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all w-full px-2 py-3 border border-transparent hover:border-red-400/10 rounded-xl cursor-pointer"
-                    style={{ color: isSalon ? '#64748b' : '#94a3b8' }}
+                <nav
+                    ref={sidebarNavRef}
+                    onScroll={handleSidebarScroll}
+                    className="flex-1 px-4 space-y-1 elite-nav-container custom-scrollbar pb-10 overflow-y-auto"
                 >
-                    <span className="material-symbols-outlined text-[18px]">logout</span>
-                    SAIR DO SISTEMA
-                </button>
-            </div>
-        </aside>
+                    {menuItems.map(item => {
+                        const isActive = pathname === item.path;
+                        return (
+                            <Link
+                                key={item.path}
+                                href={item.path}
+                                onClick={() => {
+                                    if (window.innerWidth < 768 && onClose) onClose();
+                                }}
+                                className={`flex items-center p-3 rounded-xl transition-all relative group ${isActive ? 'font-extrabold' : 'font-semibold opacity-60 hover:opacity-100'}`}
+                                style={{
+                                    backgroundColor: isActive ? `${theme.primary}1a` : 'transparent',
+                                    color: isActive ? theme.primary : theme.text
+                                }}
+                            >
+                                <span className="material-symbols-outlined text-[22px] mr-3.5">{item.icon}</span>
+                                <span className="text-sm tracking-tight">{item.label}</span>
+                                {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full shadow-lg" style={{ backgroundColor: theme.primary, boxShadow: `0 0 10px ${theme.primary}` }}></div>}
+                            </Link>
+                        );
+                    })}
+                </nav>
+
+                <div className="p-4 border-t shrink-0 relative z-[100]" style={{ borderColor: theme.border, backgroundColor: `${theme.sidebarBg}cc` }}>
+                    <div className="p-3 border rounded-xl mb-4 shadow-inner pointer-events-none select-none" style={{ backgroundColor: theme.sidebarBg, borderColor: theme.border }}>
+                        <p className="text-[7px] font-black uppercase tracking-[0.2em] mb-0.5" style={{ color: theme.primary }}>
+                            {user?.role?.toUpperCase() || 'ACESSO'}
+                        </p>
+                        <p className="text-[11px] font-black truncate" style={{ color: theme.text }}>{user?.full_name || 'Membro FastBeauty'}</p>
+                    </div>
+
+                    <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.2em] transition-all w-full px-2 py-2.5 border border-transparent hover:border-red-400/10 rounded-xl cursor-pointer"
+                        style={{ color: isSalon ? '#64748b' : '#94a3b8' }}
+                    >
+                        <span className="material-symbols-outlined text-[16px]">logout</span>
+                        SAIR DO SISTEMA
+                    </button>
+                </div>
+            </aside>
+        </>
     );
 };
 

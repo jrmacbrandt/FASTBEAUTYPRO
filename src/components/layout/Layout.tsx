@@ -13,6 +13,7 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     const [user, setUser] = React.useState<any>(null);
     const [businessType, setBusinessType] = React.useState<'barber' | 'salon'>('barber');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
     React.useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -33,12 +34,22 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', cardBg: '#121214', sidebarBg: '#121214', headerBg: '#121214', border: '#ffffff0d' };
 
     return (
-        <div className="flex min-h-screen transition-colors duration-500" style={{ backgroundColor: theme.bg }}>
-            <Sidebar user={user} theme={theme} businessType={businessType} />
-            <div className="flex-1 flex flex-col min-w-0">
-                <Header title={title || "FastBeauty Pro"} theme={theme} />
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
-                    <div className="max-w-7xl mx-auto">
+        <div className="flex min-h-screen transition-colors duration-500 overflow-x-hidden" style={{ backgroundColor: theme.bg }}>
+            <Sidebar
+                user={user}
+                theme={theme}
+                businessType={businessType}
+                isOpen={isMobileMenuOpen}
+                onClose={() => setIsMobileMenuOpen(false)}
+            />
+            <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+                <Header
+                    title={title || "FastBeauty Pro"}
+                    theme={theme}
+                    onMenuToggle={() => setIsMobileMenuOpen(true)}
+                />
+                <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth custom-scrollbar">
+                    <div className="max-w-7xl mx-auto w-full">
                         {children}
                     </div>
                 </main>

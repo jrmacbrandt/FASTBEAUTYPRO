@@ -97,19 +97,19 @@ export default function TeamManagementPage() {
                     </div>
                 ) : filteredBarbers.length > 0 ? (
                     filteredBarbers.map(barber => (
-                        <div key={barber.id} className="bg-[#121214] border border-white/5 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-[#f2b90d]/20 transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className="size-16 rounded-2xl bg-[#f2b90d]/10 flex items-center justify-center text-[#f2b90d] border border-[#f2b90d]/20 shadow-inner">
-                                    <span className="material-symbols-outlined text-4xl">person_pin</span>
+                        <div key={barber.id} className="bg-[#121214] border border-white/5 p-4 md:p-6 rounded-3xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 group hover:border-[#f2b90d]/20 transition-all">
+                            <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
+                                <div className="size-12 md:size-16 rounded-xl md:rounded-2xl bg-[#f2b90d]/10 flex items-center justify-center text-[#f2b90d] border border-[#f2b90d]/20 shadow-inner shrink-0">
+                                    <span className="material-symbols-outlined text-2xl md:text-4xl">person_pin</span>
                                 </div>
-                                <div>
-                                    <h4 className="font-bold text-lg text-white">{barber.full_name}</h4>
-                                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{barber.email || 'Email não disponível'}</p>
+                                <div className="min-w-0">
+                                    <h4 className="font-bold text-base md:text-lg text-white truncate">{barber.full_name}</h4>
+                                    <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">{barber.email || 'Email não disponível'}</p>
                                     <div className="flex gap-2 mt-2">
-                                        <span className="bg-white/5 text-slate-400 text-[9px] font-black uppercase px-3 py-1 rounded-full border border-white/5">
+                                        <span className="bg-white/5 text-slate-400 text-[8px] md:text-[9px] font-black uppercase px-2 md:px-3 py-1 rounded-full border border-white/5">
                                             {barber.role}
                                         </span>
-                                        <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${barber.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                        <span className={`text-[8px] md:text-[9px] font-black uppercase px-2 md:px-3 py-1 rounded-full border ${barber.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                                             'bg-red-500/10 text-red-500 border-red-500/20'
                                             }`}>
                                             {barber.status}
@@ -118,25 +118,25 @@ export default function TeamManagementPage() {
                                 </div>
                             </div>
 
-                            <div className="flex flex-col md:items-end gap-2">
-                                <div className="text-right mb-2">
-                                    <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] italic">Comissão Base</p>
-                                    <p className="text-[#f2b90d] text-3xl font-black italic tracking-tighter">{barber.commission_rate}%</p>
+                            <div className="flex flex-col md:items-end gap-1 md:gap-2 w-full md:w-auto">
+                                <div className="flex md:flex-col justify-between items-end mb-1 md:mb-2 w-full md:w-auto">
+                                    <p className="text-slate-500 text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] italic">Comissão</p>
+                                    <p className="text-[#f2b90d] text-2xl md:text-3xl font-black italic tracking-tighter">{barber.commission_rate}%</p>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 w-full md:w-auto">
                                     {barber.status === 'pending' ? (
                                         <>
-                                            <button onClick={() => handleAction(barber.id, 'approve')} className="bg-emerald-500 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">APROVAR</button>
-                                            <button onClick={() => handleAction(barber.id, 'delete')} className="bg-red-500/10 text-red-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-all">REJEITAR</button>
+                                            <button onClick={() => handleAction(barber.id, 'approve')} className="flex-1 md:flex-none bg-emerald-500 text-white px-4 md:px-6 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">APROVAR</button>
+                                            <button onClick={() => handleAction(barber.id, 'delete')} className="flex-1 md:md:flex-none bg-red-500/10 text-red-500 px-4 md:px-6 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase active:scale-95 transition-all">REJEITAR</button>
                                         </>
                                     ) : (
-                                        <>
-                                            <button className="p-2 text-slate-400 hover:text-[#f2b90d] transition-colors"><span className="material-symbols-outlined">edit</span></button>
-                                            <button onClick={() => handleAction(barber.id, 'suspend')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${barber.status === 'active' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'} active:scale-95 transition-all`}>
+                                        <div className="flex items-center gap-2 w-full md:w-auto">
+                                            <button className="flex-1 md:flex-none p-2 text-slate-400 hover:text-[#f2b90d] transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
+                                            <button onClick={() => handleAction(barber.id, 'suspend')} className={`flex-[2] md:flex-none px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest ${barber.status === 'active' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'} active:scale-95 transition-all`}>
                                                 {barber.status === 'active' ? 'SUSPENDER' : 'REATIVAR'}
                                             </button>
-                                            <button onClick={() => handleAction(barber.id, 'delete')} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><span className="material-symbols-outlined">delete</span></button>
-                                        </>
+                                            <button onClick={() => handleAction(barber.id, 'delete')} className="flex-1 md:flex-none p-2 text-slate-400 hover:text-red-500 transition-colors"><span className="material-symbols-outlined text-[20px]">delete</span></button>
+                                        </div>
                                     )}
                                 </div>
                             </div>

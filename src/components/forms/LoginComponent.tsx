@@ -77,53 +77,53 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
-            <div className="w-full max-w-[440px] rounded-[2.5rem] p-8 md:p-10 relative border overflow-hidden" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                <button onClick={() => router.push('/sistema')} className="absolute left-8 top-8 size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.inputBg, color: colors.text }}>
-                    <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+        <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500 overflow-hidden" style={{ backgroundColor: colors.bg }}>
+            <div className="w-full max-w-[400px] rounded-[2rem] p-6 md:p-8 relative border overflow-hidden bg-opacity-95" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
+                <button onClick={() => router.push('/sistema')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.inputBg, color: colors.text }}>
+                    <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                 </button>
 
-                <div className="flex flex-col items-center mb-8 pt-4">
-                    <div className="size-14 rounded-2xl border-2 flex items-center justify-center mb-6" style={{ backgroundColor: `${colors.primary}1a`, borderColor: colors.primary, color: colors.primary }}>
-                        <span className="material-symbols-outlined text-3xl font-bold">{type === 'master' ? 'security' : 'person_pin'}</span>
+                <div className="flex flex-col items-center mb-6 pt-2">
+                    <div className="size-12 rounded-xl border-2 flex items-center justify-center mb-4" style={{ backgroundColor: `${colors.primary}1a`, borderColor: colors.primary, color: colors.primary }}>
+                        <span className="material-symbols-outlined text-2xl font-bold">{type === 'master' ? 'security' : 'person_pin'}</span>
                     </div>
-                    <h1 className="text-2xl md:text-3xl font-black mb-1 italic tracking-tight uppercase text-center leading-none" style={{ color: colors.text }}>{terms.title}</h1>
-                    <p className="opacity-70 text-xs text-center" style={{ color: colors.textMuted }}>{terms.subtitle}</p>
+                    <h1 className="text-xl md:text-2xl font-black mb-1 italic tracking-tight uppercase text-center leading-none" style={{ color: colors.text }}>{terms.title}</h1>
+                    <p className="opacity-60 text-[10px] text-center" style={{ color: colors.textMuted }}>{terms.subtitle}</p>
                 </div>
 
                 {type !== 'master' && (
-                    <div className="flex p-1.5 rounded-2xl mb-8 border" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                        <button onClick={() => setActiveTab('pro')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'pro' ? 'shadow-lg' : 'opacity-50 hover:opacity-100'}`} style={activeTab === 'pro' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>PROFISSIONAL</button>
-                        <button onClick={() => setActiveTab('admin')} className={`flex-1 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'admin' ? 'shadow-lg' : 'opacity-50 hover:opacity-100'}`} style={activeTab === 'admin' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>ADMINISTRADOR</button>
+                    <div className="flex p-1 rounded-xl mb-6 border" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
+                        <button onClick={() => setActiveTab('pro')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'pro' ? 'shadow-md scale-[1.02]' : 'opacity-40 hover:opacity-100'}`} style={activeTab === 'pro' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>PROFISSIONAL</button>
+                        <button onClick={() => setActiveTab('admin')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'admin' ? 'shadow-md scale-[1.02]' : 'opacity-40 hover:opacity-100'}`} style={activeTab === 'admin' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>ADMIN</button>
                     </div>
                 )}
 
-                <form onSubmit={handleLogin} className="space-y-6">
-                    {error && <div className="text-xs text-center font-bold p-3 rounded-xl border" style={{ color: '#ef4444', backgroundColor: '#ef444410', borderColor: '#ef444420' }}>{error}</div>}
+                <form onSubmit={handleLogin} className="space-y-4">
+                    {error && <div className="text-[10px] text-center font-bold p-2.5 rounded-xl border" style={{ color: '#ef4444', backgroundColor: '#ef444410', borderColor: '#ef444420' }}>{error}</div>}
 
-                    <div className="space-y-2.5">
-                        <label className="opacity-80 text-[10px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{terms.idLabel}</label>
+                    <div className="space-y-1.5">
+                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{terms.idLabel}</label>
                         <div className="relative">
-                            <span className="material-symbols-outlined absolute left-5 top-4 text-[20px] opacity-40" style={{ color: colors.textMuted }}>badge</span>
-                            <input type="email" placeholder="nome@exemplo.com" className="w-full border rounded-2xl py-4 pl-14 pr-6 focus:outline-none transition-all font-bold" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>badge</span>
+                            <input type="email" placeholder="nome@exemplo.com" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
                     </div>
 
-                    <div className="space-y-2.5">
-                        <label className="opacity-80 text-[10px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{terms.passLabel}</label>
+                    <div className="space-y-1.5">
+                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{terms.passLabel}</label>
                         <div className="relative">
-                            <span className="material-symbols-outlined absolute left-5 top-4 text-[20px] opacity-40" style={{ color: colors.textMuted }}>lock</span>
-                            <input type="password" placeholder="........" className="w-full border rounded-2xl py-4 pl-14 pr-6 focus:outline-none transition-all font-bold tracking-widest" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={password} onChange={(e) => setPassword(e.target.value)} required />
+                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>lock</span>
+                            <input type="password" placeholder="........" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold tracking-widest text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={password} onChange={(e) => setPassword(e.target.value)} required />
                         </div>
                     </div>
 
-                    <button type="submit" disabled={loading} className="w-full font-black py-5 rounded-2xl text-[14px] shadow-2xl transition-all mt-4 active:scale-95 uppercase italic tracking-tight disabled:opacity-50" style={{ backgroundColor: colors.primary, color: colors.buttonText, boxShadow: `0 20px 60px ${colors.primary}20` }}>
+                    <button type="submit" disabled={loading} className="w-full font-black py-4 rounded-xl text-[12px] shadow-xl transition-all mt-2 active:scale-95 uppercase italic tracking-tight disabled:opacity-50" style={{ backgroundColor: colors.primary, color: colors.buttonText, boxShadow: `0 10px 30px ${colors.primary}20` }}>
                         {loading ? 'PROCESSANDO...' : 'CONFIRMAR ACESSO'}
                     </button>
                 </form>
 
-                <div className="mt-10 text-center border-t pt-6" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] opacity-60 italic" style={{ color: colors.textMuted }}>© 2024 {terms.footer}</p>
+                <div className="mt-8 text-center border-t pt-4" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
+                    <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 italic" style={{ color: colors.textMuted }}>© 2024 {terms.footer}</p>
                 </div>
             </div>
         </div>
