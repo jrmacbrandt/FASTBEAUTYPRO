@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -10,111 +16,315 @@ export default function ShopLandingPage() {
     const params = useParams();
     const router = useRouter();
     const slug = params.slug as string;
+
     const [tenant, setTenant] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [step, setStep] = useState(1);
+
+    // Selection State
+    const [selection, setSelection] = useState({
+        service: null as any,
+        barber: null as any,
+        date: '',
+        time: '',
+        clientName: '',
+        clientPhone: ''
+    });
+
+    // Data State
+    const [services, setServices] = useState<any[]>([]);
+    const [barbers, setBarbers] = useState<any[]>([]);
+    const [appointments, setAppointments] = useState<any[]>([]);
 
     useEffect(() => {
-        async function loadTenant() {
-            const { data, error } = await supabase
+        async function loadData() {
+            setLoading(true);
+            const { data: tenantData } = await supabase
                 .from('tenants')
                 .select('*')
                 .eq('slug', slug)
                 .single();
 
-            if (data) {
-                setTenant(data);
+            if (tenantData) {
+                setTenant(tenantData);
+
+                // Load Services
+                const { data: svs } = await supabase
+                    .from('services')
+                    .select('*')
+                    .eq('tenant_id', tenantData.id)
+                    .eq('active', true);
+                if (svs) setServices(svs);
+
+                // Load Barbers
+                const { data: brbs } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('tenant_id', tenantData.id)
+                    .eq('role', 'barber')
+                    .eq('status', 'active');
+                if (brbs) setBarbers(brbs);
             }
             setLoading(false);
         }
-        loadTenant();
+        loadData();
     }, [slug]);
+
+    useEffect(() => {
+        if (selection.barber && selection.date) {
+            async function loadAvailability() {
+                const { data } = await supabase
+                    .from('appointments')
+                    .select('scheduled_at')
+                    .eq('barber_id', selection.barber.id)
+                    .gte('scheduled_at', `${selection.date}T00:00:00`)
+                    .lte('scheduled_at', `${selection.date}T23:59:59`);
+                if (data) setAppointments(data);
+            }
+            loadAvailability();
+        }
+    }, [selection.barber, selection.date]);
+
+    const theme = useMemo(() => {
+        const config = tenant?.config as any;
+        return {
+            primary: config?.theme?.primary || '#f2b90d',
+            secondary: config?.theme?.secondary || '#000000'
+        };
+    }, [tenant]);
+
+    const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
+
+    const availableTimes = useMemo(() => {
+        const occupied = appointments.map(a => {
+            const date = new Date(a.scheduled_at);
+            return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        });
+        return times.filter(t => !occupied.includes(t));
+    }, [appointments]);
+
+    const handleConfirm = () => {
+        if (!selection.barber || !selection.service) return;
+
+        const phoneNumber = `55${selection.barber.phone?.replace(/\D/g, '') || ''}`;
+        const message = `Olá ${selection.barber.full_name}! Sou o ${selection.clientName}. Gostaria de confirmar meu agendamento de ${selection.service.name} no dia ${new Date(selection.date).toLocaleDateString('pt-BR')} às ${selection.time}.`;
+
+        const finalLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        window.open(finalLink, '_blank');
+    };
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
+            <div className="min-h-screen bg-black flex items-center justify-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#f2b90d]"></div>
             </div>
         );
     }
 
-    if (!tenant) {
-        return (
-            <div className="min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-6 text-center">
-                <h1 className="text-4xl font-black italic text-white mb-4">404 - ESTABELECIMENTO NÃO ENCONTRADO</h1>
-                <p className="text-white/60 mb-8">O endereço que você tentou acessar não existe ou foi removido.</p>
-                <button
-                    onClick={() => router.push('/')}
-                    className="bg-yellow-500 text-black px-8 py-3 rounded-full font-black uppercase italic"
-                >
-                    Voltar para o Início
-                </button>
-            </div>
-        );
-    }
+    if (!tenant) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loja não encontrada.</div>;
 
-    const primaryColor = tenant.config?.theme?.primary || '#f2b90d';
+    const progress = (step / 4) * 100;
 
     return (
-        <div className="min-h-screen bg-[#09090b] text-white">
-            {/* Hero Section */}
-            <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
+        <div className="min-h-screen relative overflow-hidden font-sans selection:bg-white/10" style={{ backgroundColor: theme.secondary }}>
+            {/* Background Effect */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div
-                    className="absolute inset-0 opacity-30 grayscale"
-                    style={{
-                        backgroundImage: `url('https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&q=80')`,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center'
-                    }}
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[120px] opacity-20"
+                    style={{ background: `radial-gradient(circle, ${theme.primary} 0%, transparent 70%)` }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#09090b] via-transparent to-transparent" />
+            </div>
 
-                <div className="relative z-10 text-center space-y-4 px-4">
-                    <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter">
-                        {tenant.name}
-                    </h1>
-                    <p className="text-xl md:text-2xl text-white/80 font-medium italic">
-                        Experiência Premium em Estética e Bem-estar
-                    </p>
-                    <div className="pt-8">
-                        <button
-                            onClick={() => router.push(`/${slug}/agendamento`)}
-                            className="px-12 py-6 rounded-full font-black text-xl uppercase italic transition-all hover:scale-105 shadow-2xl"
-                            style={{ backgroundColor: primaryColor, color: '#000', boxShadow: `0 20px 40px ${primaryColor}40` }}
-                        >
-                            Agendar Agora
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            {/* Info Sections */}
-            <section className="max-w-4xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12">
-                <div className="bg-white/5 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/5 space-y-4">
-                    <h3 className="text-2xl font-black italic uppercase" style={{ color: primaryColor }}>Localização</h3>
-                    <p className="text-lg opacity-80">{tenant.address || 'Endereço não informado'}</p>
-                    <div className="pt-4 flex items-center gap-2">
-                        <span className="material-symbols-outlined" style={{ color: primaryColor }}>near_me</span>
-                        <span className="font-bold">Ver no Maps</span>
+            {/* Header */}
+            <header className="relative z-50 px-8 py-6 flex justify-between items-start">
+                <div className="flex items-center gap-4">
+                    {tenant.logo_url && (
+                        <img src={tenant.logo_url} alt={tenant.name} className="size-12 rounded-xl object-cover border border-white/10" />
+                    )}
+                    <div>
+                        <h1 className="text-white text-xl font-black italic tracking-tighter leading-none uppercase">{tenant.name}</h1>
+                        <p className="text-[#f2b90d] text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Premium Excellence</p>
                     </div>
                 </div>
 
-                <div className="bg-white/5 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/5 space-y-4">
-                    <h3 className="text-2xl font-black italic uppercase" style={{ color: primaryColor }}>Horários</h3>
-                    <div className="space-y-1 text-sm opacity-80">
-                        <p className="flex justify-between"><span>Segunda - Sexta</span><span>09:00 - 19:00</span></p>
-                        <p className="flex justify-between"><span>Sábado</span><span>09:00 - 18:00</span></p>
-                        <p className="flex justify-between text-red-400"><span>Domingo</span><span>Fechado</span></p>
-                    </div>
+                <div className="text-right space-y-1 hidden md:block">
+                    <p className="text-white text-[10px] font-bold uppercase tracking-widest leading-none opacity-60">{tenant.address}</p>
+                    <p className="text-[#f2b90d] text-xs font-black italic">{tenant.phone}</p>
                 </div>
-            </section>
+            </header>
 
-            {/* Footer */}
-            <footer className="py-20 text-center opacity-30 border-t border-white/5">
-                <h2 className="text-2xl font-black italic tracking-tighter mb-4">
-                    FASTBEAUTY <span style={{ color: primaryColor }}>PRO</span>
-                </h2>
-                <p className="text-[10px] uppercase font-black tracking-[0.5em]">PLATAFORMA CERTIFICADA</p>
-            </footer>
+            {/* Progress Bar */}
+            <div className="fixed top-0 left-0 w-full h-1 bg-white/5 z-[60]">
+                <div
+                    className="h-full transition-all duration-700 ease-in-out shadow-[0_0_10px_rgba(242,185,13,0.5)]"
+                    style={{ width: `${progress}%`, backgroundColor: theme.primary }}
+                />
+            </div>
+
+            <main className="relative z-10 max-w-4xl mx-auto px-6 pt-12 pb-24 min-h-[calc(100vh-100px)] flex flex-col justify-center">
+                {/* Steps Navigator */}
+                <div className="mb-20">
+                    {step === 1 && (
+                        <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
+                                O QUE VAMOS <br /><span style={{ color: theme.primary }}>FAZER HOJE?</span>
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {services.map(s => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
+                                        className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 hover:border-[#f2b90d]/30 transition-all text-left group active:scale-[0.98]"
+                                        style={{ borderColor: selection.service?.id === s.id ? theme.primary : '' }}
+                                    >
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-white text-2xl font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors">{s.name}</span>
+                                            <span className="text-2xl font-black italic text-[#f2b90d]">R$ {s.price}</span>
+                                        </div>
+                                        <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-2">Duração: {s.duration_minutes} min</p>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 2 && (
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-700">
+                            <button onClick={() => setStep(1)} className="text-[#f2b90d] text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 hover:translate-x-[-4px] transition-transform">
+                                <span className="material-symbols-outlined text-sm">arrow_back</span> VOLTAR AOS SERVIÇOS
+                            </button>
+                            <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
+                                COM <span style={{ color: theme.primary }}>QUEM?</span>
+                            </h2>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                                {barbers.map(b => (
+                                    <button
+                                        key={b.id}
+                                        onClick={() => { setSelection({ ...selection, barber: b }); setStep(3); }}
+                                        className="flex flex-col items-center group active:scale-[0.98]"
+                                    >
+                                        <div className="size-32 rounded-[2.5rem] overflow-hidden border-2 border-white/5 group-hover:border-[#f2b90d]/50 transition-all mb-4 relative"
+                                            style={{ borderColor: selection.barber?.id === b.id ? theme.primary : '' }}>
+                                            {b.avatar_url ? (
+                                                <img src={b.avatar_url} alt={b.full_name} className="size-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                                            ) : (
+                                                <div className="size-full bg-white/5 flex items-center justify-center text-white/20">
+                                                    <span className="material-symbols-outlined text-4xl">person</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-white font-black italic uppercase tracking-tight group-hover:text-[#f2b90d] transition-colors">{b.full_name}</span>
+                                        <span className="text-[9px] text-white/40 font-bold uppercase tracking-widest mt-1 italic">Barbeiro Specialist</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 3 && (
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-700">
+                            <button onClick={() => setStep(2)} className="text-[#f2b90d] text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 hover:translate-x-[-4px] transition-transform">
+                                <span className="material-symbols-outlined text-sm">arrow_back</span> VOLTAR AOS PROFISSIONAIS
+                            </button>
+                            <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
+                                QUAL O <br /><span style={{ color: theme.primary }}>MELHOR DIA?</span>
+                            </h2>
+                            <input
+                                type="date"
+                                className="w-full bg-white/[0.03] border-2 border-white/5 rounded-[2.5rem] p-8 text-white text-3xl font-black italic appearance-none focus:outline-none focus:border-[#f2b90d]/30"
+                                style={{ colorScheme: 'dark' }}
+                                min={new Date().toISOString().split('T')[0]}
+                                onChange={(e) => { setSelection({ ...selection, date: e.target.value }); setStep(4); }}
+                            />
+                        </div>
+                    )}
+
+                    {step === 4 && (
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-700">
+                            <button onClick={() => setStep(3)} className="text-[#f2b90d] text-[10px] font-black uppercase tracking-widest mb-4 flex items-center gap-2 hover:translate-x-[-4px] transition-transform">
+                                <span className="material-symbols-outlined text-sm">arrow_back</span> VOLTAR AS DATAS
+                            </button>
+                            <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
+                                ESCOLHA O <span style={{ color: theme.primary }}>HORÁRIO</span>
+                            </h2>
+                            <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
+                                {availableTimes.map(t => (
+                                    <button
+                                        key={t}
+                                        onClick={() => { setSelection({ ...selection, time: t }); setStep(5); }}
+                                        className="py-6 rounded-2xl md:rounded-3xl bg-white/[0.03] border border-white/5 text-white font-black italic text-xl hover:border-[#f2b90d]/50 transition-all active:scale-[0.98]"
+                                        style={{ borderColor: selection.time === t ? theme.primary : '', color: selection.time === t ? theme.primary : '' }}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {step === 5 && (
+                        <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-lg mx-auto">
+                            <div className="text-center mb-12">
+                                <div className="inline-flex size-20 rounded-[2rem] bg-[#f2b90d]/10 items-center justify-center text-[#f2b90d] mb-6 border border-[#f2b90d]/20 ring-4 ring-[#f2b90d]/5">
+                                    <span className="material-symbols-outlined text-4xl">check_circle</span>
+                                </div>
+                                <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter">Resumo do Agendamento</h2>
+                                <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-2">{tenant.name}</p>
+                            </div>
+
+                            <div className="bg-white/[0.03] border border-white/5 rounded-[3rem] p-10 space-y-6 mb-12 shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                                    <span className="material-symbols-outlined text-8xl" style={{ color: theme.primary }}>content_cut</span>
+                                </div>
+                                <div className="flex justify-between items-end border-b border-white/5 pb-4">
+                                    <div>
+                                        <p className="text-[#f2b90d] text-[9px] font-black uppercase tracking-widest">Serviço</p>
+                                        <p className="text-white text-xl font-black italic uppercase">{selection.service?.name}</p>
+                                    </div>
+                                    <p className="text-white font-black italic text-xl">R$ {selection.service?.price}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[#f2b90d] text-[9px] font-black uppercase tracking-widest">Profissional</p>
+                                    <p className="text-white text-xl font-black italic uppercase">{selection.barber?.full_name}</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-widest">Data</p>
+                                        <p className="text-white text-lg font-black italic">{new Date(selection.date).toLocaleDateString('pt-BR')}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-widest">Horário</p>
+                                        <p className="text-white text-lg font-black italic">{selection.time}</p>
+                                    </div>
+                                </div>
+
+                                <div className="pt-6 space-y-4">
+                                    <input
+                                        type="text"
+                                        placeholder="SEU NOME"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic focus:border-[#f2b90d] transition-all"
+                                        value={selection.clientName}
+                                        onChange={(e) => setSelection({ ...selection, clientName: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleConfirm}
+                                disabled={!selection.clientName}
+                                className="w-full bg-[#f2b90d] text-black font-black py-7 rounded-[2.5rem] uppercase italic tracking-widest text-lg shadow-[0_20px_40px_rgba(242,185,13,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-30"
+                            >
+                                <span className="material-symbols-outlined text-3xl">chat</span>
+                                ENVIAR AGENDAMENTO NO WHATSAPP
+                            </button>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex items-center justify-center gap-4 opacity-10">
+                    <p className="text-white text-[8px] font-black uppercase tracking-[0.5em]">POWERED BY FASTBEAUTY PRO</p>
+                </div>
+            </main>
         </div>
     );
 }
