@@ -12,8 +12,14 @@ interface LayoutProps {
 
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     const [user, setUser] = React.useState<any>(null);
+    const [businessType, setBusinessType] = React.useState<'barber' | 'salon'>('barber');
 
     React.useEffect(() => {
+        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
+        if (savedType) {
+            setBusinessType(savedType);
+        }
+
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
                 supabase.from('profiles').select('*').eq('id', session.user.id).single()
@@ -22,11 +28,15 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         });
     }, []);
 
+    const theme = businessType === 'salon'
+        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', cardBg: '#ffffff', sidebarBg: '#ffffff', headerBg: '#faf8f5', border: '#7b438e1a' }
+        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', cardBg: '#121214', sidebarBg: '#121214', headerBg: '#121214', border: '#ffffff0d' };
+
     return (
-        <div className="flex min-h-screen bg-black overflow-hidden">
-            <Sidebar user={user} />
+        <div className="flex min-h-screen transition-colors duration-500" style={{ backgroundColor: theme.bg }}>
+            <Sidebar user={user} theme={theme} businessType={businessType} />
             <div className="flex-1 flex flex-col min-w-0">
-                <Header title={title || "FastBeauty Pro"} />
+                <Header title={title || "FastBeauty Pro"} theme={theme} />
                 <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
                     <div className="max-w-7xl mx-auto">
                         {children}
