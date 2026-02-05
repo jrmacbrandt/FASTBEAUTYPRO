@@ -22,7 +22,7 @@ const SystemGateway = () => {
         : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214' };
 
     const terms = {
-        description: 'Plataforma FastBeauty Pro',
+        description: 'FastBeauty Pro',
         accessBtn: 'Acessar Painel Administrativo',
         masterBtn: 'Painel Administrador Master'
     };
@@ -61,7 +61,7 @@ const SystemGateway = () => {
                 </div>
 
                 <div className="pt-20 flex flex-col items-center gap-2 w-full">
-                    <Link href="/login-master" className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] transition-all hover:tracking-[0.4em] opacity-20 hover:opacity-100 py-1" style={{ color: colors.textMuted }}>
+                    <Link href="/login-master" className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] transition-opacity duration-300 opacity-20 hover:opacity-100 py-1" style={{ color: colors.textMuted }}>
                         {terms.masterBtn}
                     </Link>
                     <div className="w-8 h-0.5 rounded-full" style={{ backgroundColor: `${colors.primary}1a` }}></div>
