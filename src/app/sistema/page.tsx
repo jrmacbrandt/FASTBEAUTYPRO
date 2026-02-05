@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
 
 const SystemGateway = () => {
     const router = useRouter();
@@ -14,7 +15,26 @@ const SystemGateway = () => {
             setBusinessType(savedType);
             document.body.className = savedType === 'salon' ? 'theme-salon' : '';
         }
-    }, []);
+
+        // Auto-redirect if already logged in
+        const checkAuth = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (profile?.role === 'owner') {
+                    router.push('/admin');
+                } else if (profile?.role === 'barber') {
+                    router.push('/profissional');
+                }
+            }
+        };
+        checkAuth();
+    }, [router]);
 
     const colors = businessType === 'salon'
         ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff' }
