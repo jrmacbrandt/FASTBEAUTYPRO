@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* Tema Padrão: Barbearia */
+  :root, .theme-barber {
+    --color-background: 0 0% 0%;    /* Black */
+    --color-surface: 240 5% 10%;    /* Zinc-900 */
+    --color-primary: 38 92% 50%;    /* Amber-500 */
+    --color-primary-hover: 38 92% 60%;
+    --color-text-main: 240 5% 96%;       /* Zinc-100 */
+    --color-text-muted: 240 5% 70%;
+    
+    --background: 0 0% 0%;
+    --foreground: 240 5% 96%;
+  }
+
+  /* Tema: Salão de Beleza */
+  .theme-salon {
+    --color-background: 320 20% 98%; /* Soft Rose/White */
+    --color-surface: 0 0% 100%;      /* Pure White */
+    --color-primary: 330 80% 60%;    /* Rose/Pink Moderno */
+    --color-primary-hover: 330 80% 70%;
+    --color-text-main: 240 10% 20%;       /* Dark Gray */
+    --color-text-muted: 240 10% 40%;
+    
+    --background: 320 20% 98%;
+    --foreground: 240 10% 20%;
+  }
+}
+
+body {
+  background-color: hsl(var(--color-background));
+  color: hsl(var(--color-text-main));
+}
+
+/* Material Symbols support */
+.material-symbols-outlined {
+  font-variation-settings:
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24
+}

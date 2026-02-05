@@ -1,0 +1,152 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+
+interface Profile {
+    id: string;
+    full_name: string;
+    email?: string;
+    role: string;
+    status: string;
+    commission_rate: number;
+}
+
+export default function TeamManagementPage() {
+    const [barbers, setBarbers] = useState<Profile[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState<'team' | 'pending'>('team');
+
+    useEffect(() => {
+        fetchTeam();
+    }, []);
+
+    const fetchTeam = async () => {
+        setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        // Fetch current user's profile to get tenant_id
+        const { data: currentUser } = await supabase
+            .from('profiles')
+            .select('tenant_id')
+            .eq('id', session.user.id)
+            .single();
+
+        if (currentUser?.tenant_id) {
+            const { data, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('tenant_id', currentUser.tenant_id);
+
+            if (!error && data) {
+                setBarbers(data);
+            }
+        }
+        setLoading(false);
+    };
+
+    const handleAction = async (id: string, action: 'approve' | 'suspend' | 'delete') => {
+        if (action === 'delete') {
+            const { error } = await supabase.from('profiles').delete().eq('id', id);
+            if (!error) fetchTeam();
+            return;
+        }
+
+        const newStatus = action === 'approve' ? 'active' : 'suspended';
+        const { error } = await supabase
+            .from('profiles')
+            .update({ status: newStatus })
+            .eq('id', id);
+
+        if (!error) fetchTeam();
+    };
+
+    const pendingCount = barbers.filter(b => b.status === 'pending').length;
+    const filteredBarbers = barbers.filter(b => activeTab === 'team' ? b.status !== 'pending' : b.status === 'pending');
+
+    return (
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="flex p-1.5 rounded-2xl bg-black/50 border border-white/5">
+                    <button
+                        onClick={() => setActiveTab('team')}
+                        className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'team' ? 'bg-[#f2b90d] text-black shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        ATIVOS
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('pending')}
+                        className={`px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic flex items-center gap-2 ${activeTab === 'pending' ? 'bg-[#f2b90d] text-black shadow-lg' : 'text-slate-400 hover:text-white'}`}
+                    >
+                        SOLICITAÇÕES {pendingCount > 0 && <span className="bg-red-500 text-white size-5 flex items-center justify-center rounded-full text-[9px] font-bold">{pendingCount}</span>}
+                    </button>
+                </div>
+                <button className="bg-[#f2b90d] text-black px-8 py-4 rounded-xl font-black text-xs shadow-lg shadow-[#f2b90d]/20 uppercase italic tracking-tight active:scale-95 transition-all">
+                    CADASTRAR PROFISSIONAL
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4">
+                {loading ? (
+                    <div className="text-center py-20 opacity-40">
+                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#f2b90d] mx-auto mb-4"></div>
+                        <p className="font-black uppercase text-xs tracking-[0.4em]">Carregando equipe...</p>
+                    </div>
+                ) : filteredBarbers.length > 0 ? (
+                    filteredBarbers.map(barber => (
+                        <div key={barber.id} className="bg-[#121214] border border-white/5 p-6 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6 group hover:border-[#f2b90d]/20 transition-all">
+                            <div className="flex items-center gap-4">
+                                <div className="size-16 rounded-2xl bg-[#f2b90d]/10 flex items-center justify-center text-[#f2b90d] border border-[#f2b90d]/20 shadow-inner">
+                                    <span className="material-symbols-outlined text-4xl">person_pin</span>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-lg text-white">{barber.full_name}</h4>
+                                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{barber.email || 'Email não disponível'}</p>
+                                    <div className="flex gap-2 mt-2">
+                                        <span className="bg-white/5 text-slate-400 text-[9px] font-black uppercase px-3 py-1 rounded-full border border-white/5">
+                                            {barber.role}
+                                        </span>
+                                        <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${barber.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                                'bg-red-500/10 text-red-500 border-red-500/20'
+                                            }`}>
+                                            {barber.status}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col md:items-end gap-2">
+                                <div className="text-right mb-2">
+                                    <p className="text-slate-500 text-[9px] font-black uppercase tracking-[0.2em] italic">Comissão Base</p>
+                                    <p className="text-[#f2b90d] text-3xl font-black italic tracking-tighter">{barber.commission_rate}%</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    {barber.status === 'pending' ? (
+                                        <>
+                                            <button onClick={() => handleAction(barber.id, 'approve')} className="bg-emerald-500 text-white px-6 py-2 rounded-xl text-[10px] font-black uppercase shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">APROVAR</button>
+                                            <button onClick={() => handleAction(barber.id, 'delete')} className="bg-red-500/10 text-red-500 px-6 py-2 rounded-xl text-[10px] font-black uppercase active:scale-95 transition-all">REJEITAR</button>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <button className="p-2 text-slate-400 hover:text-[#f2b90d] transition-colors"><span className="material-symbols-outlined">edit</span></button>
+                                            <button onClick={() => handleAction(barber.id, 'suspend')} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest ${barber.status === 'active' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'} active:scale-95 transition-all`}>
+                                                {barber.status === 'active' ? 'SUSPENDER' : 'REATIVAR'}
+                                            </button>
+                                            <button onClick={() => handleAction(barber.id, 'delete')} className="p-2 text-slate-400 hover:text-red-500 transition-colors"><span className="material-symbols-outlined">delete</span></button>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-center py-20 opacity-40">
+                        <span className="material-symbols-outlined text-6xl mb-4 italic">groups</span>
+                        <p className="font-black uppercase text-xs tracking-[0.4em]">Nenhum registro encontrado</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
