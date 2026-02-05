@@ -1,109 +1,57 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
-export default function GlobalLandingPage() {
+export default function LandingPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
-  const [recentTenants, setRecentTenants] = useState<any[]>([]);
 
-  useEffect(() => {
-    async function loadRecent() {
-      const { data } = await supabase
-        .from('tenants')
-        .select('name, slug')
-        .limit(5);
+  const handleChoice = (type: 'barber' | 'salon') => {
+    localStorage.setItem('elite_business_type', type);
+    document.body.className = type === 'salon' ? 'theme-salon' : '';
+    router.push('/sistema');
+  };
 
-      if (data) setRecentTenants(data);
-      setLoading(false);
-    }
-    loadRecent();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#09090b] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-500"></div>
-      </div>
-    );
-  }
+  const colors = {
+    amber: '#f2b90d',
+    purple: '#7b438e',
+    darkBg: '#09090b',
+    cardDark: '#18181b'
+  };
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-white font-display">
-      {/* Platform Hero */}
-      <section className="relative h-screen flex flex-col items-center justify-center p-6 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-yellow-500/10 via-transparent to-transparent opacity-50" />
-
-        <div className="relative z-10 text-center space-y-8 max-w-4xl">
-          <h1 className="text-7xl md:text-9xl font-black italic uppercase tracking-tighter leading-none">
-            FASTBEAUTY <span className="text-yellow-500">PRO</span>
-          </h1>
-          <p className="text-xl md:text-3xl text-white/60 font-medium italic max-w-2xl mx-auto">
-            A plataforma definitiva para gestão de barbearias e salões de alta performance.
-          </p>
-
-          <div className="flex flex-wrap justify-center gap-4 pt-8">
-            <button
-              onClick={() => router.push('/login')}
-              className="px-10 py-5 bg-white text-black rounded-full font-black uppercase italic transition-all hover:scale-105 active:scale-95"
-            >
-              Área Administrativa
-            </button>
-            <button
-              onClick={() => {
-                // For demo/dev convenience, go to the first tenant if exists
-                if (recentTenants.length > 0) router.push(`/${recentTenants[0].slug}`);
-              }}
-              className="px-10 py-5 bg-yellow-500 text-black rounded-full font-black uppercase italic transition-all hover:scale-105 active:scale-95 shadow-[0_0_30px_rgba(234,179,8,0.3)]"
-            >
-              Ver Demonstração
-            </button>
-          </div>
-        </div>
-
-        {/* Floating Elements */}
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex flex-col items-center space-y-4 opacity-20 animate-bounce">
-          <p className="text-[10px] font-black uppercase tracking-[0.5em]">Explore a Plataforma</p>
-          <span className="material-symbols-outlined">expand_more</span>
-        </div>
-      </section>
-
-      {/* Featured Shops / Recent (Internal Showcase) */}
-      {recentTenants.length > 0 && (
-        <section className="max-w-6xl mx-auto px-6 py-32 space-y-12">
-          <div className="space-y-2">
-            <h2 className="text-4xl font-black italic uppercase tracking-tighter">Unidades <span className="text-yellow-500">FastBeauty</span></h2>
-            <p className="text-white/40 font-bold uppercase tracking-widest text-xs">Estabelecimentos que utilizam nossa tecnologia</p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {recentTenants.map(t => (
-              <button
-                key={t.slug}
-                onClick={() => router.push(`/${t.slug}`)}
-                className="group p-8 bg-white/5 border border-white/5 rounded-[2.5rem] text-left transition-all hover:bg-white/10 hover:border-white/20"
-              >
-                <div className="size-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                  <span className="material-symbols-outlined text-yellow-500 text-3xl">storefront</span>
-                </div>
-                <h3 className="text-2xl font-black italic uppercase mb-2">{t.name}</h3>
-                <p className="text-sm text-white/40 font-bold uppercase tracking-widest">Unidade Oficial</p>
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* Corporate Footer */}
-      <footer className="p-12 text-center border-t border-white/5 bg-black">
-        <p className="text-[10px] font-black uppercase tracking-[1em] opacity-20">
-          FastBeauty Pro &copy; 2026 - Todos os direitos reservados
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 text-center transition-colors duration-700" style={{ backgroundColor: colors.darkBg }}>
+      <div className="max-w-4xl w-full">
+        <h1 className="text-5xl md:text-8xl font-black text-white mb-6 tracking-tighter italic uppercase leading-none">
+          FASTBEAUTY <span style={{ color: colors.amber }} className="italic">PRO</span>
+        </h1>
+        <p className="text-lg md:text-xl text-slate-400 mb-16 max-w-2xl mx-auto leading-relaxed font-bold">
+          Escolha o nicho do seu estabelecimento para iniciar a experiência personalizada.
         </p>
-      </footer>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+          <button onClick={() => handleChoice('barber')} className="group relative border-2 border-transparent hover:border-[#f2b90d] p-10 rounded-[2.5rem] transition-all duration-500 shadow-2xl overflow-hidden text-left" style={{ backgroundColor: colors.cardDark }}>
+            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="material-symbols-outlined text-8xl" style={{ color: colors.amber }}>content_cut</span>
+            </div>
+            <h3 className="text-2xl font-black italic mb-3 uppercase tracking-tight" style={{ color: colors.amber }}>Barbearia</h3>
+            <p className="text-slate-500 font-bold text-sm mb-8 leading-snug">Contraste Dark, Amber e gestão robusta de equipe.</p>
+            <span className="inline-block px-8 py-3 rounded-xl font-black text-xs transition-transform group-hover:scale-105 active:scale-95" style={{ backgroundColor: colors.amber, color: colors.darkBg }}>SELECIONAR</span>
+          </button>
+          <button onClick={() => handleChoice('salon')} className="group relative bg-white border-2 border-transparent hover:border-[#7b438e] p-10 rounded-[2.5rem] transition-all duration-500 shadow-2xl overflow-hidden text-left">
+            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+              <span className="material-symbols-outlined text-8xl" style={{ color: colors.purple }}>spa</span>
+            </div>
+            <h3 className="text-2xl font-black italic mb-3 uppercase tracking-tight" style={{ color: colors.purple }}>Salão & Spa</h3>
+            <p className="text-slate-400 font-bold text-sm mb-8 leading-snug">Estética SpaLab, Roxo Ametista e design minimalista.</p>
+            <span className="inline-block px-8 py-3 rounded-xl font-black text-xs text-white transition-transform group-hover:scale-105 active:scale-95" style={{ backgroundColor: colors.purple }}>SELECIONAR</span>
+          </button>
+        </div>
+      </div>
+      <div className="mt-20 opacity-20">
+        <div className="w-12 h-1 rounded-full bg-white/20"></div>
+      </div>
     </div>
   );
 }
