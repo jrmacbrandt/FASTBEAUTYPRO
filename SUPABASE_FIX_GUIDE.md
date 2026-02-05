@@ -84,5 +84,19 @@ END $$;
 
 ---
 
+## Passo Final: Liberar Acesso (RLS Policies)
+O Supabase bloqueia a leitura de dados por padrão. Se você logar e não for redirecionado, é porque o sistema não tem permissão para ler seu perfil.
+
+1. No **SQL Editor**, rode este comando:
+
+```sql
+-- Permite que o usuário leia seu próprio perfil
+CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
+-- Permite que o usuário atualize seu próprio perfil
+CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
+```
+
+---
+
 ## Por que isso resolve?
-O projeto é novo e não possui dados. Criando o usuário no dashboard e rodando o SQL, você configura manualmente o que o sistema espera encontrar (um usuário com um perfil vinculado a uma unidade/tenant).
+Mesmo com o login funcionando, o código precisa ler a coluna `role` (cargo) para saber se te manda para `/admin` ou `/profissional`. Sem essas "Policies" (políticas), o Supabase retorna um erro de acesso negado e o site fica parado na tela de seleção.
