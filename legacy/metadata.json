@@ -1,7 +1,0 @@
-{
-  "name": "FastBeauty Pro",
-  "description": "A high-performance multi-tenant SaaS platform for barbershop and salon management, featuring automated commissions, inventory control, and public booking URLs.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}
