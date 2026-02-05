@@ -37,27 +37,30 @@ const SystemGateway = () => {
                 </button>
             </div>
 
-            <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-md w-full z-10 animate-in fade-in zoom-in duration-700 bg-white/5 p-8 md:p-12 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-2xl">
+            <div className="flex flex-col items-center justify-center text-center space-y-6 max-w-md w-full z-10 animate-in fade-in zoom-in duration-700 bg-white/5 p-8 md:p-14 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-2xl">
                 <div>
-                    <span className="material-symbols-outlined text-2xl animate-pulse" style={{ color: colors.primary }}>
+                    <span className="material-symbols-outlined text-4xl mb-2 animate-pulse" style={{ color: colors.primary }}>
                         {businessType === 'salon' ? 'spa' : 'content_cut'}
                     </span>
                 </div>
-                <h2 className="text-[10px] md:text-xs font-black italic tracking-[0.5em] uppercase opacity-60" style={{ color: colors.primary }}>FastBeauty Pro</h2>
-                <h3 className="text-2xl md:text-3xl font-black leading-tight tracking-tighter italic" style={{ color: colors.text }}>
-                    Portal do <span style={{ color: colors.primary }}>Sistema</span> <br className="hidden md:block" /> Premium
-                </h3>
-                <p className="text-xs md:text-sm font-medium w-full whitespace-nowrap mx-auto leading-tight opacity-50" style={{ color: colors.textMuted }}>
-                    Selecione seu ponto de acesso à <span className="font-bold italic" style={{ color: colors.text }}>{terms.description}</span>.
+                <div className="space-y-1 w-full flex flex-col items-center">
+                    <h2 className="text-[14px] font-black italic tracking-[0.4em] uppercase opacity-60 leading-none" style={{ color: colors.primary }}>FastBeauty Pro</h2>
+                    <h3 className="text-4xl md:text-5xl font-black leading-[0.9] tracking-tighter italic uppercase" style={{ color: colors.text }}>
+                        Portal do <span style={{ color: colors.primary }}>Sistema</span> <br /> Premium
+                    </h3>
+                </div>
+
+                <p className="text-xs md:text-sm font-medium w-full max-w-[280px] mx-auto leading-relaxed opacity-50" style={{ color: colors.textMuted }}>
+                    Selecione seu ponto de acesso à <br className="hidden sm:block" /> <span className="font-bold italic" style={{ color: colors.text }}>Plataforma {terms.description}</span>.
                 </p>
 
                 <div className="pt-4 w-full flex justify-center">
-                    <Link href="/login" className="inline-block px-14 font-black py-4 rounded-xl text-sm md:text-base shadow-lg transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-tighter" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#ffffff' : '#0a0a0b' }}>
+                    <Link href="/login" className="w-full max-w-[320px] font-black py-5 rounded-2xl text-base md:text-lg shadow-lg transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-tighter flex items-center justify-center" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#ffffff' : '#0a0a0b' }}>
                         {terms.accessBtn}
                     </Link>
                 </div>
 
-                <div className="pt-24 flex flex-col items-center gap-2 w-full">
+                <div className="pt-20 flex flex-col items-center gap-2 w-full">
                     <Link href="/login-master" className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] transition-all hover:tracking-[0.4em] opacity-20 hover:opacity-100 py-1" style={{ color: colors.textMuted }}>
                         {terms.masterBtn}
                     </Link>
