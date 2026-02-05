@@ -56,8 +56,22 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         }
 
         if (data.session) {
-            // Middleware will handle redirection based on roles
-            router.push('/sistema');
+            // Since middleware is disabled, handle redirection here based on profile role
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', data.session.user.id)
+                .single();
+
+            if (type === 'master') {
+                router.push('/admin-master');
+            } else if (profile?.role === 'owner') {
+                router.push('/admin');
+            } else if (profile?.role === 'barber') {
+                router.push('/profissional');
+            } else {
+                router.push('/sistema');
+            }
         }
     };
 
