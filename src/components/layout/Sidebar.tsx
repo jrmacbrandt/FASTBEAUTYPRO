@@ -46,12 +46,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType }) => {
     };
 
     const menuItems = React.useMemo(() => {
-        if (user?.role === 'master') return [
+        const isMasterArea = pathname.startsWith('/admin-master');
+        const isAdminArea = pathname.startsWith('/admin');
+        const isProArea = pathname.startsWith('/profissional');
+
+        if (isMasterArea) return [
             { label: 'Painel Master', icon: 'dashboard', path: '/admin-master' },
             { label: 'Cupons Globais', icon: 'local_offer', path: '/admin-master/cupons' },
         ];
 
-        if (user?.role === 'owner') return [
+        if (isAdminArea) return [
             { label: 'Dashboard', icon: 'dashboard', path: '/admin' },
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/profissional' },
@@ -68,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType }) => {
             { label: 'Histórico', icon: 'history', path: '/profissional/historico' },
             { label: 'Configuração', icon: 'settings', path: '/profissional/configuracao' },
         ];
-    }, [user?.role]);
+    }, [pathname]);
 
     const isSalon = businessType === 'salon';
 
