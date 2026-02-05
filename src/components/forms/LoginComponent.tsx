@@ -103,13 +103,98 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         setLoading(true);
         setError(null);
 
-        // Implementation of registration logic will go here
-        // For Professionals: status = 'pending'
-        // For Admins: create tenant + profile (owner)
-        setTimeout(() => {
+        try {
+            // 1. Validation for professional
+            let tenantId: string | null = null;
+            if (activeTab === 'pro') {
+                const { data: tenant, error: tError } = await supabase
+                    .from('tenants')
+                    .select('id')
+                    .eq('slug', shopSlug)
+                    .single();
+
+                if (tError || !tenant) {
+                    setError('A loja informada não foi encontrada. Verifique o link/slug digitado.');
+                    setLoading(false);
+                    return;
+                }
+                tenantId = tenant.id;
+            }
+
+            // 2. Auth Sign Up
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        full_name: fullName,
+                    }
+                }
+            });
+
+            if (authError) throw authError;
+            if (!authData.user) throw new Error('Erro ao criar usuário');
+
+            const userId = authData.user.id;
+
+            // 3. Image Upload
+            let imageUrl = '';
+            if (file) {
+                const bucket = activeTab === 'admin' ? 'logos' : 'avatars';
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${userId}-${Math.random()}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage
+                    .from(bucket)
+                    .upload(fileName, file);
+
+                if (!uploadError) {
+                    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName);
+                    imageUrl = publicUrl;
+                }
+            }
+
+            // 4. Admin Specific: Create Tenant
+            if (activeTab === 'admin') {
+                const slug = shopName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+                const { data: newTenant, error: tenantError } = await supabase
+                    .from('tenants')
+                    .insert({
+                        name: shopName,
+                        slug: slug,
+                        logo_url: imageUrl,
+                        has_paid: false,
+                        subscription_status: 'trialing'
+                    })
+                    .select()
+                    .single();
+
+                if (tenantError) throw tenantError;
+                tenantId = newTenant.id;
+            }
+
+            // 5. Create Profile
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .insert({
+                    id: userId,
+                    tenant_id: tenantId,
+                    full_name: fullName,
+                    email: email,
+                    cpf: cpf,
+                    role: activeTab === 'admin' ? 'owner' : 'barber',
+                    status: activeTab === 'admin' ? 'active' : 'pending',
+                    avatar_url: activeTab === 'pro' ? imageUrl : null
+                });
+
+            if (profileError) throw profileError;
+
             setRegisterSuccess(true);
+        } catch (err: any) {
+            setError(err.message || 'Ocorreu um erro ao realizar o cadastro.');
+            console.error('Registration error:', err);
+        } finally {
             setLoading(false);
-        }, 1500);
+        }
     };
 
     return (
@@ -240,14 +325,6 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 </div>
             </div>
         </div>
-    );
-};
-
-<div className="mt-8 text-center border-t pt-4" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-    <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 italic" style={{ color: colors.textMuted }}>© 2024 {terms.footer}</p>
-</div>
-            </div >
-        </div >
     );
 };
 
