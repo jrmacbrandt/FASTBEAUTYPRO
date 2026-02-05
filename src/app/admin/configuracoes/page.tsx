@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export default function EstablishmentSettingsPage() {
     const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'hours' | 'automation'>('general');
     const [isSaving, setIsSaving] = useState(false);

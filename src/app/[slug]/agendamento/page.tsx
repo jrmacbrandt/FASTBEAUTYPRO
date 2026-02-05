@@ -4,6 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export default function DynamicBookingPage() {
     const params = useParams();
     const router = useRouter();

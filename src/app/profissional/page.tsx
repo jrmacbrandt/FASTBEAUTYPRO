@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export default function ProfessionalAgendaPage() {
     const [view, setView] = useState<'agenda' | 'command'>('agenda');
     const [selectedClient, setSelectedClient] = useState<any>(null);

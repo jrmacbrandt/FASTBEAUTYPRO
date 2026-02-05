@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export default function MasterDashboardPage() {
     const [tenants, setTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);

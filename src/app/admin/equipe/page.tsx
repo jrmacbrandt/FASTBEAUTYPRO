@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 interface Profile {
     id: string;
     full_name: string;
@@ -108,7 +110,7 @@ export default function TeamManagementPage() {
                                             {barber.role}
                                         </span>
                                         <span className={`text-[9px] font-black uppercase px-3 py-1 rounded-full border ${barber.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                                'bg-red-500/10 text-red-500 border-red-500/20'
+                                            'bg-red-500/10 text-red-500 border-red-500/20'
                                             }`}>
                                             {barber.status}
                                         </span>

@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export default function CashierCheckoutPage() {
     const [orders, setOrders] = useState<any[]>([]);
     const [selected, setSelected] = useState<any>(null);
