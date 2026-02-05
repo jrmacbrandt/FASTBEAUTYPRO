@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import Layout from '../../components/Layout';
+import Layout from '../../components/layout/Layout';
 
 const BarberCommand: React.FC<{ businessType: 'barber' | 'salon' }> = ({ businessType }) => {
   const [view, setView] = useState<'agenda' | 'command'>('agenda');
@@ -54,7 +54,7 @@ const BarberCommand: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
             <h3 className="text-xl font-black italic uppercase">Hoje</h3>
             <span className="text-text-muted text-xs font-bold uppercase tracking-widest">{new Date().toLocaleDateString()}</span>
           </div>
-          
+
           <div className="grid gap-4">
             {dailyAgenda.map(item => (
               <div key={item.id} className={`${isSalon ? 'bg-white border-slate-100 shadow-sm' : 'bg-background-card border-white/5 shadow-lg'} p-6 rounded-[2rem] border flex flex-col sm:flex-row items-center justify-between transition-all gap-4`}>
@@ -106,7 +106,7 @@ const BarberCommand: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {products.map(p => (
               <div key={p.id} className={`${isSalon ? 'bg-white border-slate-100 shadow-sm' : 'bg-background-card border-white/5'} p-4 rounded-3xl border group hover:border-primary/30 transition-all`}>
-                <img src={p.img} className="w-full aspect-square rounded-2xl mb-4 object-cover" />
+                <img alt="Produto" src={p.img} className="w-full aspect-square rounded-2xl mb-4 object-cover" />
                 <div className="flex justify-between items-start mb-2">
                   <h4 className="font-bold text-base">{p.name}</h4>
                   <span className="text-primary font-black">R$ {p.price}</span>

@@ -167,7 +167,7 @@ export default function ProfessionalAgendaPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {products.map(p => (
                         <div key={p.id} className="bg-[#121214] p-4 rounded-3xl border border-white/5 group hover:border-[#f2b90d]/30 transition-all">
-                            <img src={p.image_url || 'https://picsum.photos/200/200'} className="w-full aspect-square rounded-2xl mb-4 object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                            <img alt="Produto" src={p.image_url || 'https://picsum.photos/200/200'} className="w-full aspect-square rounded-2xl mb-4 object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
                             <div className="flex justify-between items-start mb-4">
                                 <h4 className="font-bold text-base text-white">{p.name}</h4>
                                 <span className="text-[#f2b90d] font-black">R$ {p.price}</span>

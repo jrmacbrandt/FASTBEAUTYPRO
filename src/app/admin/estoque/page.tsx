@@ -75,7 +75,7 @@ export default function InventoryManagementPage() {
                 ) : products.map(p => (
                     <div key={p.id} className="bg-[#121214] rounded-[2rem] border border-white/5 overflow-hidden group hover:border-[#f2b90d]/20 transition-all shadow-xl">
                         <div className="relative aspect-square overflow-hidden bg-black">
-                            <img src={p.image_url || 'https://picsum.photos/200/200'} className="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 scale-110 group-hover:scale-100" />
+                            <img alt="Produto" src={p.image_url || 'https://picsum.photos/200/200'} className="w-full h-full object-cover grayscale opacity-50 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500 scale-110 group-hover:scale-100" />
                             {p.current_stock <= p.min_stock && (
                                 <div className="absolute top-4 right-4 bg-red-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full shadow-lg">
                                     ESTOQUE CRÍTICO
