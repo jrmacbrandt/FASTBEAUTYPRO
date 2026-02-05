@@ -37,31 +37,31 @@ const SystemGateway = () => {
                 </button>
             </div>
 
-            <div className="flex flex-col items-center justify-center text-center space-y-2 max-w-sm w-full z-10 animate-in fade-in zoom-in duration-700 bg-white/5 p-6 rounded-3xl border border-white/5 backdrop-blur-sm shadow-2xl">
-                <div className="mb-0.5">
-                    <span className="material-symbols-outlined text-xl animate-pulse" style={{ color: colors.primary }}>
+            <div className="flex flex-col items-center justify-center text-center space-y-4 max-w-md w-full z-10 animate-in fade-in zoom-in duration-700 bg-white/5 p-8 md:p-12 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-2xl">
+                <div>
+                    <span className="material-symbols-outlined text-2xl animate-pulse" style={{ color: colors.primary }}>
                         {businessType === 'salon' ? 'spa' : 'content_cut'}
                     </span>
                 </div>
-                <h2 className="text-[5.6px] font-black italic tracking-[0.5em] uppercase opacity-60" style={{ color: colors.primary }}>FastBeauty Pro</h2>
-                <h3 className="text-[10px] md:text-[12px] font-black leading-tight tracking-tighter italic" style={{ color: colors.text }}>
+                <h2 className="text-[10px] md:text-xs font-black italic tracking-[0.5em] uppercase opacity-60" style={{ color: colors.primary }}>FastBeauty Pro</h2>
+                <h3 className="text-2xl md:text-3xl font-black leading-tight tracking-tighter italic" style={{ color: colors.text }}>
                     Portal do <span style={{ color: colors.primary }}>Sistema</span> <br className="hidden md:block" /> Premium
                 </h3>
-                <p className="text-[10px] md:text-xs font-medium w-full whitespace-nowrap mx-auto leading-tight opacity-50" style={{ color: colors.textMuted }}>
+                <p className="text-xs md:text-sm font-medium w-full whitespace-nowrap mx-auto leading-tight opacity-50" style={{ color: colors.textMuted }}>
                     Selecione seu ponto de acesso à <span className="font-bold italic" style={{ color: colors.text }}>{terms.description}</span>.
                 </p>
 
-                <div className="pt-2 w-full flex justify-center">
-                    <Link href="/login" className="inline-block px-10 font-black py-1.5 rounded-lg text-[6px] shadow-lg transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-tight" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#ffffff' : '#0a0a0b' }}>
+                <div className="pt-4 w-full flex justify-center">
+                    <Link href="/login" className="inline-block px-14 font-black py-4 rounded-xl text-sm md:text-base shadow-lg transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-tighter" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#ffffff' : '#0a0a0b' }}>
                         {terms.accessBtn}
                     </Link>
                 </div>
 
-                <div className="pt-20 flex flex-col items-center gap-1.5 w-full">
-                    <Link href="/login-master" className="text-[1.6px] font-black uppercase tracking-[0.3em] transition-all hover:tracking-[0.4em] opacity-30 hover:opacity-70 py-1" style={{ color: colors.textMuted }}>
+                <div className="pt-24 flex flex-col items-center gap-2 w-full">
+                    <Link href="/login-master" className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] transition-all hover:tracking-[0.4em] opacity-20 hover:opacity-100 py-1" style={{ color: colors.textMuted }}>
                         {terms.masterBtn}
                     </Link>
-                    <div className="w-6 h-0.5 rounded-full" style={{ backgroundColor: `${colors.primary}1a` }}></div>
+                    <div className="w-8 h-0.5 rounded-full" style={{ backgroundColor: `${colors.primary}1a` }}></div>
                 </div>
             </div>
 
