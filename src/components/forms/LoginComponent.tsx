@@ -199,7 +199,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     };
 
     return (
-        <div className="min-h-screen flex items-start justify-center p-4 pt-[10vh] md:pt-[12vh] font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
+        <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
             <div className="w-full max-w-[400px] rounded-[2rem] p-6 md:p-8 relative border bg-opacity-95" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
                 <button onClick={() => view === 'register' ? setView('login') : router.push('/sistema')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.inputBg, color: colors.text }}>
                     <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
@@ -218,6 +218,10 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                         <button onClick={() => setActiveTab('pro')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'pro' ? 'shadow-md scale-[1.02]' : 'opacity-40 hover:opacity-100'}`} style={activeTab === 'pro' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>PROFISSIONAL</button>
                         <button onClick={() => setActiveTab('admin')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'admin' ? 'shadow-md scale-[1.02]' : 'opacity-40 hover:opacity-100'}`} style={activeTab === 'admin' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>ADMIN</button>
                     </div>
+                )}
+
+                {type === 'master' && (
+                    <div className="h-[46px] mb-6 invisible select-none pointer-events-none" />
                 )}
 
                 {registerSuccess ? (
