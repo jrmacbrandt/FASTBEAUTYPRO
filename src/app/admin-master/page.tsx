@@ -72,8 +72,21 @@ export default function MasterDashboardPage() {
                 const { error } = await supabase.from('tenants').update({ active: action === 'resume' }).eq('id', selectedTenant.id);
                 if (error) throw error;
             } else if (action === 'save') {
-                const { error } = await supabase.from('tenants').update(data).eq('id', selectedTenant.id);
+                const { error } = await supabase.from('tenants').update({
+                    name: data.name,
+                    slug: data.slug,
+                    business_type: data.business_type,
+                    has_paid: data.has_paid,
+                    phone: data.phone,
+                    address: data.address,
+                    logo_url: data.logo_url
+                }).eq('id', selectedTenant.id);
                 if (error) throw error;
+
+                // Update Profile name if changed
+                if (data.owner_name && selectedTenant.profiles?.[0]?.id) {
+                    await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', selectedTenant.profiles[0].id);
+                }
             }
 
             fetchTenants();
@@ -147,11 +160,11 @@ export default function MasterDashboardPage() {
                                                 <div className="flex items-center justify-center gap-2">
                                                     <span className="text-xs italic opacity-60">/{t.slug}</span>
                                                     <div className="flex gap-1">
-                                                        <button onClick={() => handleCopy(t.slug)} className="size-6 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Copiar Link Completo">
-                                                            <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                                                        <button onClick={() => handleCopy(t.slug)} className="size-3.5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Copiar Link Completo">
+                                                            <span className="material-symbols-outlined text-[10px]">content_copy</span>
                                                         </button>
-                                                        <button onClick={() => handleOpen(t.slug)} className="size-6 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Abrir Página">
-                                                            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                                                        <button onClick={() => handleOpen(t.slug)} className="size-3.5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Abrir Página">
+                                                            <span className="material-symbols-outlined text-[10px]">open_in_new</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -243,6 +256,17 @@ export default function MasterDashboardPage() {
                                     </div>
 
                                     <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">URL do Logo (Imagem)</label>
+                                        <input
+                                            type="text"
+                                            defaultValue={selectedTenant.logo_url}
+                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
+                                            placeholder="https://exemplo.com/logo.png"
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Slug (URL de Acesso)</label>
                                         <div className="relative">
                                             <span className="absolute left-4 top-3.5 text-xs text-white/30 font-bold">/</span>
@@ -263,8 +287,8 @@ export default function MasterDashboardPage() {
                                                 onChange={(e) => setSelectedTenant({ ...selectedTenant, business_type: e.target.value })}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
                                             >
-                                                <option value="barber">BARBEARIA</option>
-                                                <option value="salon">SALÃO</option>
+                                                <option value="barber" className="bg-white text-black font-bold">BARBEARIA</option>
+                                                <option value="salon" className="bg-white text-black font-bold">SALÃO</option>
                                             </select>
                                         </div>
                                         <div className="space-y-1.5">
@@ -274,8 +298,8 @@ export default function MasterDashboardPage() {
                                                 onChange={(e) => setSelectedTenant({ ...selectedTenant, has_paid: e.target.value === 'paid' })}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
                                             >
-                                                <option value="paid" className="text-emerald-500">PAGO / OK</option>
-                                                <option value="pending" className="text-red-500">PENDENTE</option>
+                                                <option value="paid" className="bg-white text-emerald-600 font-bold">PAGO / OK</option>
+                                                <option value="pending" className="bg-white text-red-600 font-bold">PENDENTE</option>
                                             </select>
                                         </div>
                                     </div>
@@ -292,12 +316,20 @@ export default function MasterDashboardPage() {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário</label>
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
                                             <input
                                                 type="text"
-                                                value={selectedTenant.profiles?.[0]?.full_name || 'N/A'}
-                                                readOnly
-                                                className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white/40"
+                                                defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
+                                                onChange={(e) => {
+                                                    const newProfiles = [...(selectedTenant.profiles || [])];
+                                                    if (newProfiles[0]) {
+                                                        newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
+                                                    } else {
+                                                        newProfiles[0] = { full_name: e.target.value };
+                                                    }
+                                                    setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
+                                                }}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
                                             />
                                         </div>
                                     </div>

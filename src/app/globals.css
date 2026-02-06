@@ -2,74 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-
-  /* Tema Padrão: Barbearia */
-  :root,
-  .theme-barber {
+:root {
     --color-background: 0 0% 0%;
-    /* Black */
     --color-surface: 240 5% 10%;
-    /* Zinc-900 */
-    --color-primary: 38 92% 50%;
-    /* Amber-500 */
-    --color-primary-hover: 38 92% 60%;
+    --color-primary: 45 93% 47%;
     --color-text-main: 240 5% 96%;
-    /* Zinc-100 */
-    --color-text-muted: 240 5% 70%;
-
+    --color-text-muted: 240 5% 64%;
+    --radius-main: 1.5rem;
     --background: 0 0% 0%;
-    --foreground: 240 5% 96%;
-  }
+    --foreground: 0 0% 98%;
+}
 
-  /* Tema: Salão de Beleza */
-  .theme-salon {
-    --color-background: 320 15% 84%;
-    /* Deeper Grayish-Pink (84% Luminosity) */
+.theme-barber {
+    --color-background: 0 0% 0%;
+    --color-surface: 240 5% 10%;
+    --color-primary: 45 93% 47%;
+    --color-text-main: 240 5% 96%;
+    --color-text-muted: 240 5% 64%;
+}
+
+.theme-salon {
+    --color-background: 30 20% 98%;
     --color-surface: 0 0% 100%;
-    /* Pure White */
-    --color-primary: 330 80% 60%;
-    /* Rose/Pink Moderno */
-    --color-primary-hover: 330 80% 70%;
+    --color-primary: 285 36% 41%;
     --color-text-main: 240 10% 20%;
-    /* Dark Gray */
-    --color-text-muted: 240 10% 30%;
-
-    --background: 320 15% 84%;
-    --foreground: 240 10% 20%;
-  }
+    --color-text-muted: 240 5% 45%;
 }
 
 body {
-  background-color: hsl(var(--color-background));
-  color: hsl(var(--color-text-main));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.5s, color 0.5s;
+    overflow-x: hidden;
 }
 
-/* Material Symbols support */
-.material-symbols-outlined {
-  font-variation-settings:
-    'FILL' 0,
-    'wght' 400,
-    'GRAD' 0,
-    'opsz' 24
+.custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
 }
 
-/* Hide native browser password icons */
-input::-ms-reveal,
-input::-ms-clear,
-input::-webkit-contacts-auto-fill-button,
-input::-webkit-credentials-auto-fill-button {
-  display: none !important;
-  visibility: hidden !important;
-  pointer-events: none !important;
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
 }
 
-/* Fix Autofill issues (Contrast and Background) */
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+    -moz-appearance: textfield;
+}
+
+/* Autofill Fix */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,
-input:-webkit-autofill:focus,
-input:-webkit-autofill:active {
-  transition: background-color 5000s ease-in-out 0s;
-  -webkit-text-fill-color: hsl(var(--color-text-main)) !important;
-  background-color: transparent !important;
+input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px black inset !important;
+    -webkit-text-fill-color: #f8fafc !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.theme-salon input:-webkit-autofill,
+.theme-salon input:-webkit-autofill:hover,
+.theme-salon input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0px 1000px #faf8f5 inset !important;
+    -webkit-text-fill-color: #1e1e1e !important;
+}
+
+.glass-morphism {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
