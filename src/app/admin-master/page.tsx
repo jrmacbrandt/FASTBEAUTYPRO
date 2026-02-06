@@ -159,12 +159,12 @@ export default function MasterDashboardPage() {
                                             <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
                                                 <div className="flex items-center justify-center gap-2">
                                                     <span className="text-xs italic opacity-60">/{t.slug}</span>
-                                                    <div className="flex gap-1">
-                                                        <button onClick={() => handleCopy(t.slug)} className="size-3.5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Copiar Link Completo">
-                                                            <span className="material-symbols-outlined text-[10px]">content_copy</span>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={() => handleCopy(t.slug)} className="size-5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Copiar Link Completo">
+                                                            <span className="material-symbols-outlined text-[12px]">content_copy</span>
                                                         </button>
-                                                        <button onClick={() => handleOpen(t.slug)} className="size-3.5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Abrir Página">
-                                                            <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                                                        <button onClick={() => handleOpen(t.slug)} className="size-5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Abrir Página">
+                                                            <span className="material-symbols-outlined text-[12px]">open_in_new</span>
                                                         </button>
                                                     </div>
                                                 </div>
@@ -194,8 +194,8 @@ export default function MasterDashboardPage() {
 
             {/* Modal de Gestão de Inquilino */}
             {isEditModalOpen && selectedTenant && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[3rem] p-10 relative shadow-2xl my-8">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] max-h-[90vh] overflow-y-auto rounded-[3rem] p-10 relative shadow-2xl my-8">
                         <div className="absolute top-0 left-0 w-full h-1 bg-[#f2b90d] animate-pulse"></div>
 
                         <button onClick={() => setIsEditModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
