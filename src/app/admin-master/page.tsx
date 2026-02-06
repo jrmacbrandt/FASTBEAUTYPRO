@@ -143,12 +143,19 @@ export default function MasterDashboardPage() {
                                         <tr key={t.id} className="transition-all hover:bg-white/5 group">
                                             <td className="py-4 px-6 italic rounded-l-2xl border-y border-l" style={{ borderColor: `${colors.text}0d` }}>
                                                 <div className="flex items-center gap-4">
-                                                    <div className="size-10 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                                                    <div className="size-10 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0 relative group/logo">
                                                         {t.logo_url ? (
                                                             <img src={t.logo_url} alt={t.name} className="size-full object-cover" />
                                                         ) : (
                                                             <span className="material-symbols-outlined opacity-30">storefront</span>
                                                         )}
+                                                        <button
+                                                            onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
+                                                            className="absolute inset-0 bg-black/60 opacity-0 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center"
+                                                            title="Editar Logo"
+                                                        >
+                                                            <span className="material-symbols-outlined text-[14px] text-[#f2b90d]">edit</span>
+                                                        </button>
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="font-black uppercase tracking-tight">{t.name}</span>
