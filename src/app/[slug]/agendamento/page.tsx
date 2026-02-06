@@ -164,8 +164,8 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Com <br /> <span style={{ color: primaryColor }}>quem?</span></h2>
-                                <button onClick={prevStep} className="size-10 rounded-full bg-white/5 flex items-center justify-center transition-all active:scale-95 border border-white/5">
-                                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                <button onClick={prevStep} className="size-8 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                                 </button>
                             </div>
                             <div className="grid gap-3 md:gap-4">
@@ -194,8 +194,8 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Qual <br /> <span style={{ color: primaryColor }}>horário?</span></h2>
-                                <button onClick={prevStep} className="size-10 rounded-full bg-white/5 flex items-center justify-center transition-all active:scale-95 border border-white/5">
-                                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                <button onClick={prevStep} className="size-8 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                                 </button>
                             </div>
                             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5 md:gap-3">
@@ -222,8 +222,8 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quase <br /> <span style={{ color: primaryColor }}>lá!</span></h2>
-                                <button onClick={prevStep} className="size-10 rounded-full bg-white/5 flex items-center justify-center transition-all active:scale-95 border border-white/5">
-                                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                <button onClick={prevStep} className="size-8 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                                 </button>
                             </div>
                             <div className="space-y-4 bg-white/[0.03] backdrop-blur-3xl p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 shadow-2xl">
