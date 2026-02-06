@@ -29,13 +29,34 @@ export default function MasterDashboardPage() {
         setLoading(true);
         const { data, error } = await supabase
             .from('tenants')
-            .select('*')
+            .select('*, profiles!profiles_tenant_id_fkey(*)')
             .order('created_at', { ascending: false });
 
         if (!error && data) {
             setTenants(data);
         }
         setLoading(false);
+    };
+
+    const handleCopy = (slug: string) => {
+        const fullUrl = `${window.location.origin}/${slug}`;
+        navigator.clipboard.writeText(fullUrl);
+        alert('Link copiado para a área de transferência!');
+    };
+
+    const handleOpen = (slug: string) => {
+        window.open(`${window.location.origin}/${slug}`, '_blank');
+    };
+
+    const normalizeSlug = (text: string) => {
+        return text
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\w\s-]/g, '')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .trim();
     };
 
     const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any) => {
@@ -116,10 +137,25 @@ export default function MasterDashboardPage() {
                                                             <span className="material-symbols-outlined opacity-30">storefront</span>
                                                         )}
                                                     </div>
-                                                    <span className="font-black uppercase tracking-tight">{t.name}</span>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black uppercase tracking-tight">{t.name}</span>
+                                                        <span className="text-[9px] opacity-40 uppercase tracking-tighter">Prop: {t.profiles?.[0]?.full_name || 'N/A'}</span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d`, color: colors.primary }}>/{t.slug}</td>
+                                            <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <span className="text-xs italic opacity-60">/{t.slug}</span>
+                                                    <div className="flex gap-1">
+                                                        <button onClick={() => handleCopy(t.slug)} className="size-6 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Copiar Link Completo">
+                                                            <span className="material-symbols-outlined text-[14px]">content_copy</span>
+                                                        </button>
+                                                        <button onClick={() => handleOpen(t.slug)} className="size-6 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Abrir Página">
+                                                            <span className="material-symbols-outlined text-[14px]">open_in_new</span>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </td>
                                             <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
                                                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${t.active ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
                                                     {t.active ? 'ATIVO' : 'PAUSADO'}
@@ -145,8 +181,8 @@ export default function MasterDashboardPage() {
 
             {/* Modal de Gestão de Inquilino */}
             {isEditModalOpen && selectedTenant && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-[500px] rounded-[3rem] p-10 relative overflow-hidden shadow-2xl">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[3rem] p-10 relative shadow-2xl my-8">
                         <div className="absolute top-0 left-0 w-full h-1 bg-[#f2b90d] animate-pulse"></div>
 
                         <button onClick={() => setIsEditModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
@@ -164,10 +200,10 @@ export default function MasterDashboardPage() {
                                 )}
                             </div>
                             <h3 className="text-white text-2xl font-black italic uppercase italic leading-none">{selectedTenant.name}</h3>
-                            <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-60">ID Inquilino: {selectedTenant.id.slice(0, 8)}</p>
+                            <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-60">ADMINISTRAÇÃO DE UNIDADE</p>
                         </div>
 
-                        <div className="space-y-4">
+                        <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-3">
                                 <button
                                     onClick={() => handleAction(selectedTenant.active ? 'pause' : 'resume')}
@@ -185,32 +221,123 @@ export default function MasterDashboardPage() {
                                 </button>
                             </div>
 
-                            <div className="p-6 rounded-3xl bg-white/5 border border-white/5 space-y-4">
-                                <h4 className="text-white text-[11px] font-black uppercase tracking-widest opacity-40">Dados do Estabelecimento</h4>
-                                <div className="space-y-3">
-                                    <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl">
-                                        <span className="text-slate-500 text-[10px] font-bold">Slug Atual</span>
-                                        <span className="text-[#f2b90d] text-[10px] font-black tracking-widest uppercase">/{selectedTenant.slug}</span>
+                            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-white text-[11px] font-black uppercase tracking-widest opacity-40">Dados do Estabelecimento</h4>
+                                    <div className="text-[9px] font-black uppercase tracking-tighter opacity-30 text-white">ID: {selectedTenant.id.slice(0, 8)}</div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Nome da Loja</label>
+                                        <input
+                                            type="text"
+                                            defaultValue={selectedTenant.name}
+                                            onChange={(e) => {
+                                                const newName = e.target.value;
+                                                const newSlug = normalizeSlug(newName);
+                                                setSelectedTenant({ ...selectedTenant, name: newName, slug: newSlug });
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
+                                        />
                                     </div>
-                                    <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl">
-                                        <span className="text-slate-500 text-[10px] font-bold">Tipo de Negócio</span>
-                                        <span className="text-white text-[10px] font-black tracking-widest uppercase">{selectedTenant.business_type === 'salon' ? 'Salão' : 'Barbearia'}</span>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Slug (URL de Acesso)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-3.5 text-xs text-white/30 font-bold">/</span>
+                                            <input
+                                                type="text"
+                                                value={selectedTenant.slug}
+                                                readOnly
+                                                className="w-full bg-black/20 border border-white/5 rounded-xl px-4 pl-7 py-3 text-sm font-bold text-[#f2b90d] opacity-80"
+                                            />
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center bg-black/20 p-3 rounded-xl">
-                                        <span className="text-slate-500 text-[10px] font-bold">Pagamento</span>
-                                        <span className={`text-[10px] font-black tracking-widest uppercase ${selectedTenant.has_paid ? 'text-emerald-500' : 'text-red-500'}`}>{selectedTenant.has_paid ? 'OK' : 'PENDENTE'}</span>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tipo de Negócio</label>
+                                            <select
+                                                value={selectedTenant.business_type}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, business_type: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
+                                            >
+                                                <option value="barber">BARBEARIA</option>
+                                                <option value="salon">SALÃO</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Status Pagamento</label>
+                                            <select
+                                                value={selectedTenant.has_paid ? 'paid' : 'pending'}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, has_paid: e.target.value === 'paid' })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
+                                            >
+                                                <option value="paid" className="text-emerald-500">PAGO / OK</option>
+                                                <option value="pending" className="text-red-500">PENDENTE</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
+                                            <input
+                                                type="text"
+                                                defaultValue={selectedTenant.phone}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
+                                                placeholder="(00) 00000-0000"
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário</label>
+                                            <input
+                                                type="text"
+                                                value={selectedTenant.profiles?.[0]?.full_name || 'N/A'}
+                                                readOnly
+                                                className="w-full bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-white/40"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
+                                        <input
+                                            type="text"
+                                            defaultValue={selectedTenant.address}
+                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
+                                            placeholder="Rua, Número, Bairro, Cidade"
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                        />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <button
-                            disabled={saving}
-                            onClick={() => setIsEditModalOpen(false)}
-                            className="w-full mt-8 bg-white/5 text-slate-400 font-black py-5 rounded-2xl uppercase italic tracking-widest text-[10px] hover:text-white transition-all"
-                        >
-                            FECHAR GERENCIAMENTO
-                        </button>
+                        <div className="grid grid-cols-2 gap-3 mt-8">
+                            <button
+                                onClick={() => setIsEditModalOpen(false)}
+                                className="bg-white/5 text-slate-400 font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:text-white transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                disabled={saving}
+                                onClick={() => handleAction('save', {
+                                    name: selectedTenant.name,
+                                    slug: selectedTenant.slug,
+                                    business_type: selectedTenant.business_type,
+                                    has_paid: selectedTenant.has_paid,
+                                    phone: selectedTenant.phone,
+                                    address: selectedTenant.address
+                                })}
+                                className="bg-[#f2b90d] text-black font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                            >
+                                {saving ? 'Salvando...' : 'Salvar Alterações'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
