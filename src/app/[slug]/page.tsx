@@ -189,9 +189,9 @@ export default function ShopLandingPage() {
                     )}
 
                     {step === 2 && (
-                        <div className="animate-in fade-in slide-in-from-right-8 duration-700">
-                            <button onClick={() => setStep(1)} className="absolute left-0 -top-16 md:-top-20 size-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-all group" style={{ color: theme.primary }}>
-                                <span className="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
+                            <button onClick={() => setStep(1)} className="absolute left-0 -top-16 md:-top-20 size-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-sm" style={{ color: '#ffffff' }}>
+                                <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                             </button>
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 COM <span style={{ color: theme.primary }}>QUEM?</span>
@@ -222,9 +222,9 @@ export default function ShopLandingPage() {
                     )}
 
                     {step === 3 && (
-                        <div className="animate-in fade-in slide-in-from-right-8 duration-700">
-                            <button onClick={() => setStep(2)} className="absolute left-0 -top-16 md:-top-20 size-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-all group" style={{ color: theme.primary }}>
-                                <span className="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
+                            <button onClick={() => setStep(2)} className="absolute left-0 -top-16 md:-top-20 size-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-sm" style={{ color: '#ffffff' }}>
+                                <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                             </button>
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 QUAL O <br /><span style={{ color: theme.primary }}>MELHOR DIA?</span>
@@ -240,9 +240,9 @@ export default function ShopLandingPage() {
                     )}
 
                     {step === 4 && (
-                        <div className="animate-in fade-in slide-in-from-right-8 duration-700">
-                            <button onClick={() => setStep(3)} className="absolute left-0 -top-16 md:-top-20 size-10 flex items-center justify-center rounded-full hover:bg-white/10 transition-all group" style={{ color: theme.primary }}>
-                                <span className="material-symbols-outlined text-xl group-hover:-translate-x-1 transition-transform">arrow_back</span>
+                        <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
+                            <button onClick={() => setStep(3)} className="absolute left-0 -top-16 md:-top-20 size-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-sm" style={{ color: '#ffffff' }}>
+                                <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                             </button>
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 ESCOLHA O <span style={{ color: theme.primary }}>HORÁRIO</span>

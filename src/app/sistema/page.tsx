@@ -32,8 +32,8 @@ const SystemGateway = () => {
             <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-20" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.primary}33, ${colors.primary})` }}></div>
 
             <div className="absolute left-4 top-4 z-50">
-                <button onClick={() => router.push('/')} className="size-8 flex items-center justify-center rounded-full border transition-all group shadow-sm bg-opacity-50" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}1a`, color: colors.textMuted }}>
-                    <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-1 transition-transform" style={{ color: colors.primary }}>arrow_back</span>
+                <button onClick={() => router.push('/')} className="size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group shadow-sm bg-opacity-50" style={{ backgroundColor: colors.cardBg, color: colors.text }}>
+                    <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                 </button>
             </div>
 
