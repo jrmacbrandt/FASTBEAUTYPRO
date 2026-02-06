@@ -151,10 +151,23 @@ export default function MasterDashboardPage() {
                                                         )}
                                                         <button
                                                             onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
-                                                            className="absolute top-0 right-0 size-6 bg-black/80 hover:bg-black/90 transition-all flex items-center justify-center rounded-bl-lg"
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                right: 0,
+                                                                width: '24px',
+                                                                height: '24px',
+                                                                backgroundColor: 'rgba(0,0,0,0.8)',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                borderBottomLeftRadius: '8px',
+                                                                cursor: 'pointer',
+                                                                border: 'none'
+                                                            }}
                                                             title="Editar Logo"
                                                         >
-                                                            <span className="material-symbols-outlined text-[12px] text-[#f2b90d]">edit</span>
+                                                            <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#f2b90d' }}>edit</span>
                                                         </button>
                                                     </div>
                                                     <div className="flex flex-col">
