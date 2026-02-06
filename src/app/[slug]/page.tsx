@@ -231,7 +231,7 @@ export default function ShopLandingPage() {
                             </h2>
                             <input
                                 type="date"
-                                className="w-full bg-white/[0.03] border-2 border-white/5 rounded-[2.5rem] p-8 text-white text-3xl font-black italic appearance-none focus:outline-none focus:border-[#f2b90d]/30"
+                                className="w-full bg-white/[0.03] border-2 border-white/5 rounded-[2.5rem] p-6 md:p-8 text-white text-xl md:text-3xl font-black italic focus:outline-none focus:border-[#f2b90d]/30 text-center uppercase"
                                 style={{ colorScheme: 'dark' }}
                                 min={new Date().toISOString().split('T')[0]}
                                 onChange={(e) => { setSelection({ ...selection, date: e.target.value }); setStep(4); }}
@@ -312,10 +312,10 @@ export default function ShopLandingPage() {
                             <button
                                 onClick={handleConfirm}
                                 disabled={!selection.clientName}
-                                className="w-full bg-[#f2b90d] text-black font-black py-7 rounded-[2.5rem] uppercase italic tracking-widest text-lg shadow-[0_20px_40px_rgba(242,185,13,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-30"
+                                className="w-full bg-[#f2b90d] text-black font-black py-6 md:py-7 rounded-[2.5rem] uppercase italic tracking-widest text-sm md:text-lg shadow-[0_20px_40px_rgba(242,185,13,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-4 disabled:opacity-30"
                             >
-                                <span className="material-symbols-outlined text-3xl">chat</span>
-                                ENVIAR AGENDAMENTO NO WHATSAPP
+                                <span className="material-symbols-outlined text-2xl md:text-3xl">chat</span>
+                                ENVIAR NO WHATSAPP
                             </button>
                         </div>
                     )}
