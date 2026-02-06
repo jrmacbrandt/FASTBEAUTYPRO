@@ -63,7 +63,10 @@ export default function InventoryManagementPage() {
                     <h3 className="text-white text-xl font-black italic uppercase">Lista de Produtos</h3>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">Gerencie seus itens de revenda</p>
                 </div>
-                <button className="bg-[#f2b90d] text-black px-8 py-3 rounded-xl font-black text-sm shadow-xl shadow-[#f2b90d]/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+                <button
+                    onClick={() => setEditingProduct({ name: '', price: 0, current_stock: 0, min_stock: 0 })}
+                    className="bg-[#f2b90d] text-black px-8 py-3 rounded-xl font-black text-sm shadow-xl shadow-[#f2b90d]/20 flex items-center gap-2 hover:scale-105 active:scale-95 transition-all"
+                >
                     <span className="material-symbols-outlined">add_box</span>
                     ADICIONAR PRODUTO
                 </button>

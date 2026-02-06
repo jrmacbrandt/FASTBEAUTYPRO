@@ -18,6 +18,8 @@ export default function TeamManagementPage() {
     const [barbers, setBarbers] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'team' | 'pending'>('team');
+    const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
+    const [editingBarber, setEditingBarber] = useState<Profile | null>(null);
 
     useEffect(() => {
         fetchTeam();
@@ -84,7 +86,10 @@ export default function TeamManagementPage() {
                         SOLICITAÇÕES {pendingCount > 0 && <span className="bg-red-500 text-white size-5 flex items-center justify-center rounded-full text-[9px] font-bold">{pendingCount}</span>}
                     </button>
                 </div>
-                <button className="bg-[#f2b90d] text-black px-8 py-4 rounded-xl font-black text-xs shadow-lg shadow-[#f2b90d]/20 uppercase italic tracking-tight active:scale-95 transition-all">
+                <button
+                    onClick={() => setIsRegistrationModalOpen(true)}
+                    className="bg-[#f2b90d] text-black px-8 py-4 rounded-xl font-black text-xs shadow-lg shadow-[#f2b90d]/20 uppercase italic tracking-tight active:scale-95 transition-all"
+                >
                     CADASTRAR PROFISSIONAL
                 </button>
             </div>
@@ -131,7 +136,12 @@ export default function TeamManagementPage() {
                                         </>
                                     ) : (
                                         <div className="flex items-center gap-2 w-full md:w-auto">
-                                            <button className="flex-1 md:flex-none p-2 text-slate-400 hover:text-[#f2b90d] transition-colors"><span className="material-symbols-outlined text-[20px]">edit</span></button>
+                                            <button
+                                                onClick={() => setEditingBarber(barber)}
+                                                className="flex-1 md:flex-none p-2 text-slate-400 hover:text-[#f2b90d] transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-[20px]">edit</span>
+                                            </button>
                                             <button onClick={() => handleAction(barber.id, 'suspend')} className={`flex-[2] md:flex-none px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest ${barber.status === 'active' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'} active:scale-95 transition-all`}>
                                                 {barber.status === 'active' ? 'SUSPENDER' : 'REATIVAR'}
                                             </button>
@@ -149,6 +159,44 @@ export default function TeamManagementPage() {
                     </div>
                 )}
             </div>
+
+            {/* Modal de Cadastro/Edição */}
+            {(isRegistrationModalOpen || editingBarber) && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-[#121214] w-full max-w-xl rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                            <h3 className="text-xl text-white font-black italic uppercase italic tracking-tight">
+                                {editingBarber ? 'Editar Profissional' : 'Novo Profissional'}
+                            </h3>
+                            <button onClick={() => { setIsRegistrationModalOpen(false); setEditingBarber(null); }} className="size-10 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Nome Completo</label>
+                                <input type="text" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50" defaultValue={editingBarber?.full_name} placeholder="Ex: João da Silva" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão (%)</label>
+                                    <input type="number" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50" defaultValue={editingBarber?.commission_rate || 50} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Status</label>
+                                    <select className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50">
+                                        <option value="active">ATIVO</option>
+                                        <option value="suspended">SUSPENSO</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button className="w-full bg-[#f2b90d] text-black font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl shadow-[#f2b90d]/20 active:scale-95 transition-all">
+                                {editingBarber ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR CADASTRO'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

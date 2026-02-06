@@ -86,6 +86,53 @@ export default function EstablishmentSettingsPage() {
                 </div>
             )}
 
+            {activeTab === 'finance' && (
+                <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in">
+                    <h4 className="text-lg md:text-xl font-black italic uppercase text-white">Configurações Financeiras</h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                        {['PIX', 'CARTÃO', 'DINHEIRO', 'DÉBITO'].map(m => (
+                            <div key={m} className="p-6 rounded-2xl border border-white/5 bg-black/40 flex items-center justify-between">
+                                <span className="text-xs font-black uppercase tracking-widest text-white">{m}</span>
+                                <div className="w-12 h-6 bg-emerald-500/20 border border-emerald-500/30 rounded-full relative">
+                                    <div className="absolute right-1 top-1 size-4 bg-emerald-500 rounded-full shadow-lg"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'hours' && (
+                <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in">
+                    <h4 className="text-lg md:text-xl font-black italic uppercase text-white">Horário de Funcionamento</h4>
+                    <div className="space-y-4">
+                        {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map(day => (
+                            <div key={day} className="flex items-center justify-between p-4 rounded-xl border border-white/5 bg-black/20">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-24">{day}</span>
+                                <div className="flex items-center gap-4">
+                                    <input type="time" defaultValue="09:00" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-white outline-none" />
+                                    <span className="text-white/20 text-xs">até</span>
+                                    <input type="time" defaultValue="19:00" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-white outline-none" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'automation' && (
+                <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in text-center">
+                    <div className="size-20 bg-[#f2b90d]/10 rounded-3xl flex items-center justify-center text-[#f2b90d] mx-auto mb-4">
+                        <span className="material-symbols-outlined text-4xl">bolt</span>
+                    </div>
+                    <h4 className="text-lg md:text-xl font-black italic uppercase text-white">Agendamento Automático</h4>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest max-w-sm mx-auto">Configure a aprovação imediata para novos agendamentos realizados via link público.</p>
+                    <div className="flex justify-center pt-4">
+                        <button className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest">Ativado</button>
+                    </div>
+                </div>
+            )}
+
             <div className="flex justify-center pt-6 md:pt-10">
                 <button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white px-10 md:px-16 py-4 md:py-6 rounded-2xl md:rounded-[1.8rem] text-[13px] md:text-[15px] font-black uppercase tracking-widest italic shadow-xl md:shadow-2xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 md:gap-4 disabled:opacity-50">
                     <span className="material-symbols-outlined text-[20px] md:text-[24px]">save</span>{isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
