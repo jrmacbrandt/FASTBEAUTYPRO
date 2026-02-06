@@ -151,10 +151,10 @@ export default function MasterDashboardPage() {
                                                         )}
                                                         <button
                                                             onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
-                                                            className="absolute inset-0 bg-black/60 opacity-0 group-hover/logo:opacity-100 transition-opacity flex items-center justify-center"
+                                                            className="absolute top-0 right-0 size-6 bg-black/80 hover:bg-black/90 transition-all flex items-center justify-center rounded-bl-lg"
                                                             title="Editar Logo"
                                                         >
-                                                            <span className="material-symbols-outlined text-[14px] text-[#f2b90d]">edit</span>
+                                                            <span className="material-symbols-outlined text-[12px] text-[#f2b90d]">edit</span>
                                                         </button>
                                                     </div>
                                                     <div className="flex flex-col">
