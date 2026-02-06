@@ -307,7 +307,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                             <div className="relative">
                                 <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>lock</span>
                                 <input type={showPassword ? "text" : "password"} placeholder="........" className="w-full border rounded-xl py-3 pl-12 pr-12 focus:outline-none transition-all font-bold tracking-widest text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={password} onChange={(e) => setPassword(e.target.value)} required />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 opacity-40 hover:opacity-100 transition-opacity z-10" style={{ color: colors.text }}>
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-3 hover:opacity-100 transition-opacity z-30" style={{ color: colors.text }}>
                                     <span className="material-symbols-outlined text-[18px]">{showPassword ? 'visibility' : 'visibility_off'}</span>
                                 </button>
                             </div>
