@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import { Manrope } from "next/font/google";
 import "./globals.css";
-
-const manrope = Manrope({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "FastBeauty Pro - Barber & Salon",
@@ -17,9 +14,12 @@ export default function RootLayout({
   return (
     <html lang="pt-br">
       <head>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet" />
+        <style dangerouslySetInnerHTML={{ __html: `body { font-family: 'Manrope', sans-serif; }` }} />
       </head>
-      <body className={manrope.className}>
+      <body>
         {children}
       </body>
     </html>
