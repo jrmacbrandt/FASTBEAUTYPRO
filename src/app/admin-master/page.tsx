@@ -276,11 +276,14 @@ export default function MasterDashboardPage() {
                                     </div>
 
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">URL do Logo (Imagem)</label>
+                                        <label className="text-[11px] font-black uppercase ml-1" style={{ color: '#f2b90d' }}>🖼️ URL DO LOGO (IMAGEM)</label>
                                         <input
                                             type="text"
                                             value={selectedTenant.logo_url || ''}
-                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
+                                            onChange={(e) => {
+                                                console.log('Logo URL changed:', e.target.value);
+                                                setSelectedTenant({ ...selectedTenant, logo_url: e.target.value });
+                                            }}
                                             placeholder="https://exemplo.com/logo.png"
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
                                         />
