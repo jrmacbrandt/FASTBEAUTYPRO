@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 interface LoginProps {
@@ -321,7 +322,9 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 )}
 
                 <div className="mt-8 text-center border-t pt-4" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                    <p className="text-[8px] font-black uppercase tracking-[0.3em] opacity-40 italic" style={{ color: colors.textMuted }}>© 2024 {terms.footer}</p>
+                    <Link href="/login-master" className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity italic" style={{ color: colors.textMuted }}>
+                        Acessar Painel ADM MASTER
+                    </Link>
                 </div>
             </div>
         </div>
