@@ -37,7 +37,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     }, []);
 
     const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', inputBg: '#f5f3f0', buttonText: '#ffffff' }
+        ? { primary: '#7b438e', bg: '#f0ede9', text: '#1e1e1e', textMuted: '#555555', cardBg: '#ffffff', inputBg: '#e9e5e0', buttonText: '#ffffff' }
         : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#18181b', inputBg: '#0f0f10', buttonText: '#000000' };
 
     const terms = {

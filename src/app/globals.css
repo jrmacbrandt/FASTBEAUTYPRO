@@ -24,8 +24,8 @@
 
   /* Tema: Salão de Beleza */
   .theme-salon {
-    --color-background: 320 20% 98%;
-    /* Soft Rose/White */
+    --color-background: 320 15% 94%;
+    /* Subtle Grayish-Pink */
     --color-surface: 0 0% 100%;
     /* Pure White */
     --color-primary: 330 80% 60%;
@@ -33,7 +33,7 @@
     --color-primary-hover: 330 80% 70%;
     --color-text-main: 240 10% 20%;
     /* Dark Gray */
-    --color-text-muted: 240 10% 40%;
+    --color-text-muted: 240 10% 35%;
 
     --background: 320 20% 98%;
     --foreground: 240 10% 20%;
