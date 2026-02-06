@@ -199,7 +199,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500 overflow-hidden" style={{ backgroundColor: colors.bg }}>
-            <div className="w-full max-w-[400px] rounded-[2rem] p-6 md:p-8 relative border overflow-hidden bg-opacity-95 max-h-[90vh] overflow-y-auto custom-scrollbar" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
+            <div className="w-full max-w-[400px] rounded-[2rem] p-6 md:p-8 relative border overflow-hidden bg-opacity-95 max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
                 <button onClick={() => view === 'register' ? setView('login') : router.push('/sistema')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.inputBg, color: colors.text }}>
                     <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                 </button>
