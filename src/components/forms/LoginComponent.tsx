@@ -322,8 +322,8 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 )}
 
                 <div className="mt-8 text-center border-t pt-4" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                    <Link href="/login-master" className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity italic" style={{ color: colors.textMuted }}>
-                        Acessar Painel ADM MASTER
+                    <Link href={type === 'master' ? "/login" : "/login-master"} className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity italic" style={{ color: colors.textMuted }}>
+                        {type === 'master' ? "Acessar Painel ADMINISTRATIVO" : "Acessar Painel ADM MASTER"}
                     </Link>
                 </div>
             </div>
