@@ -1,74 +1,66 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
-const SystemGateway = () => {
+export const dynamic = 'force-dynamic';
+
+export default function SystemGateway() {
     const router = useRouter();
-    const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
 
-    useEffect(() => {
-        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) {
-            setBusinessType(savedType);
-            document.body.className = savedType === 'salon' ? 'theme-salon' : '';
-        }
-    }, []);
+    const handleChoice = (type: 'barber' | 'salon') => {
+        localStorage.setItem('elite_business_type', type);
+        document.body.className = type === 'salon' ? 'theme-salon' : '';
+        router.push('/login');
+    };
 
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214' };
-
-    const terms = {
-        description: 'FastBeauty Pro',
-        accessBtn: 'Acessar Painel Administrativo',
-        masterBtn: 'Painel Administrador Master'
+    const colors = {
+        amber: '#f2b90d',
+        purple: '#7b438e',
+        darkBg: '#09090b',
+        cardDark: '#18181b'
     };
 
     return (
-        <div className="h-screen w-screen flex items-center justify-center p-4 md:p-8 relative transition-colors duration-500 overflow-hidden" style={{ backgroundColor: colors.bg, color: colors.text }}>
-            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-20" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.primary}33, ${colors.primary})` }}></div>
-
-            <div className="w-full max-w-[400px] rounded-[2rem] p-6 md:p-8 relative border bg-opacity-95 z-10 animate-in fade-in zoom-in duration-700 shadow-2xl flex flex-col items-center text-center" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}>
-                <button onClick={() => router.push('/')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: businessType === 'salon' ? '#f5f3f0' : '#0f0f10', color: colors.text }}>
-                    <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
-                </button>
-                <div>
-                    <span className="material-symbols-outlined text-4xl mb-2 animate-pulse" style={{ color: colors.primary }}>
-                        {businessType === 'salon' ? 'spa' : 'content_cut'}
-                    </span>
-                </div>
-                <div className="space-y-1 w-full flex flex-col items-center">
-                    <h2 className="text-[14px] font-black italic tracking-[0.4em] uppercase opacity-60 leading-none" style={{ color: colors.primary }}>FastBeauty Pro</h2>
-                    <h3 className="text-4xl md:text-5xl font-black leading-[0.9] tracking-tighter italic uppercase" style={{ color: colors.text }}>
-                        Portal do <span style={{ color: colors.primary }}>Sistema</span> <br /> Premium
-                    </h3>
-                </div>
-
-                <p className="text-xs md:text-sm font-medium w-full max-w-[280px] mx-auto leading-relaxed opacity-50" style={{ color: colors.textMuted }}>
-                    Selecione seu ponto de acesso à <br className="hidden sm:block" /> <span className="font-bold italic" style={{ color: colors.text }}>Plataforma {terms.description}</span>.
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 md:p-6 text-center transition-colors duration-700 overflow-hidden" style={{ backgroundColor: colors.darkBg }}>
+            <div className="max-w-4xl w-full animate-in fade-in zoom-in-95 duration-700">
+                <h1 className="text-4xl sm:text-6xl md:text-8xl font-black text-white mb-4 md:mb-6 tracking-tighter italic uppercase leading-tight md:leading-none">
+                    FASTBEAUTY <span style={{ color: colors.amber }} className="italic">PRO</span>
+                </h1>
+                <p className="text-sm md:text-xl text-slate-400 mb-10 md:mb-16 max-w-2xl mx-auto leading-relaxed font-bold opacity-60">
+                    Selecione o seu perfil para uma experiência personalizada na gestão do seu negócio.
                 </p>
 
-                <div className="pt-4 w-full flex justify-center">
-                    <Link href="/login" className="w-full max-w-[320px] font-black py-5 rounded-2xl text-base md:text-lg shadow-lg transition-all hover:scale-[1.02] active:scale-95 uppercase tracking-tighter flex items-center justify-center" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#ffffff' : '#0a0a0b' }}>
-                        {terms.accessBtn}
-                    </Link>
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 max-w-3xl mx-auto">
+                    <button
+                        onClick={() => handleChoice('barber')}
+                        className="group relative border-2 border-transparent hover:border-[#f2b90d] p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] transition-all duration-500 shadow-2xl overflow-hidden text-left bg-[#18181b] active:scale-[0.98]"
+                    >
+                        <div className="absolute top-0 right-0 p-4 md:p-6 opacity-5 md:opacity-10 group-hover:opacity-20 transition-opacity">
+                            <span className="material-symbols-outlined text-6xl md:text-8xl" style={{ color: colors.amber }}>content_cut</span>
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-black italic mb-2 md:mb-3 uppercase tracking-tight" style={{ color: colors.amber }}>Barbearia</h3>
+                        <p className="text-slate-500 font-bold text-xs md:text-sm mb-6 md:mb-8 leading-snug">Estética clássica, tons Amber e gestão ágil.</p>
+                        <span className="inline-block px-6 md:px-8 py-2.5 md:py-3 rounded-xl font-black text-[10px] md:text-xs transition-transform group-hover:scale-105" style={{ backgroundColor: colors.amber, color: colors.darkBg }}>ACESSAR</span>
+                    </button>
 
-                <div className="pt-20 flex flex-col items-center gap-2 w-full">
-                    <Link href="/login-master" className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em] transition-opacity duration-300 opacity-20 hover:opacity-100 py-1" style={{ color: colors.textMuted }}>
-                        {terms.masterBtn}
-                    </Link>
-                    <div className="w-8 h-0.5 rounded-full" style={{ backgroundColor: `${colors.primary}1a` }}></div>
+                    <button
+                        onClick={() => handleChoice('salon')}
+                        className="group relative bg-white border-2 border-transparent hover:border-[#7b438e] p-6 md:p-10 rounded-[2rem] md:rounded-[2.5rem] transition-all duration-500 shadow-2xl overflow-hidden text-left active:scale-[0.98]"
+                    >
+                        <div className="absolute top-0 right-0 p-4 md:p-6 opacity-5 md:opacity-10 group-hover:opacity-20 transition-opacity">
+                            <span className="material-symbols-outlined text-6xl md:text-8xl" style={{ color: colors.purple }}>spa</span>
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-black italic mb-2 md:mb-3 uppercase tracking-tight" style={{ color: colors.purple }}>Salão & Spa</h3>
+                        <p className="text-slate-400 font-bold text-xs md:text-sm mb-6 md:mb-8 leading-snug">Minimalismo SpaLab, tons Ametista e delicadeza.</p>
+                        <span className="inline-block px-6 md:px-8 py-2.5 md:py-3 rounded-xl font-black text-[10px] md:text-xs text-white transition-transform group-hover:scale-105" style={{ backgroundColor: colors.purple }}>ACESSAR</span>
+                    </button>
                 </div>
             </div>
-
-            <div className="absolute -bottom-24 -left-24 size-96 blur-[120px] rounded-full pointer-events-none" style={{ backgroundColor: `${colors.primary}0d` }}></div>
-            <div className="absolute -top-24 -right-24 size-96 blur-[120px] rounded-full pointer-events-none" style={{ backgroundColor: `${colors.primary}0d` }}></div>
+            <div className="mt-12 md:mt-20 opacity-20">
+                <div className="w-10 md:w-12 h-1 rounded-full bg-white/20"></div>
+            </div>
         </div>
     );
-};
+}
 
-export default SystemGateway;
