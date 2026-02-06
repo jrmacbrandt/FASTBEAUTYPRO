@@ -31,13 +31,10 @@ const SystemGateway = () => {
         <div className="h-screen w-screen flex items-center justify-center p-4 md:p-8 relative transition-colors duration-500 overflow-hidden" style={{ backgroundColor: colors.bg, color: colors.text }}>
             <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-20" style={{ background: `linear-gradient(90deg, ${colors.primary}, ${colors.primary}33, ${colors.primary})` }}></div>
 
-            <div className="absolute left-4 top-4 z-50">
-                <button onClick={() => router.push('/')} className="size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group shadow-sm bg-opacity-50" style={{ backgroundColor: colors.cardBg, color: colors.text }}>
+            <div className="flex flex-col items-center justify-center text-center space-y-6 max-w-md w-full z-10 animate-in fade-in zoom-in duration-700 bg-white/5 p-8 md:p-14 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-2xl relative">
+                <button onClick={() => router.push('/')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.cardBg, color: colors.text }}>
                     <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                 </button>
-            </div>
-
-            <div className="flex flex-col items-center justify-center text-center space-y-6 max-w-md w-full z-10 animate-in fade-in zoom-in duration-700 bg-white/5 p-8 md:p-14 rounded-[2.5rem] border border-white/5 backdrop-blur-md shadow-2xl">
                 <div>
                     <span className="material-symbols-outlined text-4xl mb-2 animate-pulse" style={{ color: colors.primary }}>
                         {businessType === 'salon' ? 'spa' : 'content_cut'}
