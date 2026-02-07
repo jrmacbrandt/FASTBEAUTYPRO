@@ -1,72 +1,14 @@
 -- ============================================
--- FASTBEAUTYPRO: SCRIPT COMPLETO DE CONFIGURAÇÃO
+-- FASTBEAUTYPRO: CORREÇÃO COMPLETA DA TRIGGER
 -- Execute este script no SQL Editor do Supabase
 -- https://supabase.com/dashboard/project/sxunkigrburoknsshezl/sql/new
 -- ============================================
 
--- 1. Garantir extensões
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 2. Criar tabela tenants (caso não exista)
-CREATE TABLE IF NOT EXISTS public.tenants (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name text NOT NULL,
-    slug text UNIQUE NOT NULL,
-    business_type text DEFAULT 'barber',
-    active boolean DEFAULT true,
-    has_paid boolean DEFAULT false,
-    logo_url text,
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
--- 3. Criar tabela profiles (caso não exista)
-CREATE TABLE IF NOT EXISTS public.profiles (
-    id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-    tenant_id uuid REFERENCES public.tenants(id) ON DELETE SET NULL,
-    full_name text,
-    cpf text,
-    email text,
-    role text DEFAULT 'barber',
-    status text DEFAULT 'pending',
-    avatar_url text,
-    created_at timestamptz DEFAULT now(),
-    updated_at timestamptz DEFAULT now()
-);
-
--- 4. Habilitar RLS
-ALTER TABLE public.tenants ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-
--- 5. Remover políticas antigas (para evitar conflitos)
-DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
-DROP POLICY IF EXISTS "Service can insert profiles" ON public.profiles;
-DROP POLICY IF EXISTS "Enable insert for authenticated users only" ON public.profiles;
-DROP POLICY IF EXISTS "Service can insert tenants" ON public.tenants;
-DROP POLICY IF EXISTS "Users can view their tenant" ON public.tenants;
-DROP POLICY IF EXISTS "Enable insert for service role" ON public.tenants;
-
--- 6. Criar políticas de acesso
--- Permitir que o serviço crie perfis (via trigger) - Essencial para o signup
-CREATE POLICY "Enable insert for service role" ON public.profiles FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can view their own profile" ON public.profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update their own profile" ON public.profiles FOR UPDATE USING (auth.uid() = id);
-
--- Permitir que o serviço crie tenants (via trigger) - Essencial para o signup
-CREATE POLICY "Enable insert for service role" ON public.tenants FOR INSERT WITH CHECK (true);
-CREATE POLICY "Users can view their tenant" ON public.tenants FOR SELECT USING (
-    id IN (SELECT tenant_id FROM public.profiles WHERE id = auth.uid())
-);
-CREATE POLICY "Users can update their tenant" ON public.tenants FOR UPDATE USING (
-    id IN (SELECT tenant_id FROM public.profiles WHERE id = auth.uid() AND role = 'owner')
-);
-
--- 7. Remover trigger antigo
+-- 1. Remover triggers e funções antigas
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
-DROP FUNCTION IF EXISTS public.handle_new_user();
+DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
--- 8. Criar a função handle_new_user corrigida
+-- 2. Criar a função handle_new_user corrigida
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -76,35 +18,50 @@ DECLARE
     new_tenant_id uuid;
     v_role text;
     v_status text;
+    v_shop_name text;
+    v_shop_slug text;
 BEGIN
-    -- Extrair o role do metadata
+    -- Extrair o role do metadata (com fallback para 'barber')
     v_role := COALESCE(NEW.raw_user_meta_data->>'role', 'barber');
+    
+    -- Log para debug
+    RAISE NOTICE 'Creating user with role: %, email: %', v_role, NEW.email;
     
     -- Definir status baseado no role
     IF v_role = 'owner' THEN
         v_status := 'active';
         
+        -- Extrair nome da loja e gerar slug
+        v_shop_name := COALESCE(NEW.raw_user_meta_data->>'shop_name', 'Minha Loja');
+        v_shop_slug := lower(regexp_replace(v_shop_name, '[^a-zA-Z0-9]+', '-', 'g'));
+        
+        RAISE NOTICE 'Creating tenant: name=%, slug=%', v_shop_name, v_shop_slug;
+        
         -- Criar o tenant para proprietários
         INSERT INTO public.tenants (
-            id,
             name,
             slug,
             business_type,
             active,
             has_paid
         ) VALUES (
-            uuid_generate_v4(),
-            COALESCE(NEW.raw_user_meta_data->>'shop_name', 'Minha Loja'),
-            COALESCE(NEW.raw_user_meta_data->>'shop_slug', 'loja-' || substr(md5(random()::text), 1, 8)),
+            v_shop_name,
+            v_shop_slug,
             'barber',
             true,
             false
         )
         RETURNING id INTO new_tenant_id;
+        
+        RAISE NOTICE 'Tenant created with ID: %', new_tenant_id;
     ELSE
         v_status := 'pending';
-        -- Para profissionais, usa o tenant_id passado
-        new_tenant_id := (NEW.raw_user_meta_data->>'tenant_id')::uuid;
+        -- Para profissionais, usa o tenant_id passado nos metadados
+        BEGIN
+            new_tenant_id := (NEW.raw_user_meta_data->>'tenant_id')::uuid;
+        EXCEPTION WHEN OTHERS THEN
+            new_tenant_id := NULL;
+        END;
     END IF;
 
     -- Criar o perfil do usuário
@@ -127,22 +84,25 @@ BEGIN
         v_status,
         COALESCE(NEW.raw_user_meta_data->>'image_url', '')
     );
+    
+    RAISE NOTICE 'Profile created for user: %', NEW.id;
 
     RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
-    -- Log do erro (opcional, pode ser visto nos logs do Supabase)
-    RAISE LOG 'Erro ao criar perfil para usuário %: %', NEW.id, SQLERRM;
-    RETURN NEW;
+    -- Log detalhado do erro
+    RAISE WARNING 'Error in handle_new_user for %: % (SQLSTATE: %)', NEW.email, SQLERRM, SQLSTATE;
+    -- Re-raise o erro para que o signup falhe e mostre o erro
+    RAISE;
 END;
 $$;
 
--- 9. Criar a trigger
+-- 3. Criar a trigger
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_new_user();
 
--- 10. Verificar se a trigger foi criada
+-- 4. Verificar se a trigger foi criada
 SELECT 
     trg.tgname AS trigger_name,
     proc.proname AS function_name,
@@ -150,3 +110,7 @@ SELECT
 FROM pg_trigger trg
 JOIN pg_proc proc ON trg.tgfoid = proc.oid
 WHERE trg.tgname = 'on_auth_user_created';
+
+-- 5. Mostrar as tabelas existentes
+SELECT 'Tabelas criadas:' AS info;
+SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
