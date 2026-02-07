@@ -248,7 +248,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                         <h2 className="text-xl font-black italic uppercase" style={{ color: colors.text }}>Solicitação Enviada!</h2>
                         <p className="text-xs font-bold opacity-60 leading-relaxed" style={{ color: colors.textMuted }}>
                             {activeTab === 'pro'
-                                ? 'Seus dados foram enviados. Aguarde a aprovação do administrador do estabelecimento para acessar o painel.'
+                                ? 'Usuário aguardando aprovação do Administrador da loja.'
                                 : 'Sua conta foi criada! Realize o login para acessar o painel e concluir a configuração do seu estabelecimento.'}
                         </p>
                         <button onClick={() => { setView('login'); setRegisterSuccess(false); }} className="w-full font-black py-4 rounded-xl text-xs uppercase italic tracking-widest" style={{ backgroundColor: colors.primary, color: colors.buttonText }}>
@@ -317,7 +317,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                                 </>
                                             )}
                                         </label>
-                                        {uploadStatus === 'success' && !previewUrl && (
+                                        {uploadStatus === 'success' && (
                                             <div className="flex items-center gap-1.5 mt-2 ml-1 text-emerald-500 animate-in fade-in slide-in-from-top-1">
                                                 <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
                                                 <span className="text-[9px] font-black uppercase italic">Carregado com sucesso!</span>

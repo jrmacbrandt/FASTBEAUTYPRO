@@ -86,7 +86,7 @@ export default function PendingPaymentPage() {
                     </div>
 
                     <h1 className="text-xl md:text-2xl font-black mb-4 italic tracking-tight uppercase text-center leading-tight" style={{ color: colors.text }}>
-                        Faça o pagamento para o acesso <br /> completo ao sistema
+                        Faça o pagamento para o acesso completo ao sistema
                     </h1>
 
                     <div className="flex items-center gap-4 w-full mb-4">
@@ -96,7 +96,7 @@ export default function PendingPaymentPage() {
                     </div>
 
                     <p className="text-xs font-bold opacity-60 text-center uppercase tracking-widest leading-relaxed mb-8" style={{ color: colors.text }}>
-                        Digite seu <span style={{ color: colors.primary }}>CUPOM</span> <br /> de acesso.
+                        Digite seu <span style={{ color: colors.primary }}>CUPOM</span> de acesso.
                     </p>
                 </div>
 
