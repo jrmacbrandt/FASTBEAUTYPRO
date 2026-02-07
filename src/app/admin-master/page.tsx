@@ -275,19 +275,37 @@ export default function MasterDashboardPage() {
                                         />
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[11px] font-black uppercase ml-1" style={{ color: '#f2b90d' }}>🖼️ URL DO LOGO (IMAGEM)</label>
-                                        <input
-                                            type="text"
-                                            value={selectedTenant.logo_url || ''}
-                                            onChange={(e) => {
-                                                console.log('Logo URL changed:', e.target.value);
-                                                setSelectedTenant({ ...selectedTenant, logo_url: e.target.value });
-                                            }}
-                                            placeholder="https://exemplo.com/logo.png"
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
-                                        />
+                                    {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - INICIO */}
+                                    <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/10">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-xl">🖼️</span>
+                                            <label className="text-[11px] font-black uppercase text-[#f2b90d]">
+                                                Alterar Logo do Estabelecimento
+                                            </label>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                value={selectedTenant.logo_url || ''}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
+                                                placeholder="Cole a URL da imagem aqui..."
+                                                className="w-full bg-black/60 border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f2b90d] transition-all"
+                                            />
+
+                                            <div className="flex flex-col gap-1 text-[10px] text-zinc-400 font-medium px-1">
+                                                <p className="flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[12px]">info</span>
+                                                    Formatos aceitos: JPG, PNG, WEBP
+                                                </p>
+                                                <p className="flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[12px]">fit_screen</span>
+                                                    Tamanho recomendado: 500x500px (Quadrado)
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
+                                    {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - FIM */}
 
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Slug (URL de Acesso)</label>
@@ -296,102 +314,116 @@ export default function MasterDashboardPage() {
                                             <input
                                                 type="text"
                                                 value={selectedTenant.slug}
-                                                readOnly
-                                                className="w-full bg-black/20 border border-white/5 rounded-xl px-4 pl-7 py-3 text-sm font-bold text-[#f2b90d] opacity-80"
+                                                onChange={(e) => {
+                                                    const newSlug = normalizeSlug(e.target.value);
+                                                    setSelectedTenant({ ...selectedTenant, slug: newSlug });
+                                                }}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pl-8 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all font-mono"
                                             />
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tipo de Negócio</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tipo de Negócio</label>
+                                        <div className="relative">
                                             <select
                                                 value={selectedTenant.business_type}
                                                 onChange={(e) => setSelectedTenant({ ...selectedTenant, business_type: e.target.value })}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all appearance-none cursor-pointer"
                                             >
-                                                <option value="barber" className="bg-white text-black font-bold">BARBEARIA</option>
-                                                <option value="salon" className="bg-white text-black font-bold">SALÃO</option>
+                                                <option className="bg-white text-black font-bold" value="barbearia">Barbearia</option>
+                                                <option className="bg-white text-black font-bold" value="salao">Salão de Beleza</option>
+                                                <option className="bg-white text-black font-bold" value="estetica">Clínica Estética</option>
+                                                <option className="bg-white text-black font-bold" value="esmalteria">Esmalteria</option>
+                                                <option className="bg-white text-black font-bold" value="spa">SPA</option>
                                             </select>
+                                            <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
                                         </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Status Pagamento</label>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Status Pagamento</label>
+                                        <div className="relative">
                                             <select
                                                 value={selectedTenant.has_paid ? 'paid' : 'pending'}
                                                 onChange={(e) => setSelectedTenant({ ...selectedTenant, has_paid: e.target.value === 'paid' })}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
                                             >
-                                                <option value="paid" className="bg-white text-emerald-600 font-bold">PAGO / OK</option>
-                                                <option value="pending" className="bg-white text-red-600 font-bold">PENDENTE</option>
+                                                <option className="bg-white text-emerald-600 font-bold" value="paid">PAGO / OK</option>
+                                                <option className="bg-white text-red-600 font-bold" value="pending">PENDENTE</option>
                                             </select>
+                                            <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
-                                            <input
-                                                type="text"
-                                                defaultValue={selectedTenant.phone}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
-                                                placeholder="(00) 00000-0000"
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
-                                            <input
-                                                type="text"
-                                                defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
-                                                onChange={(e) => {
-                                                    const newProfiles = [...(selectedTenant.profiles || [])];
-                                                    if (newProfiles[0]) {
-                                                        newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
-                                                    } else {
-                                                        newProfiles[0] = { full_name: e.target.value };
-                                                    }
-                                                    setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
-                                                }}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
                                         <input
                                             type="text"
-                                            defaultValue={selectedTenant.address}
-                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
-                                            placeholder="Rua, Número, Bairro, Cidade"
+                                            defaultValue={selectedTenant.phone}
+                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
+                                            placeholder="(00) 00000-0000"
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                         />
                                     </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
+                                        <input
+                                            type="text"
+                                            defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
+                                            onChange={(e) => {
+                                                const newProfiles = [...(selectedTenant.profiles || [])];
+                                                if (newProfiles[0]) {
+                                                    newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
+                                                } else {
+                                                    newProfiles[0] = { full_name: e.target.value };
+                                                }
+                                                setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
+                                    <input
+                                        type="text"
+                                        defaultValue={selectedTenant.address}
+                                        onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
+                                        placeholder="Rua, Número, Bairro, Cidade"
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                    />
                                 </div>
                             </div>
-                        </div>
 
-                        <div className="grid grid-cols-2 gap-3 mt-8">
-                            <button
-                                onClick={() => setIsEditModalOpen(false)}
-                                className="bg-white/5 text-slate-400 font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:text-white transition-all"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                disabled={saving}
-                                onClick={() => handleAction('save', {
-                                    name: selectedTenant.name,
-                                    slug: selectedTenant.slug,
-                                    business_type: selectedTenant.business_type,
-                                    has_paid: selectedTenant.has_paid,
-                                    phone: selectedTenant.phone,
-                                    address: selectedTenant.address
-                                })}
-                                className="bg-[#f2b90d] text-black font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-                            >
-                                {saving ? 'Salvando...' : 'Salvar Alterações'}
-                            </button>
+                            <div className="grid grid-cols-2 gap-3 mt-8">
+                                <button
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="bg-white/5 text-slate-400 font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:text-white transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    disabled={saving}
+                                    onClick={() => handleAction('save', {
+                                        name: selectedTenant.name,
+                                        slug: selectedTenant.slug,
+                                        business_type: selectedTenant.business_type,
+                                        has_paid: selectedTenant.has_paid,
+                                        phone: selectedTenant.phone,
+                                        address: selectedTenant.address,
+                                        owner_name: selectedTenant.profiles?.[0]?.full_name,
+                                        logo_url: selectedTenant.logo_url
+                                    })}
+                                    className="bg-[#f2b90d] text-black font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                                >
+                                    {saving ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

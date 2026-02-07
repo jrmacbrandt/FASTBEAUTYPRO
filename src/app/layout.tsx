@@ -11,6 +11,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Build Timestamp: 2026-02-06T13:06:00 (Forcing Cache Revalidation)
   return (
     <html lang="pt-br">
       <head>
