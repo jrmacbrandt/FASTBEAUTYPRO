@@ -160,27 +160,12 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 tenantId = tenant.id;
             }
 
-            // 2. Auth Sign Up
-            const { data: authData, error: authError } = await supabase.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        full_name: fullName,
-                    }
-                }
-            });
-
-            if (authError) throw authError;
-            if (!authData.user) throw new Error('Erro ao criar usuário');
-
-            const userId = authData.user.id;
-
-            // 3. Image Upload
+            // 2. Image Upload
             let imageUrl = '';
             if (file) {
                 const bucket = activeTab === 'admin' ? 'logos' : 'avatars';
-                const fileName = `${userId}-${Math.random()}.webp`;
+                // Use a temporary unique name that we'll pass to trigger
+                const fileName = `pending-${Math.random()}.webp`;
                 const { error: uploadError } = await supabase.storage
                     .from(bucket)
                     .upload(fileName, file, {
@@ -194,42 +179,27 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 }
             }
 
-            // 4. Admin Specific: Create Tenant
-            if (activeTab === 'admin') {
-                const baseSlug = shopName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
-                // Add a small random suffix to ensure uniqueness if the base slug might conflict
-                const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
-                const { data: newTenant, error: tenantError } = await supabase
-                    .from('tenants')
-                    .insert({
-                        name: shopName,
-                        slug: slug,
-                        logo_url: imageUrl,
-                        has_paid: false,
-                        subscription_status: 'trialing'
-                    })
-                    .select()
-                    .single();
+            // 3. Auth Sign Up with metadata (Trigger will handle Tenant and Profile creation)
+            const baseSlug = shopName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+            const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
 
-                if (tenantError) throw tenantError;
-                tenantId = newTenant.id;
-            }
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        full_name: fullName,
+                        role: activeTab === 'admin' ? 'owner' : 'barber',
+                        cpf: cpf,
+                        shop_name: shopName,
+                        shop_slug: slug,
+                        image_url: imageUrl,
+                        tenant_id: tenantId // Only for barbers
+                    }
+                }
+            });
 
-            // 5. Create Profile
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert({
-                    id: userId,
-                    tenant_id: tenantId,
-                    full_name: fullName,
-                    email: email,
-                    cpf: cpf,
-                    role: activeTab === 'admin' ? 'owner' : 'barber',
-                    status: activeTab === 'admin' ? 'active' : 'pending',
-                    avatar_url: activeTab === 'pro' ? imageUrl : null
-                });
-
-            if (profileError) throw profileError;
+            if (authError) throw authError;
 
             if (activeTab === 'admin') {
                 router.push('/pagamento-pendente');
