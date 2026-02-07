@@ -245,7 +245,13 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             if (authError) throw authError;
 
             if (activeTab === 'admin') {
-                router.push('/pagamento-pendente');
+                // Auto-login and redirect owner to payment page
+                const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+                if (!loginError) {
+                    router.push('/pagamento-pendente');
+                } else {
+                    setRegisterSuccess(true);
+                }
             } else {
                 setRegisterSuccess(true);
             }
@@ -304,32 +310,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
                         {view === 'register' && (
                             <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME COMPLETO</label>
-                                    <div className="relative">
-                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>person</span>
-                                        <input type="text" placeholder="Seu nome" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={fullName} onChange={(e) => setFullName(e.target.value)} required />
-                                    </div>
-                                </div>
-
-                                {activeTab === 'admin' && (
-                                    <div className="space-y-1.5">
-                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
-                                        <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>storefront</span>
-                                            <input type="text" placeholder="Nome da Loja" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={shopName} onChange={(e) => setShopName(e.target.value)} required />
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="space-y-1.5">
-                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'CPF / CNPJ' : 'CPF'}</label>
-                                    <div className="relative">
-                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>fingerprint</span>
-                                        <input type="text" placeholder="000.000.000-00" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={cpf} onChange={(e) => setCpf(e.target.value)} required />
-                                    </div>
-                                </div>
-
+                                {/* Professional: Establishment search FIRST */}
                                 {activeTab === 'pro' && (
                                     <>
                                         <div className="space-y-1.5">
@@ -396,6 +377,32 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                         </div>
                                     </>
                                 )}
+
+                                <div className="space-y-1.5">
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME COMPLETO</label>
+                                    <div className="relative">
+                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>person</span>
+                                        <input type="text" placeholder="Seu nome" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+                                    </div>
+                                </div>
+
+                                {activeTab === 'admin' && (
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
+                                        <div className="relative">
+                                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>storefront</span>
+                                            <input type="text" placeholder="Nome da Loja" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={shopName} onChange={(e) => setShopName(e.target.value)} required />
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="space-y-1.5">
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'CPF / CNPJ' : 'CPF'}</label>
+                                    <div className="relative">
+                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>fingerprint</span>
+                                        <input type="text" placeholder="000.000.000-00" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={cpf} onChange={(e) => setCpf(e.target.value)} required />
+                                    </div>
+                                </div>
 
                                 <div className="space-y-1.5">
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'LOGO DA LOJA' : 'SUA FOTO DE PERFIL'}</label>
