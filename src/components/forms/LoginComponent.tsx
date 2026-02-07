@@ -31,6 +31,12 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [registerSuccess, setRegisterSuccess] = useState(false);
 
+    // Professional tenant search states
+    const [tenantSearchQuery, setTenantSearchQuery] = useState('');
+    const [tenantSuggestions, setTenantSuggestions] = useState<Array<{id: string, name: string, slug: string}>>([]);
+    const [selectedTenant, setSelectedTenant] = useState<{id: string, name: string, slug: string} | null>(null);
+    const [searchingTenant, setSearchingTenant] = useState(false);
+
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
         if (savedType) {
@@ -38,6 +44,42 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             document.body.className = savedType === 'salon' ? 'theme-salon' : '';
         }
     }, []);
+
+    // Debounced tenant search for professionals
+    useEffect(() => {
+        if (activeTab !== 'pro' || tenantSearchQuery.length < 2) {
+            setTenantSuggestions([]);
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            setSearchingTenant(true);
+            try {
+                const { data, error } = await supabase
+                    .from('tenants')
+                    .select('id, name, slug')
+                    .ilike('name', `%${tenantSearchQuery}%`)
+                    .limit(5);
+
+                if (!error && data) {
+                    setTenantSuggestions(data);
+                }
+            } catch (e) {
+                console.error('Error searching tenants:', e);
+            } finally {
+                setSearchingTenant(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(timer);
+    }, [tenantSearchQuery, activeTab]);
+
+    const handleSelectTenant = (tenant: {id: string, name: string, slug: string}) => {
+        setSelectedTenant(tenant);
+        setTenantSearchQuery(tenant.name);
+        setShopSlug(tenant.slug);
+        setTenantSuggestions([]);
+    };
 
     const colors = businessType === 'salon'
         ? { primary: '#7b438e', bg: '#decad4', text: '#1e1e1e', textMuted: '#444444', cardBg: '#ffffff', inputBg: '#d3bcc8', buttonText: '#ffffff' }
@@ -146,18 +188,12 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             // 1. Validation for professional
             let tenantId: string | null = null;
             if (activeTab === 'pro') {
-                const { data: tenant, error: tError } = await supabase
-                    .from('tenants')
-                    .select('id')
-                    .eq('slug', shopSlug)
-                    .single();
-
-                if (tError || !tenant) {
-                    setError('A loja informada não foi encontrada. Verifique o link/slug digitado.');
+                if (!selectedTenant) {
+                    setError('Selecione uma loja da lista de sugestões.');
                     setLoading(false);
                     return;
                 }
-                tenantId = tenant.id;
+                tenantId = selectedTenant.id;
             }
 
             // 2. Image Upload
@@ -288,13 +324,70 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                 </div>
 
                                 {activeTab === 'pro' && (
-                                    <div className="space-y-1.5">
-                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>SLUG DA LOJA (DESEJADO)</label>
-                                        <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>link</span>
-                                            <input type="text" placeholder="ex: barbearia-elite" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={shopSlug} onChange={(e) => setShopSlug(e.target.value)} required />
+                                    <>
+                                        <div className="space-y-1.5">
+                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
+                                            <div className="relative">
+                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>store</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Digite o nome da loja..." 
+                                                    className="w-full border rounded-xl py-3 pl-12 pr-10 focus:outline-none transition-all font-bold text-xs" 
+                                                    style={{ backgroundColor: colors.inputBg, borderColor: selectedTenant ? colors.primary : (businessType === 'salon' ? '#7b438e20' : '#ffffff0d'), color: colors.text }} 
+                                                    value={tenantSearchQuery} 
+                                                    onChange={(e) => {
+                                                        setTenantSearchQuery(e.target.value);
+                                                        if (selectedTenant && e.target.value !== selectedTenant.name) {
+                                                            setSelectedTenant(null);
+                                                            setShopSlug('');
+                                                        }
+                                                    }} 
+                                                    required 
+                                                />
+                                                {searchingTenant && (
+                                                    <span className="material-symbols-outlined absolute right-4 top-3 text-[18px] animate-spin" style={{ color: colors.primary }}>progress_activity</span>
+                                                )}
+                                                {selectedTenant && (
+                                                    <span className="material-symbols-outlined absolute right-4 top-3 text-[18px] text-emerald-500">check_circle</span>
+                                                )}
+                                            </div>
+                                            {tenantSuggestions.length > 0 && (
+                                                <div className="absolute z-50 w-[calc(100%-3rem)] ml-6 mt-1 rounded-xl border overflow-hidden shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e40' : '#ffffff1a' }}>
+                                                    {tenantSuggestions.map((t) => (
+                                                        <button
+                                                            key={t.id}
+                                                            type="button"
+                                                            onClick={() => handleSelectTenant(t)}
+                                                            className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-3 border-b last:border-b-0"
+                                                            style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm" style={{ color: colors.primary }}>storefront</span>
+                                                            <div>
+                                                                <div className="text-xs font-bold" style={{ color: colors.text }}>{t.name}</div>
+                                                                <div className="text-[10px] opacity-50" style={{ color: colors.textMuted }}>{t.slug}</div>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
-                                    </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>SLUG DA LOJA</label>
+                                            <div className="relative">
+                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>link</span>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="Será preenchido automaticamente" 
+                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs cursor-not-allowed" 
+                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text, opacity: 0.7 }} 
+                                                    value={shopSlug} 
+                                                    readOnly 
+                                                    disabled
+                                                />
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
 
                                 <div className="space-y-1.5">
