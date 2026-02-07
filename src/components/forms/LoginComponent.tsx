@@ -49,10 +49,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     useEffect(() => {
         console.log('[TenantSearch] Query:', tenantSearchQuery, 'ActiveTab:', activeTab, 'View:', view);
 
-        if (activeTab !== 'pro' || view !== 'register' || tenantSearchQuery.length < 2) {
-            setTenantSuggestions([]);
-            return;
-        }
+        if (activeTab !== 'pro' || view !== 'register' || tenantSearchQuery.length < 2 || selectedTenant) { \n            setTenantSuggestions([]); \n            return; \n }
 
         const timer = setTimeout(async () => {
             setSearchingTenant(true);
@@ -79,7 +76,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [tenantSearchQuery, activeTab, view]);
+    }, [tenantSearchQuery, activeTab, view, selectedTenant]);
 
     const handleSelectTenant = (tenant: { id: string, name: string, slug: string }) => {
         setSelectedTenant(tenant);
