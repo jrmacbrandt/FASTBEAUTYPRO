@@ -33,8 +33,8 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
     // Professional tenant search states
     const [tenantSearchQuery, setTenantSearchQuery] = useState('');
-    const [tenantSuggestions, setTenantSuggestions] = useState<Array<{id: string, name: string, slug: string}>>([]);
-    const [selectedTenant, setSelectedTenant] = useState<{id: string, name: string, slug: string} | null>(null);
+    const [tenantSuggestions, setTenantSuggestions] = useState<Array<{ id: string, name: string, slug: string }>>([]);
+    const [selectedTenant, setSelectedTenant] = useState<{ id: string, name: string, slug: string } | null>(null);
     const [searchingTenant, setSearchingTenant] = useState(false);
 
     useEffect(() => {
@@ -47,13 +47,16 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
     // Debounced tenant search for professionals
     useEffect(() => {
-        if (activeTab !== 'pro' || tenantSearchQuery.length < 2) {
+        console.log('[TenantSearch] Query:', tenantSearchQuery, 'ActiveTab:', activeTab, 'View:', view);
+
+        if (activeTab !== 'pro' || view !== 'register' || tenantSearchQuery.length < 2) {
             setTenantSuggestions([]);
             return;
         }
 
         const timer = setTimeout(async () => {
             setSearchingTenant(true);
+            console.log('[TenantSearch] Searching for:', tenantSearchQuery);
             try {
                 const { data, error } = await supabase
                     .from('tenants')
@@ -61,20 +64,24 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                     .ilike('name', `%${tenantSearchQuery}%`)
                     .limit(5);
 
-                if (!error && data) {
+                console.log('[TenantSearch] Result:', { data, error });
+
+                if (error) {
+                    console.error('[TenantSearch] Error:', error);
+                } else if (data) {
                     setTenantSuggestions(data);
                 }
             } catch (e) {
-                console.error('Error searching tenants:', e);
+                console.error('[TenantSearch] Exception:', e);
             } finally {
                 setSearchingTenant(false);
             }
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [tenantSearchQuery, activeTab]);
+    }, [tenantSearchQuery, activeTab, view]);
 
-    const handleSelectTenant = (tenant: {id: string, name: string, slug: string}) => {
+    const handleSelectTenant = (tenant: { id: string, name: string, slug: string }) => {
         setSelectedTenant(tenant);
         setTenantSearchQuery(tenant.name);
         setShopSlug(tenant.slug);
@@ -329,20 +336,20 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                             <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>store</span>
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Digite o nome da loja..." 
-                                                    className="w-full border rounded-xl py-3 pl-12 pr-10 focus:outline-none transition-all font-bold text-xs" 
-                                                    style={{ backgroundColor: colors.inputBg, borderColor: selectedTenant ? colors.primary : (businessType === 'salon' ? '#7b438e20' : '#ffffff0d'), color: colors.text }} 
-                                                    value={tenantSearchQuery} 
+                                                <input
+                                                    type="text"
+                                                    placeholder="Digite o nome da loja..."
+                                                    className="w-full border rounded-xl py-3 pl-12 pr-10 focus:outline-none transition-all font-bold text-xs"
+                                                    style={{ backgroundColor: colors.inputBg, borderColor: selectedTenant ? colors.primary : (businessType === 'salon' ? '#7b438e20' : '#ffffff0d'), color: colors.text }}
+                                                    value={tenantSearchQuery}
                                                     onChange={(e) => {
                                                         setTenantSearchQuery(e.target.value);
                                                         if (selectedTenant && e.target.value !== selectedTenant.name) {
                                                             setSelectedTenant(null);
                                                             setShopSlug('');
                                                         }
-                                                    }} 
-                                                    required 
+                                                    }}
+                                                    required
                                                 />
                                                 {searchingTenant && (
                                                     <span className="material-symbols-outlined absolute right-4 top-3 text-[18px] animate-spin" style={{ color: colors.primary }}>progress_activity</span>
@@ -376,13 +383,13 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                             <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>SLUG DA LOJA</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>link</span>
-                                                <input 
-                                                    type="text" 
-                                                    placeholder="Será preenchido automaticamente" 
-                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs cursor-not-allowed" 
-                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text, opacity: 0.7 }} 
-                                                    value={shopSlug} 
-                                                    readOnly 
+                                                <input
+                                                    type="text"
+                                                    placeholder="Será preenchido automaticamente"
+                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs cursor-not-allowed"
+                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text, opacity: 0.7 }}
+                                                    value={shopSlug}
+                                                    readOnly
                                                     disabled
                                                 />
                                             </div>
