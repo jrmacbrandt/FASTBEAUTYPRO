@@ -207,7 +207,6 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             let imageUrl = '';
             if (file) {
                 const bucket = activeTab === 'admin' ? 'logos' : 'avatars';
-                // Use a temporary unique name that we'll pass to trigger
                 const fileName = `pending-${Math.random()}.webp`;
                 const { error: uploadError } = await supabase.storage
                     .from(bucket)
@@ -222,10 +221,11 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 }
             }
 
-            // 3. Auth Sign Up with metadata (Trigger will handle Tenant and Profile creation)
+            // 3. Generate slug for new tenant (admin only)
             const baseSlug = shopName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
             const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
 
+            // 4. Auth Sign Up (trigger not working, we'll create profile manually)
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
@@ -233,17 +233,58 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                     data: {
                         full_name: fullName,
                         role: activeTab === 'admin' ? 'owner' : 'barber',
-                        cpf: cpf,
-                        shop_name: shopName,
-                        shop_slug: slug,
-                        image_url: imageUrl,
-                        tenant_id: tenantId // Only for barbers
                     }
                 }
             });
 
             if (authError) throw authError;
+            if (!authData.user) throw new Error('Erro ao criar usuário.');
 
+            const userId = authData.user.id;
+
+            // 5. Create Tenant (for admin/owner only)
+            if (activeTab === 'admin') {
+                const { data: newTenant, error: tenantError } = await supabase
+                    .from('tenants')
+                    .insert({
+                        name: shopName,
+                        slug: slug,
+                        business_type: 'barber',
+                        active: true,
+                        has_paid: false,
+                        logo_url: imageUrl || null,
+                        subscription_status: 'trialing'
+                    })
+                    .select('id')
+                    .single();
+
+                if (tenantError) {
+                    console.error('Tenant creation error:', tenantError);
+                    throw new Error('Erro ao criar estabelecimento: ' + tenantError.message);
+                }
+                tenantId = newTenant.id;
+            }
+
+            // 6. Create Profile
+            const { error: profileError } = await supabase
+                .from('profiles')
+                .insert({
+                    id: userId,
+                    tenant_id: tenantId,
+                    full_name: fullName,
+                    cpf: cpf,
+                    email: email,
+                    role: activeTab === 'admin' ? 'owner' : 'barber',
+                    status: activeTab === 'admin' ? 'active' : 'pending',
+                    avatar_url: activeTab === 'pro' ? imageUrl : null
+                });
+
+            if (profileError) {
+                console.error('Profile creation error:', profileError);
+                throw new Error('Erro ao criar perfil: ' + profileError.message);
+            }
+
+            // 7. Success flow
             if (activeTab === 'admin') {
                 // Auto-login and redirect owner to payment page
                 const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
@@ -262,6 +303,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             setLoading(false);
         }
     };
+
 
     return (
         <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
