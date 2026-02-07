@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { processImage } from '@/lib/image-processing';
 
 interface LoginProps {
     type: 'standard' | 'master';
@@ -26,6 +27,8 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     const [shopSlug, setShopSlug] = useState('');
     const [shopName, setShopName] = useState('');
     const [file, setFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [registerSuccess, setRegisterSuccess] = useState(false);
 
     useEffect(() => {
@@ -87,15 +90,50 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 // For now, let's proceed but we'll need a blocker in the admin layout
             }
 
-            if (type === 'master') {
-                router.push('/admin-master');
-            } else if (profile?.role === 'owner') {
-                router.push('/admin');
+            if (profile?.role === 'owner') {
+                if ((profile as any).tenants?.has_paid === false) {
+                    router.push('/pagamento-pendente');
+                } else {
+                    router.push('/admin');
+                }
             } else if (profile?.role === 'barber') {
-                router.push('/profissional');
+                if (profile?.status === 'pending') {
+                    router.push('/aguardando-aprovacao');
+                } else {
+                    router.push('/profissional');
+                }
             } else {
                 router.push('/sistema');
             }
+        }
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selectedFile = e.target.files?.[0];
+        if (selectedFile) {
+            setLoading(true);
+            try {
+                // Process image immediately for preview and storage
+                const optimizedBlob = await processImage(selectedFile, 150, 150, 0.7);
+                const optimizedFile = new File([optimizedBlob], `${selectedFile.name.split('.')[0]}.webp`, { type: 'image/webp' });
+
+                setFile(optimizedFile);
+                setUploadStatus('success');
+
+                const objectUrl = URL.createObjectURL(optimizedBlob);
+                if (previewUrl) URL.revokeObjectURL(previewUrl); // Clean up previous preview URL
+                setPreviewUrl(objectUrl);
+
+            } catch (err) {
+                console.error('Image processing error:', err);
+                setUploadStatus('error');
+            } finally {
+                setLoading(false);
+            }
+        } else {
+            setUploadStatus('idle');
+            if (previewUrl) URL.revokeObjectURL(previewUrl); // Clean up if no file selected
+            setPreviewUrl(null);
         }
     };
 
@@ -142,11 +180,13 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             let imageUrl = '';
             if (file) {
                 const bucket = activeTab === 'admin' ? 'logos' : 'avatars';
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${userId}-${Math.random()}.${fileExt}`;
+                const fileName = `${userId}-${Math.random()}.webp`;
                 const { error: uploadError } = await supabase.storage
                     .from(bucket)
-                    .upload(fileName, file);
+                    .upload(fileName, file, {
+                        contentType: 'image/webp',
+                        upsert: true
+                    });
 
                 if (!uploadError) {
                     const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName);
@@ -156,7 +196,9 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
             // 4. Admin Specific: Create Tenant
             if (activeTab === 'admin') {
-                const slug = shopName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+                const baseSlug = shopName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
+                // Add a small random suffix to ensure uniqueness if the base slug might conflict
+                const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
                 const { data: newTenant, error: tenantError } = await supabase
                     .from('tenants')
                     .insert({
@@ -189,7 +231,11 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
             if (profileError) throw profileError;
 
-            setRegisterSuccess(true);
+            if (activeTab === 'admin') {
+                router.push('/pagamento-pendente');
+            } else {
+                setRegisterSuccess(true);
+            }
         } catch (err: any) {
             setError(err.message || 'Ocorreu um erro ao realizar o cadastro.');
             console.error('Registration error:', err);
@@ -282,13 +328,37 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                 )}
 
                                 <div className="space-y-1.5">
-                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'LOGO DA LOJA' : 'SUA FOTO'}</label>
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'LOGO DA LOJA' : 'SUA FOTO DE PERFIL'}</label>
                                     <div className="relative">
-                                        <input type="file" accept="image/*" className="hidden" id="file-upload" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-                                        <label htmlFor="file-upload" className="w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all gap-2" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.textMuted }}>
-                                            <span className="material-symbols-outlined text-2xl">{file ? 'check_circle' : 'add_a_photo'}</span>
-                                            <span className="text-[10px] font-bold uppercase">{file ? file.name : 'Clique para selecionar'}</span>
+                                        <input type="file" accept="image/*" className="hidden" id="file-upload" onChange={handleFileChange} />
+                                        <label htmlFor="file-upload" className="w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all gap-2 relative overflow-hidden min-h-[140px]" style={{ borderColor: uploadStatus === 'success' ? colors.primary : (uploadStatus === 'error' ? '#ef4444' : (businessType === 'salon' ? '#7b438e40' : '#ffffff1a')), color: colors.textMuted }}>
+                                            {previewUrl ? (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 transition-all group">
+                                                    <img src={previewUrl} alt="Preview" className="h-full w-full object-contain p-4" />
+                                                    <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 gap-1">
+                                                        <span className="material-symbols-outlined text-white">sync</span>
+                                                        <span className="text-[10px] font-black text-white uppercase italic">Trocar Imagem</span>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <span className="material-symbols-outlined text-2xl" style={{ color: colors.primary }}>add_a_photo</span>
+                                                    <span className="text-[10px] font-black uppercase italic">Clique aqui para fazer o upload</span>
+                                                </>
+                                            )}
                                         </label>
+                                        {uploadStatus === 'success' && !previewUrl && (
+                                            <div className="flex items-center gap-1.5 mt-2 ml-1 text-emerald-500 animate-in fade-in slide-in-from-top-1">
+                                                <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
+                                                <span className="text-[9px] font-black uppercase italic">Carregado com sucesso!</span>
+                                            </div>
+                                        )}
+                                        {uploadStatus === 'error' && (
+                                            <div className="flex items-center gap-1.5 mt-2 ml-1 text-red-500 animate-in fade-in slide-in-from-top-1">
+                                                <span className="material-symbols-outlined text-sm font-bold">error</span>
+                                                <span className="text-[9px] font-black uppercase italic">Imagem com erro. Tente novamente.</span>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
