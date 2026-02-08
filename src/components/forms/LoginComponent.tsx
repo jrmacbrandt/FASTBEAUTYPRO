@@ -244,44 +244,86 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
             // 5. Create Tenant (for admin/owner only)
             if (activeTab === 'admin') {
-                const { data: newTenant, error: tenantError } = await supabase
+                // First check if we already have a tenant created by trigger
+                const { data: existingTenant } = await supabase
                     .from('tenants')
-                    .insert({
-                        name: shopName,
-                        slug: slug,
-                        business_type: 'barber',
-                        active: true,
-                        has_paid: false,
-                        logo_url: imageUrl || null,
-                        subscription_status: 'trialing'
-                    })
                     .select('id')
+                    .eq('slug', slug)
                     .single();
 
-                if (tenantError) {
-                    console.error('Tenant creation error:', tenantError);
-                    throw new Error('Erro ao criar estabelecimento: ' + tenantError.message);
+                if (existingTenant) {
+                    tenantId = existingTenant.id;
+                } else {
+                    const { data: newTenant, error: tenantError } = await supabase
+                        .from('tenants')
+                        .insert({
+                            name: shopName,
+                            slug: slug,
+                            business_type: 'barber',
+                            active: true,
+                            has_paid: false,
+                            logo_url: imageUrl || null,
+                            subscription_status: 'trialing'
+                        })
+                        .select('id')
+                        .single();
+
+                    if (tenantError) {
+                        console.error('Tenant creation error:', tenantError);
+                        throw new Error('Erro ao criar estabelecimento: ' + tenantError.message);
+                    }
+                    tenantId = newTenant.id;
                 }
-                tenantId = newTenant.id;
             }
 
-            // 6. Create Profile
-            const { error: profileError } = await supabase
-                .from('profiles')
-                .insert({
-                    id: userId,
-                    tenant_id: tenantId,
-                    full_name: fullName,
-                    cpf: cpf,
-                    email: email,
-                    role: activeTab === 'admin' ? 'owner' : 'barber',
-                    status: activeTab === 'admin' ? 'active' : 'pending',
-                    avatar_url: activeTab === 'pro' ? imageUrl : null
-                });
+            // 6. Create or Update Profile (using upsert to handle trigger conflict)
+            // Wait a moment for trigger to potentially complete
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            if (profileError) {
-                console.error('Profile creation error:', profileError);
-                throw new Error('Erro ao criar perfil: ' + profileError.message);
+            // Check if profile already exists (created by trigger)
+            const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('id')
+                .eq('id', userId)
+                .single();
+
+            if (existingProfile) {
+                // Profile exists, update it with our data
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        tenant_id: tenantId,
+                        full_name: fullName,
+                        cpf: cpf,
+                        role: activeTab === 'admin' ? 'owner' : 'barber',
+                        status: activeTab === 'admin' ? 'active' : 'pending',
+                        avatar_url: activeTab === 'pro' ? imageUrl : null
+                    })
+                    .eq('id', userId);
+
+                if (updateError) {
+                    console.error('Profile update error:', updateError);
+                    throw new Error('Erro ao atualizar perfil: ' + updateError.message);
+                }
+            } else {
+                // Profile doesn't exist, create it
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .insert({
+                        id: userId,
+                        tenant_id: tenantId,
+                        full_name: fullName,
+                        cpf: cpf,
+                        email: email,
+                        role: activeTab === 'admin' ? 'owner' : 'barber',
+                        status: activeTab === 'admin' ? 'active' : 'pending',
+                        avatar_url: activeTab === 'pro' ? imageUrl : null
+                    });
+
+                if (profileError) {
+                    console.error('Profile creation error:', profileError);
+                    throw new Error('Erro ao criar perfil: ' + profileError.message);
+                }
             }
 
             // 7. Success flow
