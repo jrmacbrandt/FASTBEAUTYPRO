@@ -133,7 +133,13 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 .eq('id', data.session.user.id)
                 .single();
 
+            console.log('========== LOGIN DIAGNOSTIC ==========');
             console.log('[Login] Profile response:', { profile, error: profileError });
+            console.log('[Login] User Email:', data.session.user.email);
+            console.log('[Login] Profile Role:', profile?.role);
+            console.log('[Login] Profile Status:', profile?.status);
+            console.log('[Login] Expected Type:', type);
+            console.log('=====================================');
 
 
 
@@ -143,7 +149,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             }
 
             if (profile?.role === 'master') {
-                console.log('[Login] Redirecting Master to /admin-master');
+                console.log('[Login] ✅ Redirecting Master to /admin-master');
                 router.push('/admin-master');
             } else if (profile?.role === 'owner') {
                 if ((profile as any).tenants?.has_paid === false) {
@@ -162,7 +168,9 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                     router.push('/profissional');
                 }
             } else {
-                console.log('[Login] Redirecting to system gateway');
+                console.log('[Login] ⚠️ FALLBACK: Role is "' + profile?.role + '" - Redirecting to /sistema');
+                console.error('[Login] PROBLEMA: Role não reconhecido! Verifique o banco de dados.');
+                alert('AVISO: Seu perfil no banco não tem um role válido (master/owner/barber). Role atual: "' + (profile?.role || 'null') + '". O sistema te levará para /sistema. Por favor, verifique seu perfil no Supabase.');
                 router.push('/sistema');
             }
         }
