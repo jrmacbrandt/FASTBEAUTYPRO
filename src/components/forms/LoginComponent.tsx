@@ -139,7 +139,9 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 // For now, let's proceed but we'll need a blocker in the admin layout
             }
 
-            if (profile?.role === 'owner') {
+            if (profile?.role === 'master') {
+                router.push('/admin-master');
+            } else if (profile?.role === 'owner') {
                 if ((profile as any).tenants?.has_paid === false) {
                     router.push('/pagamento-pendente');
                 } else {
