@@ -81,7 +81,10 @@ export default function PendingPaymentPage() {
             <div className="w-full max-w-[450px] rounded-[2.5rem] p-8 md:p-12 relative border bg-opacity-95" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
 
                 <button
-                    onClick={() => router.push('/login')}
+                    onClick={async () => {
+                        await supabase.auth.signOut();
+                        router.push('/login');
+                    }}
                     className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10"
                     style={{ backgroundColor: colors.inputBg, color: colors.text }}
                 >
