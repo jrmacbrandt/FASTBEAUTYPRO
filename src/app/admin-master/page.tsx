@@ -61,18 +61,32 @@ export default function MasterDashboardPage() {
 
     const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any, tenant?: any) => {
         const targetTenant = tenant || selectedTenant;
-        if (!targetTenant) return;
-        setSaving(true);
+        console.log('[MasterAction] Initiating action:', action, 'on tenant:', targetTenant?.name, 'ID:', targetTenant?.id);
 
+        if (!targetTenant) {
+            console.error('[MasterAction] No target tenant found');
+            return;
+        }
+
+        setSaving(true);
         try {
             if (action === 'delete') {
-                if (!confirm('Tem certeza que deseja excluir este inquilino permanentemente?')) return;
+                if (!confirm(`Tem certeza que deseja excluir "${targetTenant.name}" permanentemente? Esta ação não pode ser desfeita.`)) {
+                    console.log('[MasterAction] Deletion cancelled by user');
+                    return;
+                }
+                console.log('[MasterAction] Deleting tenant ID:', targetTenant.id);
                 const { error } = await supabase.from('tenants').delete().eq('id', targetTenant.id);
                 if (error) throw error;
+                alert('Unidade excluída com sucesso!');
             } else if (action === 'pause' || action === 'resume') {
-                const { error } = await supabase.from('tenants').update({ active: action === 'resume' }).eq('id', targetTenant.id);
+                const newStatus = action === 'resume';
+                console.log('[MasterAction] Updating active status to:', newStatus, 'for ID:', targetTenant.id);
+                const { error } = await supabase.from('tenants').update({ active: newStatus }).eq('id', targetTenant.id);
                 if (error) throw error;
+                alert(`Unidade ${newStatus ? 'ativada' : 'pausada'} com sucesso!`);
             } else if (action === 'save') {
+                console.log('[MasterAction] Saving tenant data updates for ID:', targetTenant.id);
                 const { error } = await supabase.from('tenants').update({
                     name: data.name,
                     slug: data.slug,
@@ -84,18 +98,20 @@ export default function MasterDashboardPage() {
                 }).eq('id', targetTenant.id);
                 if (error) throw error;
 
-                // Update Profile name if changed
                 if (data.owner_name && targetTenant.profiles?.[0]?.id) {
-                    await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
+                    const { error: profileError } = await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
+                    if (profileError) console.error('[MasterAction] Error updating profile:', profileError);
                 }
+                alert('Alterações salvas com sucesso!');
             }
 
-            fetchTenants();
+            console.log('[MasterAction] Action completed successfully, refreshing list...');
+            await fetchTenants();
             setIsEditModalOpen(false);
             setSelectedTenant(null);
         } catch (err) {
-            console.error('Action error:', err);
-            alert('Erro ao executar ação.');
+            console.error('[MasterAction] Critical Error:', err);
+            alert('Erro ao executar ação. Verifique o console para mais detalhes.');
         } finally {
             setSaving(false);
         }
@@ -136,7 +152,7 @@ export default function MasterDashboardPage() {
                                         <th className="pb-4 px-6 text-center">Slug</th>
                                         <th className="pb-4 px-6 text-center">Status</th>
                                         <th className="pb-4 px-6 text-center">Cadastro</th>
-                                        <th className="pb-4 px-6 text-right">Gestão</th>
+                                        <th className="pb-4 px-6 text-right min-w-[140px]">Gestão</th>
                                     </tr>
                                 </thead>
                                 <tbody className="font-bold text-sm" style={{ color: colors.text }}>
@@ -197,9 +213,12 @@ export default function MasterDashboardPage() {
                                             </td>
                                             <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>
                                             <td className="py-4 px-6 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
-                                                <div className="flex items-center justify-end gap-2">
+                                                <div className="flex items-center justify-end gap-2 whitespace-nowrap min-w-max">
                                                     <button
-                                                        onClick={() => handleAction(t.active ? 'pause' : 'resume', null, t)}
+                                                        onClick={() => {
+                                                            console.log('[DEBUG] Pause/Resume clicked for:', t.name);
+                                                            handleAction(t.active ? 'pause' : 'resume', null, t);
+                                                        }}
                                                         className={`size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 ${t.active ? 'text-amber-500 hover:bg-amber-500 hover:text-white' : 'text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
                                                         title={t.active ? 'Pausar Acesso' : 'Ativar Acesso'}
                                                     >
@@ -207,7 +226,10 @@ export default function MasterDashboardPage() {
                                                     </button>
 
                                                     <button
-                                                        onClick={() => handleAction('delete', null, t)}
+                                                        onClick={() => {
+                                                            console.log('[DEBUG] Delete clicked for:', t.name);
+                                                            handleAction('delete', null, t);
+                                                        }}
                                                         className="size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 text-red-500 hover:bg-red-500 hover:text-white"
                                                         title="Excluir Unidade"
                                                     >
@@ -215,7 +237,11 @@ export default function MasterDashboardPage() {
                                                     </button>
 
                                                     <button
-                                                        onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
+                                                        onClick={() => {
+                                                            console.log('[DEBUG] Settings clicked for:', t.name);
+                                                            setSelectedTenant(t);
+                                                            setIsEditModalOpen(true);
+                                                        }}
                                                         className="size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 text-[#f2b90d] hover:bg-[#f2b90d] hover:text-black"
                                                         title="Configurações"
                                                     >
