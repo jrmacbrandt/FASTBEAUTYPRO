@@ -127,9 +127,11 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
         if (data.session) {
             console.log('[Login] Fetching profile for ID:', data.session.user.id);
+
+            // First, get profile WITHOUT tenants join (which fails for Master users with tenant_id=NULL)
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .select('role, status, tenants(has_paid)')
+                .select('role, status, tenant_id, full_name')
                 .eq('id', data.session.user.id)
                 .single();
 
@@ -138,21 +140,33 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             console.log('[Login] User Email:', data.session.user.email);
             console.log('[Login] Profile Role:', profile?.role);
             console.log('[Login] Profile Status:', profile?.status);
+            console.log('[Login] Tenant ID:', profile?.tenant_id);
             console.log('[Login] Expected Type:', type);
             console.log('=====================================');
 
+            if (profileError) {
+                console.error('[Login] ERRO ao buscar perfil:', profileError);
+                setError('Erro ao carregar perfil: ' + profileError.message);
+                setLoading(false);
+                return;
+            }
 
-
-            if (profile?.role === 'owner' && (profile as any).tenants?.has_paid === false) {
-                // Redirect to a payment/setup page or show a specific modal
-                // For now, let's proceed but we'll need a blocker in the admin layout
+            // For owners, fetch tenant data separately
+            let tenantData = null;
+            if (profile?.role === 'owner' && profile?.tenant_id) {
+                const { data: tenant } = await supabase
+                    .from('tenants')
+                    .select('has_paid')
+                    .eq('id', profile.tenant_id)
+                    .single();
+                tenantData = tenant;
             }
 
             if (profile?.role === 'master') {
                 console.log('[Login] ✅ Redirecting Master to /admin-master');
                 router.push('/admin-master');
             } else if (profile?.role === 'owner') {
-                if ((profile as any).tenants?.has_paid === false) {
+                if (tenantData?.has_paid === false) {
                     console.log('[Login] Redirecting Owner to payment page');
                     router.push('/pagamento-pendente');
                 } else {
