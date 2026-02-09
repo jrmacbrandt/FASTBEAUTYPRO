@@ -135,12 +135,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
             console.log('[Login] Profile response:', { profile, error: profileError });
 
-            if (profile?.status === 'pending') {
-                setError('Sua conta está aguardando aprovação administrativa.');
-                await supabase.auth.signOut();
-                setLoading(false);
-                return;
-            }
+
 
             if (profile?.role === 'owner' && (profile as any).tenants?.has_paid === false) {
                 // Redirect to a payment/setup page or show a specific modal
