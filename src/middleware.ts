@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
 
     const url = request.nextUrl.clone();
-    const isAuthPage = url.pathname === '/login';
+    const isAuthPage = url.pathname === '/login' || url.pathname === '/login-master';
     const isMasterPage = url.pathname.startsWith('/admin-master');
     const isAdminPage = url.pathname.startsWith('/admin') && !isMasterPage;
     const isProPage = url.pathname.startsWith('/profissional');
