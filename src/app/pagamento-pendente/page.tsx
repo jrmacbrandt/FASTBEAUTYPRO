@@ -80,6 +80,14 @@ export default function PendingPaymentPage() {
         <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
             <div className="w-full max-w-[450px] rounded-[2.5rem] p-8 md:p-12 relative border bg-opacity-95" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
 
+                <button
+                    onClick={() => router.push('/login')}
+                    className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10"
+                    style={{ backgroundColor: colors.inputBg, color: colors.text }}
+                >
+                    <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+                </button>
+
                 <div className="flex flex-col items-center mb-10">
                     <div className="size-16 rounded-2xl bg-[#f2b90d]/10 flex items-center justify-center text-[#f2b90d] mb-6 border border-[#f2b90d]/20" style={businessType === 'salon' ? { backgroundColor: '#7b438e1a', color: '#7b438e', borderColor: '#7b438e20' } : {}}>
                         <span className="material-symbols-outlined text-4xl font-bold">payments</span>
@@ -136,15 +144,6 @@ export default function PendingPaymentPage() {
                             style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#ffffff' : '#000000' }}
                         >
                             {loading ? 'VALIDANDO...' : 'ACESSAR'}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => router.push('/login')}
-                            className="w-full text-center text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 transition-all italic underline underline-offset-4"
-                            style={{ color: colors.text }}
-                        >
-                            Voltar e pagar manualmente
                         </button>
                     </form>
                 )}
