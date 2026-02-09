@@ -61,7 +61,7 @@ export default function MasterDashboardPage() {
 
     const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any, tenant?: any) => {
         const targetTenant = tenant || selectedTenant;
-        console.log('[MasterAction] Initiating action:', action, 'on tenant:', targetTenant?.name, 'ID:', targetTenant?.id);
+        console.log('[MasterAction-V3] Initiating action:', action, 'on tenant:', targetTenant?.name, 'ID:', targetTenant?.id);
 
         if (!targetTenant) {
             console.error('[MasterAction] No target tenant found');
@@ -71,22 +71,73 @@ export default function MasterDashboardPage() {
         setSaving(true);
         try {
             if (action === 'delete') {
-                if (!confirm(`Tem certeza que deseja excluir "${targetTenant.name}" permanentemente? Esta ação não pode ser desfeita.`)) {
+                if (!confirm(`TEM CERTEZA? Esta ação irá EXCLUIR PERMANENTEMENTE a unidade "${targetTenant.name}" e TODOS os seus dados (profissionais, serviços, agendamentos e fotos). Esta ação não pode ser desfeita.`)) {
                     console.log('[MasterAction] Deletion cancelled by user');
+                    setSaving(false);
                     return;
                 }
-                console.log('[MasterAction] Deleting tenant ID:', targetTenant.id);
-                const { error } = await supabase.from('tenants').delete().eq('id', targetTenant.id);
-                if (error) throw error;
-                alert('Unidade excluída com sucesso!');
+
+                console.log('[MasterAction] Starting AGGRESSIVE HARD DELETE (V3) for:', targetTenant.id);
+
+                // 1. Appointments
+                const { error: err1 } = await supabase.from('appointments').delete().eq('tenant_id', targetTenant.id);
+                if (err1) {
+                    console.warn('Appointments clean error:', err1.message);
+                    alert('Aviso (Agendamentos): ' + err1.message);
+                }
+
+                // 2. Inventory (New in V3)
+                const { error: err2 } = await supabase.from('inventory').delete().eq('tenant_id', targetTenant.id);
+                if (err2) {
+                    console.warn('Inventory clean error:', err2.message);
+                    alert('Aviso (Estoque): ' + err2.message);
+                }
+
+                // 3. Products/Services
+                const { error: err3 } = await supabase.from('products').delete().eq('tenant_id', targetTenant.id);
+                if (err3) {
+                    console.warn('Products clean error:', err3.message);
+                    alert('Aviso (Produtos/Serviços): ' + err3.message);
+                }
+
+                // 4. Services (Dedicated table check)
+                const { error: errServices } = await supabase.from('services').delete().eq('tenant_id', targetTenant.id);
+                if (errServices) console.log('Services table not found or empty (skipping)');
+
+                // 5. Team
+                const { error: err5 } = await supabase.from('team').delete().eq('tenant_id', targetTenant.id);
+                if (err5) {
+                    console.warn('Team clean error:', err5.message);
+                    alert('Aviso (Equipe): ' + err5.message);
+                }
+
+                // 6. Profiles
+                const { error: err6 } = await supabase.from('profiles').delete().eq('tenant_id', targetTenant.id);
+                if (err6) {
+                    console.warn('Profiles clean error:', err6.message);
+                    alert('Aviso (Perfis): ' + err6.message);
+                }
+
+                // 7. Finally delete the tenant
+                const { error: errFinal } = await supabase.from('tenants').delete().eq('id', targetTenant.id);
+                if (errFinal) {
+                    console.error('Final tenant delete error:', errFinal.message);
+                    throw new Error('Não foi possível excluir o inquilino principal. Erro: ' + errFinal.message);
+                }
+
+                // FINAL VERIFICATION
+                const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).single();
+                if (check) {
+                    alert('ERRO CRÍTICO: O banco de dados recusou a exclusão (vínculos pendentes). Verifique o console.');
+                } else {
+                    alert('UNIDADE E TODOS OS DADOS EXCLUÍDOS COM SUCESSO! (V3)');
+                }
             } else if (action === 'pause' || action === 'resume') {
                 const newStatus = action === 'resume';
-                console.log('[MasterAction] Updating active status to:', newStatus, 'for ID:', targetTenant.id);
                 const { error } = await supabase.from('tenants').update({ active: newStatus }).eq('id', targetTenant.id);
                 if (error) throw error;
-                alert(`Unidade ${newStatus ? 'ativada' : 'pausada'} com sucesso!`);
+                alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
             } else if (action === 'save') {
-                console.log('[MasterAction] Saving tenant data updates for ID:', targetTenant.id);
                 const { error } = await supabase.from('tenants').update({
                     name: data.name,
                     slug: data.slug,
@@ -99,27 +150,27 @@ export default function MasterDashboardPage() {
                 if (error) throw error;
 
                 if (data.owner_name && targetTenant.profiles?.[0]?.id) {
-                    const { error: profileError } = await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
-                    if (profileError) console.error('[MasterAction] Error updating profile:', profileError);
+                    await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
                 }
-                alert('Alterações salvas com sucesso!');
+                alert('Alterações salvas com sucesso! (V3)');
+                setIsEditModalOpen(false);
             }
 
-            console.log('[MasterAction] Action completed successfully, refreshing list...');
+            // Sync database state to UI
+            console.log('[MasterAction] Force refreshing tenants list...');
             await fetchTenants();
-            setIsEditModalOpen(false);
             setSelectedTenant(null);
-        } catch (err) {
-            console.error('[MasterAction] Critical Error:', err);
-            alert('Erro ao executar ação. Verifique o console para mais detalhes.');
+        } catch (err: any) {
+            console.error('[MasterAction] ERROR:', err);
+            alert('ERRO CRÍTICO (V3): ' + (err.message || 'Falha na operação'));
         } finally {
             setSaving(false);
         }
     };
 
     const metrics = [
-        { label: 'Unidades Ativas', val: tenants.filter(t => t.active).length.toString(), trend: '+12%', icon: 'storefront' },
-        { label: 'Status Sistema', val: '99.9%', trend: 'Optimum', icon: 'check_circle' }
+        { label: 'Unidades Ativas (v3)', val: tenants.filter(t => t.active).length.toString(), trend: 'Sync: OK', icon: 'storefront' },
+        { label: 'Status Sistema', val: '99.9%', trend: 'v3-final-' + new Date().getTime().toString().slice(-4), icon: 'check_circle' }
     ];
 
     return (
@@ -134,7 +185,7 @@ export default function MasterDashboardPage() {
                 ))}
             </div>
 
-            <div className="rounded-[2.5rem] border overflow-hidden shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+            <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                 <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
                     <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>Inquilinos na Plataforma</h3>
                 </div>
@@ -144,7 +195,7 @@ export default function MasterDashboardPage() {
                             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <div className="overflow-x-auto overflow-y-visible custom-scrollbar pb-4">
                             <table className="w-full text-left border-separate border-spacing-y-2">
                                 <thead>
                                     <tr className="text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>
@@ -152,7 +203,7 @@ export default function MasterDashboardPage() {
                                         <th className="pb-4 px-6 text-center">Slug</th>
                                         <th className="pb-4 px-6 text-center">Status</th>
                                         <th className="pb-4 px-6 text-center">Cadastro</th>
-                                        <th className="pb-4 px-6 text-right min-w-[140px]">Gestão</th>
+                                        <th className="pb-4 px-8 text-right min-w-[180px]">Gestão</th>
                                     </tr>
                                 </thead>
                                 <tbody className="font-bold text-sm" style={{ color: colors.text }}>
@@ -212,14 +263,14 @@ export default function MasterDashboardPage() {
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>
-                                            <td className="py-4 px-6 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
-                                                <div className="flex items-center justify-end gap-2 whitespace-nowrap min-w-max">
+                                            <td className="py-4 px-8 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
+                                                <div className="flex items-center justify-end gap-3 whitespace-nowrap min-w-max">
                                                     <button
                                                         onClick={() => {
                                                             console.log('[DEBUG] Pause/Resume clicked for:', t.name);
                                                             handleAction(t.active ? 'pause' : 'resume', null, t);
                                                         }}
-                                                        className={`size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 ${t.active ? 'text-amber-500 hover:bg-amber-500 hover:text-white' : 'text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
+                                                        className={`size-10 rounded-xl flex items-center justify-center transition-all border shadow-lg ${t.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500 hover:text-white' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
                                                         title={t.active ? 'Pausar Acesso' : 'Ativar Acesso'}
                                                     >
                                                         <span className="material-symbols-outlined text-[20px]">{t.active ? 'pause_circle' : 'play_circle'}</span>
@@ -227,11 +278,11 @@ export default function MasterDashboardPage() {
 
                                                     <button
                                                         onClick={() => {
-                                                            console.log('[DEBUG] Delete clicked for:', t.name);
+                                                            console.log('[DEBUG] Hard Delete clicked for:', t.name);
                                                             handleAction('delete', null, t);
                                                         }}
-                                                        className="size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 text-red-500 hover:bg-red-500 hover:text-white"
-                                                        title="Excluir Unidade"
+                                                        className="size-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center transition-all border border-red-500/20 hover:bg-red-500 hover:text-white shadow-lg"
+                                                        title="Excluir Unidade Permanente"
                                                     >
                                                         <span className="material-symbols-outlined text-[20px]">delete_forever</span>
                                                     </button>
@@ -242,7 +293,7 @@ export default function MasterDashboardPage() {
                                                             setSelectedTenant(t);
                                                             setIsEditModalOpen(true);
                                                         }}
-                                                        className="size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 text-[#f2b90d] hover:bg-[#f2b90d] hover:text-black"
+                                                        className="size-10 bg-white/5 text-slate-400 rounded-xl flex items-center justify-center transition-all border border-white/5 hover:bg-[#f2b90d] hover:text-black shadow-lg"
                                                         title="Configurações"
                                                     >
                                                         <span className="material-symbols-outlined text-[20px]">settings</span>
@@ -259,221 +310,223 @@ export default function MasterDashboardPage() {
             </div>
 
             {/* Modal de Gestão de Inquilino */}
-            {isEditModalOpen && selectedTenant && (
-                <div className="fixed inset-0 z-[100] flex items-start justify-center py-8 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[3rem] p-10 relative shadow-2xl my-8">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-[#f2b90d] animate-pulse"></div>
+            {
+                isEditModalOpen && selectedTenant && (
+                    <div className="fixed inset-0 z-[100] flex items-start justify-center py-8 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
+                        <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[3rem] p-10 relative shadow-2xl my-8">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-[#f2b90d] animate-pulse"></div>
 
-                        <button onClick={() => setIsEditModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
-                            <span className="material-symbols-outlined">close</span>
-                        </button>
+                            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
 
-                        <div className="flex flex-col items-center mb-10">
-                            <div className="size-20 rounded-2xl overflow-hidden bg-white/5 border border-white/10 mb-4 shadow-xl">
-                                {selectedTenant.logo_url ? (
-                                    <img src={selectedTenant.logo_url} alt={selectedTenant.name} className="size-full object-cover" />
-                                ) : (
-                                    <div className="size-full flex items-center justify-center text-[#f2b90d]">
-                                        <span className="material-symbols-outlined text-4xl">storefront</span>
-                                    </div>
-                                )}
-                            </div>
-                            <h3 className="text-white text-2xl font-black italic uppercase italic leading-none">{selectedTenant.name}</h3>
-                            <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-60">ADMINISTRAÇÃO DE UNIDADE</p>
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="grid grid-cols-2 gap-3">
-                                <button
-                                    onClick={() => handleAction(selectedTenant.active ? 'pause' : 'resume')}
-                                    className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all flex items-center justify-center gap-2 ${selectedTenant.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500 hover:text-black' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">{selectedTenant.active ? 'pause_circle' : 'play_circle'}</span>
-                                    {selectedTenant.active ? 'Pausar Acesso' : 'Ativar Acesso'}
-                                </button>
-                                <button
-                                    onClick={() => handleAction('delete')}
-                                    className="py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">delete_forever</span>
-                                    Excluir Perfil
-                                </button>
+                            <div className="flex flex-col items-center mb-10">
+                                <div className="size-20 rounded-2xl overflow-hidden bg-white/5 border border-white/10 mb-4 shadow-xl">
+                                    {selectedTenant.logo_url ? (
+                                        <img src={selectedTenant.logo_url} alt={selectedTenant.name} className="size-full object-cover" />
+                                    ) : (
+                                        <div className="size-full flex items-center justify-center text-[#f2b90d]">
+                                            <span className="material-symbols-outlined text-4xl">storefront</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <h3 className="text-white text-2xl font-black italic uppercase italic leading-none">{selectedTenant.name}</h3>
+                                <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-60">ADMINISTRAÇÃO DE UNIDADE</p>
                             </div>
 
-                            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-white text-[11px] font-black uppercase tracking-widest opacity-40">Dados do Estabelecimento</h4>
-                                    <div className="text-[9px] font-black uppercase tracking-tighter opacity-30 text-white">ID: {selectedTenant.id.slice(0, 8)}</div>
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => handleAction(selectedTenant.active ? 'pause' : 'resume')}
+                                        className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all flex items-center justify-center gap-2 ${selectedTenant.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500 hover:text-black' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">{selectedTenant.active ? 'pause_circle' : 'play_circle'}</span>
+                                        {selectedTenant.active ? 'Pausar Acesso' : 'Ativar Acesso'}
+                                    </button>
+                                    <button
+                                        onClick={() => handleAction('delete')}
+                                        className="py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                                        Excluir Perfil
+                                    </button>
                                 </div>
 
-                                <div className="space-y-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Nome da Loja</label>
-                                        <input
-                                            type="text"
-                                            defaultValue={selectedTenant.name}
-                                            onChange={(e) => {
-                                                const newName = e.target.value;
-                                                const newSlug = normalizeSlug(newName);
-                                                setSelectedTenant({ ...selectedTenant, name: newName, slug: newSlug });
-                                            }}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
-                                        />
+                                <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 space-y-6">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="text-white text-[11px] font-black uppercase tracking-widest opacity-40">Dados do Estabelecimento</h4>
+                                        <div className="text-[9px] font-black uppercase tracking-tighter opacity-30 text-white">ID: {selectedTenant.id.slice(0, 8)}</div>
                                     </div>
 
-                                    {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - INICIO */}
-                                    <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/10">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-xl">🖼️</span>
-                                            <label className="text-[11px] font-black uppercase text-[#f2b90d]">
-                                                Alterar Logo do Estabelecimento
-                                            </label>
-                                        </div>
-
-                                        <div className="space-y-2">
+                                    <div className="space-y-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Nome da Loja</label>
                                             <input
                                                 type="text"
-                                                value={selectedTenant.logo_url || ''}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
-                                                placeholder="Cole a URL da imagem aqui..."
-                                                className="w-full bg-black/60 border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f2b90d] transition-all"
+                                                defaultValue={selectedTenant.name}
+                                                onChange={(e) => {
+                                                    const newName = e.target.value;
+                                                    const newSlug = normalizeSlug(newName);
+                                                    setSelectedTenant({ ...selectedTenant, name: newName, slug: newSlug });
+                                                }}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
                                             />
+                                        </div>
 
-                                            <div className="flex flex-col gap-1 text-[10px] text-zinc-400 font-medium px-1">
-                                                <p className="flex items-center gap-1">
-                                                    <span className="material-symbols-outlined text-[12px]">info</span>
-                                                    Formatos aceitos: JPG, PNG, WEBP
-                                                </p>
-                                                <p className="flex items-center gap-1">
-                                                    <span className="material-symbols-outlined text-[12px]">fit_screen</span>
-                                                    Tamanho recomendado: 500x500px (Quadrado)
-                                                </p>
+                                        {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - INICIO */}
+                                        <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/10">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="text-xl">🖼️</span>
+                                                <label className="text-[11px] font-black uppercase text-[#f2b90d]">
+                                                    Alterar Logo do Estabelecimento
+                                                </label>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={selectedTenant.logo_url || ''}
+                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
+                                                    placeholder="Cole a URL da imagem aqui..."
+                                                    className="w-full bg-black/60 border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f2b90d] transition-all"
+                                                />
+
+                                                <div className="flex flex-col gap-1 text-[10px] text-zinc-400 font-medium px-1">
+                                                    <p className="flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-[12px]">info</span>
+                                                        Formatos aceitos: JPG, PNG, WEBP
+                                                    </p>
+                                                    <p className="flex items-center gap-1">
+                                                        <span className="material-symbols-outlined text-[12px]">fit_screen</span>
+                                                        Tamanho recomendado: 500x500px (Quadrado)
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - FIM */}
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Slug (URL de Acesso)</label>
+                                            <div className="relative">
+                                                <span className="absolute left-4 top-3.5 text-xs text-white/30 font-bold">/</span>
+                                                <input
+                                                    type="text"
+                                                    value={selectedTenant.slug}
+                                                    onChange={(e) => {
+                                                        const newSlug = normalizeSlug(e.target.value);
+                                                        setSelectedTenant({ ...selectedTenant, slug: newSlug });
+                                                    }}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pl-8 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all font-mono"
+                                                />
                                             </div>
                                         </div>
                                     </div>
-                                    {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - FIM */}
 
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Slug (URL de Acesso)</label>
-                                        <div className="relative">
-                                            <span className="absolute left-4 top-3.5 text-xs text-white/30 font-bold">/</span>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tipo de Negócio</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedTenant.business_type}
+                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, business_type: e.target.value })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all appearance-none cursor-pointer"
+                                                >
+                                                    <option className="bg-white text-black font-bold" value="barbearia">Barbearia</option>
+                                                    <option className="bg-white text-black font-bold" value="salao">Salão de Beleza</option>
+                                                    <option className="bg-white text-black font-bold" value="estetica">Clínica Estética</option>
+                                                    <option className="bg-white text-black font-bold" value="esmalteria">Esmalteria</option>
+                                                    <option className="bg-white text-black font-bold" value="spa">SPA</option>
+                                                </select>
+                                                <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Status Pagamento</label>
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedTenant.has_paid ? 'paid' : 'pending'}
+                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, has_paid: e.target.value === 'paid' })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
+                                                >
+                                                    <option className="bg-white text-emerald-600 font-bold" value="paid">PAGO / OK</option>
+                                                    <option className="bg-white text-red-600 font-bold" value="pending">PENDENTE</option>
+                                                </select>
+                                                <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
                                             <input
                                                 type="text"
-                                                value={selectedTenant.slug}
+                                                defaultValue={selectedTenant.phone}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
+                                                placeholder="(00) 00000-0000"
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
+                                            <input
+                                                type="text"
+                                                defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
                                                 onChange={(e) => {
-                                                    const newSlug = normalizeSlug(e.target.value);
-                                                    setSelectedTenant({ ...selectedTenant, slug: newSlug });
+                                                    const newProfiles = [...(selectedTenant.profiles || [])];
+                                                    if (newProfiles[0]) {
+                                                        newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
+                                                    } else {
+                                                        newProfiles[0] = { full_name: e.target.value };
+                                                    }
+                                                    setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
                                                 }}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pl-8 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all font-mono"
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
                                             />
                                         </div>
                                     </div>
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tipo de Negócio</label>
-                                        <div className="relative">
-                                            <select
-                                                value={selectedTenant.business_type}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, business_type: e.target.value })}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all appearance-none cursor-pointer"
-                                            >
-                                                <option className="bg-white text-black font-bold" value="barbearia">Barbearia</option>
-                                                <option className="bg-white text-black font-bold" value="salao">Salão de Beleza</option>
-                                                <option className="bg-white text-black font-bold" value="estetica">Clínica Estética</option>
-                                                <option className="bg-white text-black font-bold" value="esmalteria">Esmalteria</option>
-                                                <option className="bg-white text-black font-bold" value="spa">SPA</option>
-                                            </select>
-                                            <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Status Pagamento</label>
-                                        <div className="relative">
-                                            <select
-                                                value={selectedTenant.has_paid ? 'paid' : 'pending'}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, has_paid: e.target.value === 'paid' })}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
-                                            >
-                                                <option className="bg-white text-emerald-600 font-bold" value="paid">PAGO / OK</option>
-                                                <option className="bg-white text-red-600 font-bold" value="pending">PENDENTE</option>
-                                            </select>
-                                            <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
                                         <input
                                             type="text"
-                                            defaultValue={selectedTenant.phone}
-                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
-                                            placeholder="(00) 00000-0000"
+                                            defaultValue={selectedTenant.address}
+                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
+                                            placeholder="Rua, Número, Bairro, Cidade"
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                         />
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
-                                        <input
-                                            type="text"
-                                            defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
-                                            onChange={(e) => {
-                                                const newProfiles = [...(selectedTenant.profiles || [])];
-                                                if (newProfiles[0]) {
-                                                    newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
-                                                } else {
-                                                    newProfiles[0] = { full_name: e.target.value };
-                                                }
-                                                setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
-                                            }}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
-                                        />
-                                    </div>
                                 </div>
 
-                                <div className="space-y-1.5">
-                                    <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
-                                    <input
-                                        type="text"
-                                        defaultValue={selectedTenant.address}
-                                        onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
-                                        placeholder="Rua, Número, Bairro, Cidade"
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
-                                    />
+                                <div className="grid grid-cols-2 gap-3 mt-8">
+                                    <button
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="bg-white/5 text-slate-400 font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:text-white transition-all"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        disabled={saving}
+                                        onClick={() => handleAction('save', {
+                                            name: selectedTenant.name,
+                                            slug: selectedTenant.slug,
+                                            business_type: selectedTenant.business_type,
+                                            has_paid: selectedTenant.has_paid,
+                                            phone: selectedTenant.phone,
+                                            address: selectedTenant.address,
+                                            owner_name: selectedTenant.profiles?.[0]?.full_name,
+                                            logo_url: selectedTenant.logo_url
+                                        })}
+                                        className="bg-[#f2b90d] text-black font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                                    >
+                                        {saving ? 'Salvando...' : 'Salvar Alterações'}
+                                    </button>
                                 </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 mt-8">
-                                <button
-                                    onClick={() => setIsEditModalOpen(false)}
-                                    className="bg-white/5 text-slate-400 font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:text-white transition-all"
-                                >
-                                    Cancelar
-                                </button>
-                                <button
-                                    disabled={saving}
-                                    onClick={() => handleAction('save', {
-                                        name: selectedTenant.name,
-                                        slug: selectedTenant.slug,
-                                        business_type: selectedTenant.business_type,
-                                        has_paid: selectedTenant.has_paid,
-                                        phone: selectedTenant.phone,
-                                        address: selectedTenant.address,
-                                        owner_name: selectedTenant.profiles?.[0]?.full_name,
-                                        logo_url: selectedTenant.logo_url
-                                    })}
-                                    className="bg-[#f2b90d] text-black font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-                                >
-                                    {saving ? 'Salvando...' : 'Salvar Alterações'}
-                                </button>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

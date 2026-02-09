@@ -75,18 +75,33 @@ export async function middleware(request: NextRequest) {
         return response;
     }
 
-    // 2. Authenticated users: Fetch role to enforce RBAC
+    // 2. Authenticated users: Fetch role and tenant status to enforce RBAC and active state
     const { data: profile } = await supabase
         .from('profiles')
-        .select('role, status, tenants(has_paid)')
+        .select(`
+            role, 
+            status, 
+            tenants (
+                active,
+                has_paid
+            )
+        `)
         .eq('id', user.id)
         .single();
 
     const role = profile?.role;
     const status = profile?.status;
-    const hasPaid = (profile as any)?.tenants?.has_paid;
+    const tenantData = (profile as any)?.tenants;
+    const isActive = tenantData?.active !== false; // Default to true if not found, but explicitly check false
+    const hasPaid = tenantData?.has_paid;
 
-    // 3. Status checks: Redirect to pending pages if applicable
+    const isSuspendedPage = url.pathname === '/unidade-suspensa';
+
+    // 3. Active check: Redirect to suspended page if the tenant is inactive
+    if (role !== 'master' && !isActive && !isSuspendedPage) {
+        url.pathname = '/unidade-suspensa';
+        return NextResponse.redirect(url);
+    }
     if (role === 'barber' && status === 'pending' && !isApprovalPage) {
         url.pathname = '/aguardando-aprovacao';
         return NextResponse.redirect(url);
