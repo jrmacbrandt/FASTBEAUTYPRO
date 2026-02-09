@@ -1,0 +1,63 @@
+========================================
+CHECKLIST: CRIAR ADMIN MASTER
+========================================
+
+□ PASSO 1: CRIAR USUÁRIO NO DASHBOARD
+   1. Abra uma nova aba no navegador
+   2. Vá para: https://app.supabase.com/project/aunkigrburoknshe2/auth/users
+   3. Clique no botão verde "Add User" (canto superior direito)
+   4. Preencha o formulário:
+      - Email: jrmacbrandt@gmail.com
+      - Password: Ze001300$
+      - ✅ Auto Confirm User: MARCAR ESTA OPÇÃO
+   5. Clique "Create User"
+   6. ESPERE aparecer o usuário na lista
+   
+□ PASSO 2: VERIFICAR USUÁRIO CRIADO (SQL)
+   Volte para o SQL Editor e execute:
+   
+   SELECT id, email, email_confirmed_at 
+   FROM auth.users 
+   WHERE email = 'jrmacbrandt@gmail.com';
+   
+   DEVE RETORNAR: 1 linha com id, email e data de confirmação
+
+□ PASSO 3: CRIAR PROFILE MASTER (SQL)
+   Execute no SQL Editor:
+   
+   INSERT INTO public.profiles (
+       id,
+       email,
+       full_name,
+       role,
+       status,
+       tenant_id
+   ) VALUES (
+       (SELECT id FROM auth.users WHERE email = 'jrmacbrandt@gmail.com'),
+       'jrmacbrandt@gmail.com',
+       'J. Roberto',
+       'master'::user_role,
+       'active'::user_status,
+       NULL
+   );
+
+□ PASSO 4: VERIFICAR CONFIGURAÇÃO (SQL)
+   Execute no SQL Editor:
+   
+   SELECT 
+       u.email,
+       p.full_name,
+       p.role::text,
+       p.status::text
+   FROM auth.users u
+   JOIN public.profiles p ON p.id = u.id
+   WHERE u.email = 'jrmacbrandt@gmail.com';
+   
+   DEVE RETORNAR:
+   - role: master
+   - status: active
+
+========================================
+IMPORTANTE: Execute PASSO 1 PRIMEIRO!
+NÃO execute SQL antes de criar no Dashboard
+========================================

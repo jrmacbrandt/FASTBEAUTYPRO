@@ -114,18 +114,26 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             password,
         });
 
+        console.log('[Login] Attempting for:', email, 'Type:', type);
+
         if (authError) {
+            console.error('[Login] Auth Error:', authError.message);
             setError(authError.message);
             setLoading(false);
             return;
         }
 
+        console.log('[Login] Session obtained:', !!data.session);
+
         if (data.session) {
-            const { data: profile } = await supabase
+            console.log('[Login] Fetching profile for ID:', data.session.user.id);
+            const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('role, status, tenants(has_paid)')
                 .eq('id', data.session.user.id)
                 .single();
+
+            console.log('[Login] Profile response:', { profile, error: profileError });
 
             if (profile?.status === 'pending') {
                 setError('Sua conta está aguardando aprovação administrativa.');
@@ -140,20 +148,26 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             }
 
             if (profile?.role === 'master') {
+                console.log('[Login] Redirecting Master to /admin-master');
                 router.push('/admin-master');
             } else if (profile?.role === 'owner') {
                 if ((profile as any).tenants?.has_paid === false) {
+                    console.log('[Login] Redirecting Owner to payment page');
                     router.push('/pagamento-pendente');
                 } else {
+                    console.log('[Login] Redirecting Owner to /admin');
                     router.push('/admin');
                 }
             } else if (profile?.role === 'barber') {
                 if (profile?.status === 'pending') {
+                    console.log('[Login] Redirecting Barber to awaiting approval');
                     router.push('/aguardando-aprovacao');
                 } else {
+                    console.log('[Login] Redirecting Barber to /profissional');
                     router.push('/profissional');
                 }
             } else {
+                console.log('[Login] Redirecting to system gateway');
                 router.push('/sistema');
             }
         }
