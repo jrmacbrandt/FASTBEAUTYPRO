@@ -61,9 +61,16 @@ export default function MasterDashboardPage() {
 
     const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any, tenant?: any) => {
         const targetTenant = tenant || selectedTenant;
-        console.log('[MasterAction-V3] Initiating action:', action, 'on tenant:', targetTenant?.name);
+        console.log('========== MASTER ACTION DIAGNOSTIC ==========');
+        console.log('[MasterAction-V3] Initiating action:', action);
+        console.log('[MasterAction-V3] Target tenant:', targetTenant?.name, targetTenant?.id);
+        console.log('=============================================');
 
-        if (!targetTenant) return;
+        if (!targetTenant) {
+            console.error('[MasterAction] ERROR: No target tenant selected');
+            alert('ERRO: Nenhuma unidade selecionada');
+            return;
+        }
 
         setSaving(true);
         try {
@@ -73,33 +80,70 @@ export default function MasterDashboardPage() {
                     return;
                 }
 
+                console.log('[MasterAction-V3] ✅ User confirmed deletion');
                 console.log('[MasterAction-V3] Starting cleanup for:', targetTenant.id);
 
-                // Sequential cleanup (V3 - Stable)
-                await supabase.from('appointments').delete().eq('tenant_id', targetTenant.id);
-                await supabase.from('products').delete().eq('tenant_id', targetTenant.id);
-                await supabase.from('services').delete().eq('tenant_id', targetTenant.id);
-                await supabase.from('profiles').delete().eq('tenant_id', targetTenant.id);
+                // Sequential cleanup (V3 - Stable) with detailed logging
+                console.log('[MasterAction-V3] Step 1: Deleting appointments...');
+                const { error: err1 } = await supabase.from('appointments').delete().eq('tenant_id', targetTenant.id);
+                if (err1) console.error('[MasterAction-V3] ❌ Appointments error:', err1);
+                else console.log('[MasterAction-V3] ✅ Appointments deleted');
 
+                console.log('[MasterAction-V3] Step 2: Deleting products...');
+                const { error: err2 } = await supabase.from('products').delete().eq('tenant_id', targetTenant.id);
+                if (err2) console.error('[MasterAction-V3] ❌ Products error:', err2);
+                else console.log('[MasterAction-V3] ✅ Products deleted');
+
+                console.log('[MasterAction-V3] Step 3: Deleting services...');
+                const { error: err3 } = await supabase.from('services').delete().eq('tenant_id', targetTenant.id);
+                if (err3) console.error('[MasterAction-V3] ❌ Services error:', err3);
+                else console.log('[MasterAction-V3] ✅ Services deleted');
+
+                console.log('[MasterAction-V3] Step 4: Deleting profiles...');
+                const { error: err4 } = await supabase.from('profiles').delete().eq('tenant_id', targetTenant.id);
+                if (err4) console.error('[MasterAction-V3] ❌ Profiles error:', err4);
+                else console.log('[MasterAction-V3] ✅ Profiles deleted');
+
+                console.log('[MasterAction-V3] Step 5: Deleting tenant...');
                 const { error: errFinal } = await supabase.from('tenants').delete().eq('id', targetTenant.id);
 
                 if (errFinal) {
+                    console.error('[MasterAction-V3] ❌ FINAL DELETE ERROR:', errFinal);
                     throw new Error('Erro ao excluir inquilino: ' + errFinal.message);
                 } else {
+                    console.log('[MasterAction-V3] ✅ Tenant delete command sent, verifying...');
                     const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).single();
                     if (check) {
-                        alert('AVISO: O banco recusou a exclusão (RLS). Use o script SQL fornecido anteriormente.');
+                        console.error('[MasterAction-V3] ❌ VERIFICATION FAILED: Tenant still exists (RLS block)');
+                        alert('AVISO: O banco recusou a exclusão (RLS). Políticas sendo atualizadas...');
                     } else {
+                        console.log('[MasterAction-V3] ✅ VERIFICATION PASSED: Tenant deleted successfully');
                         alert('UNIDADE EXCLUÍDA COM SUCESSO! (V3)');
                     }
                 }
             } else if (action === 'pause' || action === 'resume') {
                 const newStatus = action === 'resume';
-                const { error } = await supabase.from('tenants').update({ active: newStatus }).eq('id', targetTenant.id);
-                if (error) throw error;
+                console.log('[MasterAction-V3] Attempting to', action, 'tenant:', targetTenant.id);
+                console.log('[MasterAction-V3] Setting active to:', newStatus);
+
+                const { error, data: updateData } = await supabase
+                    .from('tenants')
+                    .update({ active: newStatus })
+                    .eq('id', targetTenant.id)
+                    .select();
+
+                if (error) {
+                    console.error('[MasterAction-V3] ❌ Pause/Resume error:', error);
+                    throw error;
+                }
+
+                console.log('[MasterAction-V3] ✅ Update successful:', updateData);
                 alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
             } else if (action === 'save') {
-                const { error } = await supabase.from('tenants').update({
+                console.log('[MasterAction-V3] Attempting to save tenant data for:', targetTenant.id);
+                console.log('[MasterAction-V3] Data to save:', data);
+
+                const { error: tenantUpdateError, data: tenantUpdateData } = await supabase.from('tenants').update({
                     name: data.name,
                     slug: data.slug,
                     business_type: data.business_type,
