@@ -61,7 +61,7 @@ export default function MasterDashboardPage() {
 
     const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any, tenant?: any) => {
         const targetTenant = tenant || selectedTenant;
-        console.log('[MasterAction-V3] Initiating action:', action, 'on tenant:', targetTenant?.name, 'ID:', targetTenant?.id);
+        console.log('[MasterAction-V4] Initiating action:', action, 'on tenant:', targetTenant?.name);
 
         if (!targetTenant) {
             console.error('[MasterAction] No target tenant found');
@@ -71,72 +71,54 @@ export default function MasterDashboardPage() {
         setSaving(true);
         try {
             if (action === 'delete') {
-                if (!confirm(`TEM CERTEZA? Esta ação irá EXCLUIR PERMANENTEMENTE a unidade "${targetTenant.name}" e TODOS os seus dados (profissionais, serviços, agendamentos e fotos). Esta ação não pode ser desfeita.`)) {
-                    console.log('[MasterAction] Deletion cancelled by user');
+                if (!confirm(`[V4-DIAGNÓSTICO] TEM CERTEZA? Esta ação irá tentar limpar TODAS as tabelas vinculadas antes de excluir a unidade "${targetTenant.name}". Se o banco recusar, o sistema mostrará o motivo.`)) {
                     setSaving(false);
                     return;
                 }
 
-                console.log('[MasterAction] Starting AGGRESSIVE HARD DELETE (V3) for:', targetTenant.id);
+                console.log('[MasterAction-V4] Starting DIAGNOSTIC DELETE for:', targetTenant.id);
+                let diagnosticLog = '';
 
-                // 1. Appointments
-                const { error: err1 } = await supabase.from('appointments').delete().eq('tenant_id', targetTenant.id);
-                if (err1) {
-                    console.warn('Appointments clean error:', err1.message);
-                    alert('Aviso (Agendamentos): ' + err1.message);
+                // Step-by-step cleanup with row tracking
+                const tables = ['appointments', 'inventory', 'products', 'services', 'team', 'profiles'];
+
+                for (const table of tables) {
+                    console.log(`[MasterAction-V4] Attempting delete from: ${table}`);
+                    // @ts-ignore
+                    const { count, error } = await supabase.from(table).delete({ count: 'exact' }).eq('tenant_id', targetTenant.id);
+
+                    if (error) {
+                        console.warn(`[V4] ${table} error:`, error.message);
+                        if (!error.message.includes('not found')) {
+                            diagnosticLog += `❌ ${table}: ${error.message}\n`;
+                        }
+                    } else {
+                        console.log(`[V4] ${table} deleted: ${count} rows`);
+                        diagnosticLog += `✅ ${table}: ${count} removidos\n`;
+                    }
                 }
 
-                // 2. Inventory (New in V3)
-                const { error: err2 } = await supabase.from('inventory').delete().eq('tenant_id', targetTenant.id);
-                if (err2) {
-                    console.warn('Inventory clean error:', err2.message);
-                    alert('Aviso (Estoque): ' + err2.message);
-                }
-
-                // 3. Products/Services
-                const { error: err3 } = await supabase.from('products').delete().eq('tenant_id', targetTenant.id);
-                if (err3) {
-                    console.warn('Products clean error:', err3.message);
-                    alert('Aviso (Produtos/Serviços): ' + err3.message);
-                }
-
-                // 4. Services (Dedicated table check)
-                const { error: errServices } = await supabase.from('services').delete().eq('tenant_id', targetTenant.id);
-                if (errServices) console.log('Services table not found or empty (skipping)');
-
-                // 5. Team
-                const { error: err5 } = await supabase.from('team').delete().eq('tenant_id', targetTenant.id);
-                if (err5) {
-                    console.warn('Team clean error:', err5.message);
-                    alert('Aviso (Equipe): ' + err5.message);
-                }
-
-                // 6. Profiles
-                const { error: err6 } = await supabase.from('profiles').delete().eq('tenant_id', targetTenant.id);
-                if (err6) {
-                    console.warn('Profiles clean error:', err6.message);
-                    alert('Aviso (Perfis): ' + err6.message);
-                }
-
-                // 7. Finally delete the tenant
+                // Final deletion attempt
+                console.log('[MasterAction-V4] Attempting final tenant delete...');
                 const { error: errFinal } = await supabase.from('tenants').delete().eq('id', targetTenant.id);
-                if (errFinal) {
-                    console.error('Final tenant delete error:', errFinal.message);
-                    throw new Error('Não foi possível excluir o inquilino principal. Erro: ' + errFinal.message);
-                }
 
-                // FINAL VERIFICATION
-                const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).single();
-                if (check) {
-                    alert('ERRO CRÍTICO: O banco de dados recusou a exclusão (vínculos pendentes). Verifique o console.');
+                if (errFinal) {
+                    diagnosticLog += `❌ TENANT: ${errFinal.message}\n`;
+                    alert('FALHA NA EXCLUSÃO FINAL:\n\n' + diagnosticLog);
                 } else {
-                    alert('UNIDADE E TODOS OS DADOS EXCLUÍDOS COM SUCESSO! (V3)');
+                    // VERIFY IF STILL EXISTS
+                    const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).single();
+                    if (check) {
+                        alert('ERRO DE PERMISSÃO (RLS):\n\nO comando de exclusão foi enviado, mas o banco se recusou a apagar o registro (vínculos ocultos ou políticas de segurança).\n\nLOG:\n' + diagnosticLog + '\n⚠️ RECOMENDAÇÃO: Use o Script SQL Corretivo.');
+                    } else {
+                        alert('UNIDADE EXCLUÍDA COM SUCESSO! (V4)\n\nLOG:\n' + diagnosticLog);
+                    }
                 }
             } else if (action === 'pause' || action === 'resume') {
                 const newStatus = action === 'resume';
                 const { error } = await supabase.from('tenants').update({ active: newStatus }).eq('id', targetTenant.id);
                 if (error) throw error;
-                alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
+                alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V4)`);
             } else if (action === 'save') {
                 const { error } = await supabase.from('tenants').update({
                     name: data.name,
@@ -152,25 +134,24 @@ export default function MasterDashboardPage() {
                 if (data.owner_name && targetTenant.profiles?.[0]?.id) {
                     await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
                 }
-                alert('Alterações salvas com sucesso! (V3)');
+                alert('Alterações salvas com sucesso! (V4)');
                 setIsEditModalOpen(false);
             }
 
-            // Sync database state to UI
-            console.log('[MasterAction] Force refreshing tenants list...');
+            console.log('[MasterAction] Refreshing UI...');
             await fetchTenants();
             setSelectedTenant(null);
         } catch (err: any) {
             console.error('[MasterAction] ERROR:', err);
-            alert('ERRO CRÍTICO (V3): ' + (err.message || 'Falha na operação'));
+            alert('ERRO CRÍTICO (V4): ' + (err.message || 'Falha na operação'));
         } finally {
             setSaving(false);
         }
     };
 
     const metrics = [
-        { label: 'Unidades Ativas (v3)', val: tenants.filter(t => t.active).length.toString(), trend: 'Sync: OK', icon: 'storefront' },
-        { label: 'Status Sistema', val: '99.9%', trend: 'v3-final-' + new Date().getTime().toString().slice(-4), icon: 'check_circle' }
+        { label: 'Unidades Ativas (v4)', val: tenants.filter(t => t.active).length.toString(), trend: 'Sync: OK', icon: 'storefront' },
+        { label: 'Status Sistema', val: '99.9%', trend: 'v4-final-' + new Date().getTime().toString().slice(-4), icon: 'check_circle' }
     ];
 
     return (
