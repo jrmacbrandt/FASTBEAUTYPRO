@@ -59,17 +59,18 @@ export default function MasterDashboardPage() {
             .trim();
     };
 
-    const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any) => {
-        if (!selectedTenant) return;
+    const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any, tenant?: any) => {
+        const targetTenant = tenant || selectedTenant;
+        if (!targetTenant) return;
         setSaving(true);
 
         try {
             if (action === 'delete') {
                 if (!confirm('Tem certeza que deseja excluir este inquilino permanentemente?')) return;
-                const { error } = await supabase.from('tenants').delete().eq('id', selectedTenant.id);
+                const { error } = await supabase.from('tenants').delete().eq('id', targetTenant.id);
                 if (error) throw error;
             } else if (action === 'pause' || action === 'resume') {
-                const { error } = await supabase.from('tenants').update({ active: action === 'resume' }).eq('id', selectedTenant.id);
+                const { error } = await supabase.from('tenants').update({ active: action === 'resume' }).eq('id', targetTenant.id);
                 if (error) throw error;
             } else if (action === 'save') {
                 const { error } = await supabase.from('tenants').update({
@@ -80,12 +81,12 @@ export default function MasterDashboardPage() {
                     phone: data.phone,
                     address: data.address,
                     logo_url: data.logo_url
-                }).eq('id', selectedTenant.id);
+                }).eq('id', targetTenant.id);
                 if (error) throw error;
 
                 // Update Profile name if changed
-                if (data.owner_name && selectedTenant.profiles?.[0]?.id) {
-                    await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', selectedTenant.profiles[0].id);
+                if (data.owner_name && targetTenant.profiles?.[0]?.id) {
+                    await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
                 }
             }
 
@@ -196,12 +197,31 @@ export default function MasterDashboardPage() {
                                             </td>
                                             <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>
                                             <td className="py-4 px-6 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
-                                                <button
-                                                    onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
-                                                    className="size-10 rounded-xl bg-white/5 hover:bg-[#f2b90d] hover:text-black transition-all border border-white/5"
-                                                >
-                                                    <span className="material-symbols-outlined text-[20px]">settings_accessibility</span>
-                                                </button>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button
+                                                        onClick={() => handleAction(t.active ? 'pause' : 'resume', null, t)}
+                                                        className={`size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 ${t.active ? 'text-amber-500 hover:bg-amber-500 hover:text-white' : 'text-emerald-500 hover:bg-emerald-500 hover:text-white'}`}
+                                                        title={t.active ? 'Pausar Acesso' : 'Ativar Acesso'}
+                                                    >
+                                                        <span className="material-symbols-outlined text-[20px]">{t.active ? 'pause_circle' : 'play_circle'}</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleAction('delete', null, t)}
+                                                        className="size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 text-red-500 hover:bg-red-500 hover:text-white"
+                                                        title="Excluir Unidade"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
+                                                        className="size-10 rounded-xl flex items-center justify-center transition-all bg-white/5 border border-white/5 text-[#f2b90d] hover:bg-[#f2b90d] hover:text-black"
+                                                        title="Configurações"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[20px]">settings</span>
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
