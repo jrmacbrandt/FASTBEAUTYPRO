@@ -10,6 +10,7 @@
 -- A. CORREÇÃO DE ESTRUTURA (TENANTS)
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS status_pagamento TEXT DEFAULT 'PENDENTE';
 ALTER TABLE tenants ADD COLUMN IF NOT EXISTS business_type TEXT DEFAULT 'barbearia';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS active BOOLEAN DEFAULT true;
 
 -- B. FUNÇÃO DE EXCLUSÃO
 CREATE OR REPLACE FUNCTION delete_tenant_cascade(target_tenant_id uuid)
