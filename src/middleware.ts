@@ -92,8 +92,10 @@ export async function middleware(request: NextRequest) {
     const role = profile?.role;
     const status = profile?.status;
     const tenantData = (profile as any)?.tenants;
-    const isActive = tenantData?.active !== false; // Default to true if not found, but explicitly check false
-    const hasPaid = tenantData?.has_paid;
+    // Handle array or object response (Supabase quirk)
+    const tenantObj = Array.isArray(tenantData) ? tenantData[0] : tenantData;
+    const isActive = tenantObj?.active !== false; // Strict check for false
+    const hasPaid = tenantObj?.has_paid;
 
     const isSuspendedPage = url.pathname === '/unidade-suspensa';
 

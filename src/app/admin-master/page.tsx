@@ -125,6 +125,10 @@ export default function MasterDashboardPage() {
                 }
 
                 console.log('[MasterAction-V3] ✅ Update successful:', updateData);
+
+                // FORCE UI UPDATE LOCAL STATE
+                setTenants(prev => prev.map(t => t.id === targetTenant.id ? { ...t, active: newStatus } : t));
+
                 alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
             } else if (action === 'save') {
                 console.log('[MasterAction-V3] Attempting to save tenant data for:', targetTenant.id);
@@ -178,29 +182,7 @@ export default function MasterDashboardPage() {
 
             <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                 <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
-                    <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>
-                        {businessType === 'barber' ? '💈 Barbearias' : '💇‍♀️ Salões'}
-                    </h3>
-                    <div className="flex bg-black/20 p-1 rounded-xl">
-                        <button
-                            onClick={() => {
-                                setBusinessType('barber');
-                                localStorage.setItem('elite_business_type', 'barber');
-                            }}
-                            className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${businessType === 'barber' ? 'bg-[#f59e0b] text-black shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                        >
-                            Barbearia
-                        </button>
-                        <button
-                            onClick={() => {
-                                setBusinessType('salon');
-                                localStorage.setItem('elite_business_type', 'salon');
-                            }}
-                            className={`px-4 py-2 rounded-lg text-xs font-black uppercase transition-all ${businessType === 'salon' ? 'bg-[#fb7185] text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}
-                        >
-                            Salão
-                        </button>
-                    </div>
+                    <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>INQUILINOS NA PLATAFORMA</h3>
                 </div>
                 <div className="p-8">
                     {loading ? (
