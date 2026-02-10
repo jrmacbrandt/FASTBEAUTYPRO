@@ -153,7 +153,8 @@ export default function MasterDashboardPage() {
             }
 
             console.log('[MasterAction] Refreshing UI...');
-            await fetchTenants();
+            console.log('[MasterAction] Refreshing UI (Local Update)...');
+            // await fetchTenants(); // REMOVED TO PREVENT RACE CONDITION
             setSelectedTenant(null);
         } catch (err: any) {
             console.error('[MasterAction] ERROR:', err);
