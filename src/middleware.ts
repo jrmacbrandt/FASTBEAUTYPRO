@@ -109,7 +109,14 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
     }
 
-    if (role === 'owner' && hasPaid === false && !isPaymentPage) {
+    // Check for pending_approval tenant status (New Admin)
+    const tenantStatus = tenantObj?.status;
+    if (role === 'owner' && tenantStatus === 'pending_approval' && !isApprovalPage) {
+        url.pathname = '/aguardando-aprovacao';
+        return NextResponse.redirect(url);
+    }
+
+    if (role === 'owner' && hasPaid === false && !isPaymentPage && tenantStatus !== 'pending_approval') {
         url.pathname = '/pagamento-pendente';
         return NextResponse.redirect(url);
     }

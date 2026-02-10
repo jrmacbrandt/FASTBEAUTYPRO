@@ -1,52 +1,98 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
-export default function WaitingApprovalPage() {
+export default function AguardandoAprovacaoPage() {
     const router = useRouter();
-    const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
 
-    useEffect(() => {
-        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) {
-            setBusinessType(savedType);
-            document.body.className = savedType === 'salon' ? 'theme-salon' : '';
-        }
+    useLayoutEffect(() => {
+        // Real-time listener for approval
+        const checkStatus = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const channel = supabase
+                .channel('schema-db-changes')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'profiles',
+                        filter: `id=eq.${session.user.id}`
+                    },
+                    (payload) => {
+                        if (payload.new.status === 'active') {
+                            window.location.href = '/profissional';
+                        }
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'tenants'
+                    },
+                    async (payload: any) => {
+                        // Check if this update belongs to our tenant
+                        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+                        if (payload.new.id === profile?.tenant_id && payload.new.status === 'active') {
+                            window.location.href = '/admin';
+                        }
+                    }
+                )
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
+        };
+
+        checkStatus();
     }, []);
 
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#decad4', text: '#1e1e1e', cardBg: '#ffffff' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', cardBg: '#18181b' };
+    const handleLogout = async () => {
+        await supabase.auth.signOut();
+        router.push('/login');
+    };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
-            <div className="w-full max-w-[450px] rounded-[2.5rem] p-10 md:p-14 text-center relative border bg-opacity-95" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-
-                <div className="size-24 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto border border-amber-500/20 mb-8 animate-pulse" style={businessType === 'salon' ? { backgroundColor: '#7b438e1a', color: '#7b438e', borderColor: '#7b438e20' } : {}}>
-                    <span className="material-symbols-outlined text-6xl">hourglass_top</span>
+        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#09090b] text-center">
+            <div className="max-w-md w-full bg-[#18181b] border border-white/5 rounded-3xl p-8 shadow-2xl animate-in zoom-in duration-500">
+                <div className="size-20 bg-amber-500/10 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
+                    <span className="material-symbols-outlined text-4xl animate-pulse">hourglass_top</span>
                 </div>
 
-                <h1 className="text-xl md:text-2xl font-black mb-6 italic tracking-tight uppercase leading-tight" style={{ color: colors.text }}>
-                    Usuário aguardando aprovação <br /> do Administrador da loja.
-                </h1>
-
-                <p className="text-xs font-bold opacity-60 leading-relaxed mb-10 italic" style={{ color: colors.text }}>
-                    Seu cadastro foi realizado com sucesso. Assim que o administrador aprovar seu acesso, você poderá utilizar todas as ferramentas do seu painel profissional.
+                <h1 className="text-2xl font-black text-white mb-2 uppercase italic tracking-tight">Analisando Cadastro...</h1>
+                <p className="text-slate-400 text-sm mb-8 leading-relaxed">
+                    Sua conta foi criada com sucesso e está em fila de aprovação.
+                    <br /><br />
+                    <strong className="text-white">Para Administradores:</strong> Aguarde a liberação do plano ou insira um cupom (se disponível).
+                    <br />
+                    <strong className="text-white">Para Profissionais:</strong> O dono da barbearia precisa aprovar seu acesso.
                 </p>
 
-                <button
-                    onClick={async () => {
-                        await supabase.auth.signOut();
-                        router.push('/login');
-                    }}
-                    className="w-full font-black py-4 rounded-xl text-[10px] shadow-xl transition-all hover:opacity-90 active:scale-95 uppercase italic tracking-widest"
-                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#ffffff' : '#000000' }}
-                >
-                    VOLTAR PARA O LOGIN
-                </button>
+                <div className="space-y-3">
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="w-full bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-widest transition-all"
+                    >
+                        Verificar Novamente
+                    </button>
+
+                    <button
+                        onClick={handleLogout}
+                        className="w-full text-red-400 hover:text-red-300 font-bold py-2 rounded-xl text-[10px] uppercase tracking-widest transition-all"
+                    >
+                        Sair e Tentar Depois
+                    </button>
+                </div>
             </div>
+
+            <p className="mt-8 text-[10px] font-bold text-slate-600 uppercase tracking-[0.2em]">FastBeauty Pro</p>
         </div>
     );
 }

@@ -26,6 +26,10 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     const [cpf, setCpf] = useState('');
     const [shopSlug, setShopSlug] = useState('');
     const [shopName, setShopName] = useState('');
+    const [couponCode, setCouponCode] = useState('');
+    const [verifyingCoupon, setVerifyingCoupon] = useState(false);
+    const [couponError, setCouponError] = useState<string | null>(null);
+    const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -261,8 +265,45 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
             const userId = authData.user.id;
 
-            // 5. Create Tenant (for admin/owner only)
+            // 6. Create Tenant (for admin/owner only)
             if (activeTab === 'admin') {
+                // Verify Coupon if provided
+                let appliedPlan = 'trial';
+                let appliedStatus = 'pending_approval';
+                let trialEndsAt = null;
+
+                if (couponCode) {
+                    const { data: coupon, error: couponDbError } = await supabase
+                        .from('coupons')
+                        .select('*')
+                        .eq('code', couponCode.toUpperCase().trim())
+                        .eq('active', true)
+                        .single();
+
+                    if (coupon) {
+                        if (coupon.used_count >= coupon.max_uses) {
+                            throw new Error('Este cupom atingiu o limite de uso.');
+                        }
+
+                        // Apply coupon benefits
+                        if (coupon.discount_type === 'full_access') {
+                            appliedPlan = 'unlimited';
+                            appliedStatus = 'active';
+                        } else if (coupon.discount_type === 'trial_30') {
+                            appliedPlan = 'trial';
+                            appliedStatus = 'active'; // Active trial
+                            const d = new Date();
+                            d.setDate(d.getDate() + 30);
+                            trialEndsAt = d.toISOString();
+                        }
+
+                        // Increment usage
+                        await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
+                    } else {
+                        throw new Error('Cupom inválido ou expirado.');
+                    }
+                }
+
                 // First check if we already have a tenant created by trigger
                 const { data: existingTenant } = await supabase
                     .from('tenants')
@@ -272,6 +313,13 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
                 if (existingTenant) {
                     tenantId = existingTenant.id;
+                    // Update existing tenant with status
+                    await supabase.from('tenants').update({
+                        status: appliedStatus,
+                        subscription_plan: appliedPlan,
+                        trial_ends_at: trialEndsAt,
+                        coupon_used: couponCode || null
+                    }).eq('id', tenantId);
                 } else {
                     const { data: newTenant, error: tenantError } = await supabase
                         .from('tenants')
@@ -279,10 +327,14 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                             name: shopName,
                             slug: slug,
                             business_type: 'barber',
-                            active: true,
-                            has_paid: false,
+                            active: true, // Legacy flag, keep true
+                            has_paid: appliedStatus === 'active', // If active, assume paid/trial logic
                             logo_url: imageUrl || null,
-                            subscription_status: 'trialing'
+                            subscription_status: appliedPlan === 'unlimited' ? 'active' : 'trialing',
+                            status: appliedStatus,
+                            subscription_plan: appliedPlan,
+                            trial_ends_at: trialEndsAt,
+                            coupon_used: couponCode || null
                         })
                         .select('id')
                         .single();
@@ -490,13 +542,31 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                 </div>
 
                                 {activeTab === 'admin' && (
-                                    <div className="space-y-1.5">
-                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
-                                        <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>storefront</span>
-                                            <input type="text" placeholder="Nome da Loja" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={shopName} onChange={(e) => setShopName(e.target.value)} required />
+                                    <>
+                                        <div className="space-y-1.5">
+                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
+                                            <div className="relative">
+                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>storefront</span>
+                                                <input type="text" placeholder="Nome da Loja" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={shopName} onChange={(e) => setShopName(e.target.value)} required />
+                                            </div>
                                         </div>
-                                    </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CÓDIGO DE CONVITE / CUPOM (OPCIONAL)</label>
+                                            <div className="relative">
+                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>confirmation_number</span>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Possui um código de acesso?"
+                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs uppercase tracking-wider"
+                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
+                                                    value={couponCode}
+                                                    onChange={(e) => setCouponCode(e.target.value)}
+                                                />
+                                            </div>
+                                            <p className="text-[9px] opacity-60 ml-1 italic" style={{ color: colors.textMuted }}>Sem cupom? Sua conta entrará em análise.</p>
+                                        </div>
+                                    </>
                                 )}
 
                                 <div className="space-y-1.5">
