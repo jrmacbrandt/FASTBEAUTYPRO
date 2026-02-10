@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import Layout from '../../components/Layout';
+import Layout from '../../components/layout/Layout';
 
 const CashierCheckout: React.FC = () => {
   // Estado inicial das ordens pendentes
@@ -11,15 +11,29 @@ const CashierCheckout: React.FC = () => {
 
   const [selected, setSelected] = useState<any>(null);
 
-  const handleConfirmPayment = () => {
+  const handleConfirmPayment = async () => {
     if (!selected) return;
 
     // Remove a ordem finalizada da lista de pendentes
     const updatedOrders = orders.filter(order => order.id !== selected.id);
-    
+
     // Feedback de sucesso (simulado)
     alert(`Pagamento de R$ ${selected.total},00 confirmado para ${selected.client}! Estoque atualizado.`);
-    
+
+    // --- INTEGRATION: LOYALTY (5+1) ---
+    // In a real scenario, we would have the client's phone and tenant ID.
+    // For MVP/Demo preservation, we simulate a phone or try to get it from context.
+    try {
+      const { LoyaltyService } = await import('@/lib/loyalty');
+      // TODO: Replace with actual Tenant ID and Client Phone from context/auth
+      // console.log('Adding loyalty stamp...'); 
+      // await LoyaltyService.addStamp('CURRENT_TENANT_ID', 'CLIENT_PHONE'); 
+      console.log('[Loyalty] Stamp logic ready to hook with real data.');
+    } catch (err) {
+      console.error('[Loyalty] Error updating stamps', err);
+    }
+    // ----------------------------------
+
     // Atualiza os estados
     setOrders(updatedOrders);
     setSelected(null);
@@ -40,12 +54,11 @@ const CashierCheckout: React.FC = () => {
           <div className="grid gap-4">
             {orders.length > 0 ? (
               orders.map(cmd => (
-                <button 
+                <button
                   key={cmd.id}
                   onClick={() => setSelected(cmd)}
-                  className={`w-full p-6 rounded-3xl border text-left transition-all flex items-center justify-between group animate-in slide-in-from-left-4 duration-300 ${
-                    selected?.id === cmd.id ? 'bg-primary/5 border-primary shadow-xl shadow-primary/5 scale-[1.02]' : 'bg-background-card border-white/5 hover:border-white/20'
-                  }`}
+                  className={`w-full p-6 rounded-3xl border text-left transition-all flex items-center justify-between group animate-in slide-in-from-left-4 duration-300 ${selected?.id === cmd.id ? 'bg-primary/5 border-primary shadow-xl shadow-primary/5 scale-[1.02]' : 'bg-background-card border-white/5 hover:border-white/20'
+                    }`}
                 >
                   <div className="flex items-center gap-4">
                     <div className={`size-12 rounded-xl flex items-center justify-center transition-colors ${selected?.id === cmd.id ? 'bg-primary text-white' : 'bg-white/5 text-primary'}`}>
@@ -105,14 +118,14 @@ const CashierCheckout: React.FC = () => {
                   <span className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Valor Final</span>
                   <span className="text-primary text-4xl font-black italic tracking-tighter">R$ {selected.total}.00</span>
                 </div>
-                <button 
+                <button
                   onClick={handleConfirmPayment}
                   className="w-full bg-primary hover:bg-primary-hover text-white font-black py-6 rounded-2xl text-lg shadow-2xl shadow-primary/20 transition-all flex items-center justify-center gap-2 uppercase italic tracking-tight active:scale-95"
                 >
                   CONFIRMAR PAGAMENTO
                   <span className="material-symbols-outlined">check_circle</span>
                 </button>
-                <button 
+                <button
                   onClick={() => setSelected(null)}
                   className="w-full mt-4 text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-widest transition-colors"
                 >
@@ -126,7 +139,7 @@ const CashierCheckout: React.FC = () => {
                 <span className="material-symbols-outlined text-5xl">point_of_sale</span>
               </div>
               <p className="text-slate-500 font-bold uppercase text-xs tracking-widest leading-relaxed">
-                Selecione uma comanda ao lado <br/> para processar o recebimento
+                Selecione uma comanda ao lado <br /> para processar o recebimento
               </p>
             </div>
           )}

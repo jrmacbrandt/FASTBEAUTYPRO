@@ -246,6 +246,12 @@ export default function DynamicBookingPage() {
                                     <span>CONFIRMAR AGENDAMENTO</span>
                                     <span className="material-symbols-outlined font-bold">check_circle</span>
                                 </button>
+                                {/* Loyalty/VIP Feedback */}
+                                {selection.phone.length > 8 && (
+                                    <div className="mt-4 text-center">
+                                        <VerificationBadge tenantId={tenant.id} phone={selection.phone} />
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -261,3 +267,48 @@ export default function DynamicBookingPage() {
         </div>
     );
 }
+
+// Sub-component to handle async checks without cluttering main component
+const VerificationBadge = ({ tenantId, phone }: { tenantId: string, phone: string }) => {
+    const [status, setStatus] = useState<'loading' | 'vip' | 'loyalty' | null>(null);
+
+    useEffect(() => {
+        const check = async () => {
+            // Dynamic import to avoid SSR issues if any
+            const { LoyaltyService } = await import('@/lib/loyalty');
+
+            // Check VIP first
+            const sub = await LoyaltyService.checkSubscription(tenantId, phone);
+            if (sub) {
+                setStatus('vip');
+                return;
+            }
+
+            // Check Loyalty
+            const hasReward = await LoyaltyService.checkReward(tenantId, phone);
+            if (hasReward) {
+                setStatus('loyalty');
+                return;
+            }
+            setStatus(null);
+        };
+        const timeout = setTimeout(check, 1000); // Debounce
+        return () => clearTimeout(timeout);
+    }, [tenantId, phone]);
+
+    if (status === 'vip') return (
+        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase tracking-widest animate-in zoom-in">
+            <span className="material-symbols-outlined text-sm">workspace_premium</span>
+            Cliente VIP Detectado
+        </span>
+    );
+
+    if (status === 'loyalty') return (
+        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest animate-in zoom-in">
+            <span className="material-symbols-outlined text-sm">redeem</span>
+            Recompensa Disponível (Grátis)
+        </span>
+    );
+
+    return null;
+};
