@@ -83,454 +83,442 @@ export default function MasterDashboardPage() {
                 console.log('[MasterAction-V3] ✅ User confirmed deletion');
                 console.log('[MasterAction-V3] Starting cleanup for:', targetTenant.id);
 
-                // Sequential cleanup (V3 - Stable) with detailed logging
-                console.log('[MasterAction-V3] Step 1: Deleting appointments...');
-                const { error: err1 } = await supabase.from('appointments').delete().eq('tenant_id', targetTenant.id);
-                if (err1) console.error('[MasterAction-V3] ❌ Appointments error:', err1);
-                else console.log('[MasterAction-V3] ✅ Appointments deleted');
+                // Nuclear Option: Call server-side cascade delete function
+                console.log('[MasterAction-V3] Invoking server-side cascade delete...');
 
-                console.log('[MasterAction-V3] Step 2: Deleting products...');
-                const { error: err2 } = await supabase.from('products').delete().eq('tenant_id', targetTenant.id);
-                if (err2) console.error('[MasterAction-V3] ❌ Products error:', err2);
-                else console.log('[MasterAction-V3] ✅ Products deleted');
+                const { error: rpcError } = await supabase.rpc('delete_tenant_cascade', {
+                    target_tenant_id: targetTenant.id
+                });
 
-                console.log('[MasterAction-V3] Step 3: Deleting services...');
-                const { error: err3 } = await supabase.from('services').delete().eq('tenant_id', targetTenant.id);
-                if (err3) console.error('[MasterAction-V3] ❌ Services error:', err3);
-                else console.log('[MasterAction-V3] ✅ Services deleted');
+                if (rpcError) {
+                    console.error('[MasterAction-V3] ❌ RPC ERROR:', rpcError);
+                    throw new Error('Erro no RPC de exclusão: ' + rpcError.message);
+                }
 
-                console.log('[MasterAction-V3] Step 4: Deleting profiles...');
-                const { error: err4 } = await supabase.from('profiles').delete().eq('tenant_id', targetTenant.id);
-                if (err4) console.error('[MasterAction-V3] ❌ Profiles error:', err4);
-                else console.log('[MasterAction-V3] ✅ Profiles deleted');
+                console.log('[MasterAction-V3] ✅ RPC completed successfully');
 
-                console.log('[MasterAction-V3] Step 5: Deleting tenant...');
-                const { error: errFinal } = await supabase.from('tenants').delete().eq('id', targetTenant.id);
+                // Verification
+                console.log('[MasterAction-V3] Verifying deletion...');
+                const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).single();
 
-                if (errFinal) {
-                    console.error('[MasterAction-V3] ❌ FINAL DELETE ERROR:', errFinal);
-                    throw new Error('Erro ao excluir inquilino: ' + errFinal.message);
+                if (check) {
+                    console.error('[MasterAction-V3] ❌ VERIFICATION FAILED: Tenant still exists');
+                    alert('AVISO: O banco confirmou a exclusão, mas a unidade ainda existe. Tente atualizar a página.');
                 } else {
-                    console.log('[MasterAction-V3] ✅ Tenant delete command sent, verifying...');
-                    const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).single();
-                    if (check) {
-                        console.error('[MasterAction-V3] ❌ VERIFICATION FAILED: Tenant still exists (RLS block)');
-                        alert('AVISO: O banco recusou a exclusão (RLS). Políticas sendo atualizadas...');
-                    } else {
-                        console.log('[MasterAction-V3] ✅ VERIFICATION PASSED: Tenant deleted successfully');
-                        alert('UNIDADE EXCLUÍDA COM SUCESSO! (V3)');
-                    }
+                    console.log('[MasterAction-V3] ✅ VERIFICATION PASSED: Tenant deleted successfully');
+                    alert('UNIDADE EXCLUÍDA COM SUCESSO! (V3)');
                 }
-            } else if (action === 'pause' || action === 'resume') {
-                const newStatus = action === 'resume';
-                console.log('[MasterAction-V3] Attempting to', action, 'tenant:', targetTenant.id);
-                console.log('[MasterAction-V3] Setting active to:', newStatus);
+            }
+        } else if (action === 'pause' || action === 'resume') {
+            const newStatus = action === 'resume';
+            console.log('[MasterAction-V3] Attempting to', action, 'tenant:', targetTenant.id);
+            console.log('[MasterAction-V3] Setting active to:', newStatus);
 
-                const { error, data: updateData } = await supabase
-                    .from('tenants')
-                    .update({ active: newStatus })
-                    .eq('id', targetTenant.id)
-                    .select();
+            const { error, data: updateData } = await supabase
+                .from('tenants')
+                .update({ active: newStatus })
+                .eq('id', targetTenant.id)
+                .select();
 
-                if (error) {
-                    console.error('[MasterAction-V3] ❌ Pause/Resume error:', error);
-                    throw error;
-                }
-
-                console.log('[MasterAction-V3] ✅ Update successful:', updateData);
-                alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
-            } else if (action === 'save') {
-                console.log('[MasterAction-V3] Attempting to save tenant data for:', targetTenant.id);
-                console.log('[MasterAction-V3] Data to save:', data);
-
-                const { error: tenantUpdateError, data: tenantUpdateData } = await supabase.from('tenants').update({
-                    name: data.name,
-                    slug: data.slug,
-                    business_type: data.business_type,
-                    has_paid: data.has_paid,
-                    phone: data.phone,
-                    address: data.address,
-                    logo_url: data.logo_url
-                }).eq('id', targetTenant.id);
-                if (error) throw error;
-
-                if (data.owner_name && targetTenant.profiles?.[0]?.id) {
-                    await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
-                }
-                alert('Alterações salvas com sucesso! (V3)');
-                setIsEditModalOpen(false);
+            if (error) {
+                console.error('[MasterAction-V3] ❌ Pause/Resume error:', error);
+                throw error;
             }
 
-            console.log('[MasterAction] Refreshing UI...');
-            await fetchTenants();
-            setSelectedTenant(null);
-        } catch (err: any) {
-            console.error('[MasterAction] ERROR:', err);
-            alert('ERRO (V3): ' + (err.message || 'Falha na operação'));
-        } finally {
-            setSaving(false);
+            console.log('[MasterAction-V3] ✅ Update successful:', updateData);
+            alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
+        } else if (action === 'save') {
+            console.log('[MasterAction-V3] Attempting to save tenant data for:', targetTenant.id);
+            console.log('[MasterAction-V3] Data to save:', data);
+
+            const { error: tenantUpdateError, data: tenantUpdateData } = await supabase.from('tenants').update({
+                name: data.name,
+                slug: data.slug,
+                business_type: data.business_type,
+                has_paid: data.has_paid,
+                phone: data.phone,
+                address: data.address,
+                logo_url: data.logo_url
+            }).eq('id', targetTenant.id);
+            if (error) throw error;
+
+            if (data.owner_name && targetTenant.profiles?.[0]?.id) {
+                await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
+            }
+            alert('Alterações salvas com sucesso! (V3)');
+            setIsEditModalOpen(false);
         }
-    };
 
-    const metrics = [
-        { label: 'Unidades Ativas (V3)', val: tenants.filter(t => t.active).length.toString(), trend: 'Sync: OK', icon: 'storefront' },
-        { label: 'Status Sistema', val: '99.9%', trend: 'v3-final-' + new Date().getTime().toString().slice(-4), icon: 'check_circle' }
-    ];
+        console.log('[MasterAction] Refreshing UI...');
+        await fetchTenants();
+        setSelectedTenant(null);
+    } catch (err: any) {
+        console.error('[MasterAction] ERROR:', err);
+        alert('ERRO (V3): ' + (err.message || 'Falha na operação'));
+    } finally {
+        setSaving(false);
+    }
+};
 
-    return (
-        <div className="space-y-12 animate-in fade-in duration-500">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {metrics.map((m, i) => (
-                    <div key={i} className="p-8 rounded-[2rem] border relative group transition-all shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                        <span className="material-symbols-outlined absolute top-8 right-8 text-6xl opacity-10 group-hover:opacity-20 transition-all" style={{ color: colors.primary }}>{m.icon}</span>
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 italic" style={{ color: colors.textMuted }}>{m.label}</p>
-                        <h4 className="text-4xl font-black italic tracking-tighter mb-4" style={{ color: colors.text }}>{m.val}</h4>
+const metrics = [
+    { label: 'Unidades Ativas (V3)', val: tenants.filter(t => t.active).length.toString(), trend: 'Sync: OK', icon: 'storefront' },
+    { label: 'Status Sistema', val: '99.9%', trend: 'v3-final-' + new Date().getTime().toString().slice(-4), icon: 'check_circle' }
+];
+
+return (
+    <div className="space-y-12 animate-in fade-in duration-500">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {metrics.map((m, i) => (
+                <div key={i} className="p-8 rounded-[2rem] border relative group transition-all shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                    <span className="material-symbols-outlined absolute top-8 right-8 text-6xl opacity-10 group-hover:opacity-20 transition-all" style={{ color: colors.primary }}>{m.icon}</span>
+                    <p className="text-[10px] font-black uppercase tracking-widest mb-1 italic" style={{ color: colors.textMuted }}>{m.label}</p>
+                    <h4 className="text-4xl font-black italic tracking-tighter mb-4" style={{ color: colors.text }}>{m.val}</h4>
+                </div>
+            ))}
+        </div>
+
+        <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+            <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
+                <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>Inquilinos na Plataforma</h3>
+            </div>
+            <div className="p-8">
+                {loading ? (
+                    <div className="text-center py-20 opacity-40">
+                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
                     </div>
-                ))}
-            </div>
+                ) : (
+                    <div className="overflow-x-auto overflow-y-visible custom-scrollbar pb-4">
+                        <table className="w-full text-left border-separate border-spacing-y-2">
+                            <thead>
+                                <tr className="text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>
+                                    <th className="pb-4 px-6">Identidade</th>
+                                    <th className="pb-4 px-6 text-center">Slug</th>
+                                    <th className="pb-4 px-6 text-center">Status</th>
+                                    <th className="pb-4 px-6 text-center">Cadastro</th>
+                                    <th className="pb-4 px-8 text-right min-w-[180px]">Gestão</th>
+                                </tr>
+                            </thead>
+                            <tbody className="font-bold text-sm" style={{ color: colors.text }}>
+                                {tenants.map(t => (
+                                    <tr key={t.id} className="transition-all hover:bg-white/5 group">
+                                        <td className="py-4 px-6 italic rounded-l-2xl border-y border-l" style={{ borderColor: `${colors.text}0d` }}>
+                                            <div className="flex items-center gap-4">
+                                                <div className="size-10 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0 relative group/logo">
+                                                    {t.logo_url ? (
+                                                        <img src={t.logo_url} alt={t.name} className="size-full object-cover" />
+                                                    ) : (
+                                                        <span className="material-symbols-outlined opacity-30">storefront</span>
+                                                    )}
+                                                    <button
+                                                        onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            right: 0,
+                                                            width: '24px',
+                                                            height: '24px',
+                                                            backgroundColor: 'rgba(0,0,0,0.8)',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            borderBottomLeftRadius: '8px',
+                                                            cursor: 'pointer',
+                                                            border: 'none'
+                                                        }}
+                                                        title="Editar Logo"
+                                                    >
+                                                        <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#f2b90d' }}>edit</span>
+                                                    </button>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-black uppercase tracking-tight">{t.name}</span>
+                                                    <span className="text-[9px] opacity-40 uppercase tracking-tighter">Prop: {t.profiles?.[0]?.full_name || 'N/A'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <span className="text-xs italic opacity-60">/{t.slug}</span>
+                                                <div className="flex gap-2">
+                                                    <button onClick={() => handleCopy(t.slug)} className="size-5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Copiar Link Completo">
+                                                        <span className="material-symbols-outlined text-[12px]">content_copy</span>
+                                                    </button>
+                                                    <button onClick={() => handleOpen(t.slug)} className="size-5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Abrir Página">
+                                                        <span className="material-symbols-outlined text-[12px]">open_in_new</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${t.active ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
+                                                {t.active ? 'ATIVO' : 'PAUSADO'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>
+                                        <td className="py-4 px-8 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
+                                            <div className="flex items-center justify-end gap-3 whitespace-nowrap min-w-max">
+                                                <button
+                                                    onClick={() => {
+                                                        console.log('[DEBUG] Pause/Resume clicked for:', t.name);
+                                                        handleAction(t.active ? 'pause' : 'resume', null, t);
+                                                    }}
+                                                    className={`size-10 rounded-xl flex items-center justify-center transition-all border shadow-lg ${t.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500 hover:text-white' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
+                                                    title={t.active ? 'Pausar Acesso' : 'Ativar Acesso'}
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">{t.active ? 'pause_circle' : 'play_circle'}</span>
+                                                </button>
 
-            <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
-                    <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>Inquilinos na Plataforma</h3>
-                </div>
-                <div className="p-8">
-                    {loading ? (
-                        <div className="text-center py-20 opacity-40">
-                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
-                        </div>
-                    ) : (
-                        <div className="overflow-x-auto overflow-y-visible custom-scrollbar pb-4">
-                            <table className="w-full text-left border-separate border-spacing-y-2">
-                                <thead>
-                                    <tr className="text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>
-                                        <th className="pb-4 px-6">Identidade</th>
-                                        <th className="pb-4 px-6 text-center">Slug</th>
-                                        <th className="pb-4 px-6 text-center">Status</th>
-                                        <th className="pb-4 px-6 text-center">Cadastro</th>
-                                        <th className="pb-4 px-8 text-right min-w-[180px]">Gestão</th>
+                                                <button
+                                                    onClick={() => {
+                                                        console.log('[DEBUG] Hard Delete clicked for:', t.name);
+                                                        handleAction('delete', null, t);
+                                                    }}
+                                                    className="size-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center transition-all border border-red-500/20 hover:bg-red-500 hover:text-white shadow-lg"
+                                                    title="Excluir Unidade Permanente"
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">delete_forever</span>
+                                                </button>
+
+                                                <button
+                                                    onClick={() => {
+                                                        console.log('[DEBUG] Settings clicked for:', t.name);
+                                                        setSelectedTenant(t);
+                                                        setIsEditModalOpen(true);
+                                                    }}
+                                                    className="size-10 bg-white/5 text-slate-400 rounded-xl flex items-center justify-center transition-all border border-white/5 hover:bg-[#f2b90d] hover:text-black shadow-lg"
+                                                    title="Configurações"
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px]">settings</span>
+                                                </button>
+                                            </div>
+                                        </td>
                                     </tr>
-                                </thead>
-                                <tbody className="font-bold text-sm" style={{ color: colors.text }}>
-                                    {tenants.map(t => (
-                                        <tr key={t.id} className="transition-all hover:bg-white/5 group">
-                                            <td className="py-4 px-6 italic rounded-l-2xl border-y border-l" style={{ borderColor: `${colors.text}0d` }}>
-                                                <div className="flex items-center gap-4">
-                                                    <div className="size-10 rounded-xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0 relative group/logo">
-                                                        {t.logo_url ? (
-                                                            <img src={t.logo_url} alt={t.name} className="size-full object-cover" />
-                                                        ) : (
-                                                            <span className="material-symbols-outlined opacity-30">storefront</span>
-                                                        )}
-                                                        <button
-                                                            onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                top: 0,
-                                                                right: 0,
-                                                                width: '24px',
-                                                                height: '24px',
-                                                                backgroundColor: 'rgba(0,0,0,0.8)',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                borderBottomLeftRadius: '8px',
-                                                                cursor: 'pointer',
-                                                                border: 'none'
-                                                            }}
-                                                            title="Editar Logo"
-                                                        >
-                                                            <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#f2b90d' }}>edit</span>
-                                                        </button>
-                                                    </div>
-                                                    <div className="flex flex-col">
-                                                        <span className="font-black uppercase tracking-tight">{t.name}</span>
-                                                        <span className="text-[9px] opacity-40 uppercase tracking-tighter">Prop: {t.profiles?.[0]?.full_name || 'N/A'}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <span className="text-xs italic opacity-60">/{t.slug}</span>
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => handleCopy(t.slug)} className="size-5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Copiar Link Completo">
-                                                            <span className="material-symbols-outlined text-[12px]">content_copy</span>
-                                                        </button>
-                                                        <button onClick={() => handleOpen(t.slug)} className="size-5 rounded-md hover:bg-white/10 flex items-center justify-center transition-all text-[#f2b90d]" title="Abrir Página">
-                                                            <span className="material-symbols-outlined text-[12px]">open_in_new</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${t.active ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
-                                                    {t.active ? 'ATIVO' : 'PAUSADO'}
-                                                </span>
-                                            </td>
-                                            <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>
-                                            <td className="py-4 px-8 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
-                                                <div className="flex items-center justify-end gap-3 whitespace-nowrap min-w-max">
-                                                    <button
-                                                        onClick={() => {
-                                                            console.log('[DEBUG] Pause/Resume clicked for:', t.name);
-                                                            handleAction(t.active ? 'pause' : 'resume', null, t);
-                                                        }}
-                                                        className={`size-10 rounded-xl flex items-center justify-center transition-all border shadow-lg ${t.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500 hover:text-white' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
-                                                        title={t.active ? 'Pausar Acesso' : 'Ativar Acesso'}
-                                                    >
-                                                        <span className="material-symbols-outlined text-[20px]">{t.active ? 'pause_circle' : 'play_circle'}</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            console.log('[DEBUG] Hard Delete clicked for:', t.name);
-                                                            handleAction('delete', null, t);
-                                                        }}
-                                                        className="size-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center transition-all border border-red-500/20 hover:bg-red-500 hover:text-white shadow-lg"
-                                                        title="Excluir Unidade Permanente"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[20px]">delete_forever</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            console.log('[DEBUG] Settings clicked for:', t.name);
-                                                            setSelectedTenant(t);
-                                                            setIsEditModalOpen(true);
-                                                        }}
-                                                        className="size-10 bg-white/5 text-slate-400 rounded-xl flex items-center justify-center transition-all border border-white/5 hover:bg-[#f2b90d] hover:text-black shadow-lg"
-                                                        title="Configurações"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[20px]">settings</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    )}
-                </div>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
+        </div>
 
-            {/* Modal de Gestão de Inquilino */}
-            {
-                isEditModalOpen && selectedTenant && (
-                    <div className="fixed inset-0 z-[100] flex items-start justify-center py-8 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                        <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[3rem] p-10 relative shadow-2xl my-8">
-                            <div className="absolute top-0 left-0 w-full h-1 bg-[#f2b90d] animate-pulse"></div>
+        {/* Modal de Gestão de Inquilino */}
+        {
+            isEditModalOpen && selectedTenant && (
+                <div className="fixed inset-0 z-[100] flex items-start justify-center py-8 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[3rem] p-10 relative shadow-2xl my-8">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-[#f2b90d] animate-pulse"></div>
 
-                            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
-                                <span className="material-symbols-outlined">close</span>
-                            </button>
+                        <button onClick={() => setIsEditModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
+                            <span className="material-symbols-outlined">close</span>
+                        </button>
 
-                            <div className="flex flex-col items-center mb-10">
-                                <div className="size-20 rounded-2xl overflow-hidden bg-white/5 border border-white/10 mb-4 shadow-xl">
-                                    {selectedTenant.logo_url ? (
-                                        <img src={selectedTenant.logo_url} alt={selectedTenant.name} className="size-full object-cover" />
-                                    ) : (
-                                        <div className="size-full flex items-center justify-center text-[#f2b90d]">
-                                            <span className="material-symbols-outlined text-4xl">storefront</span>
-                                        </div>
-                                    )}
-                                </div>
-                                <h3 className="text-white text-2xl font-black italic uppercase italic leading-none">{selectedTenant.name}</h3>
-                                <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-60">ADMINISTRAÇÃO DE UNIDADE</p>
+                        <div className="flex flex-col items-center mb-10">
+                            <div className="size-20 rounded-2xl overflow-hidden bg-white/5 border border-white/10 mb-4 shadow-xl">
+                                {selectedTenant.logo_url ? (
+                                    <img src={selectedTenant.logo_url} alt={selectedTenant.name} className="size-full object-cover" />
+                                ) : (
+                                    <div className="size-full flex items-center justify-center text-[#f2b90d]">
+                                        <span className="material-symbols-outlined text-4xl">storefront</span>
+                                    </div>
+                                )}
+                            </div>
+                            <h3 className="text-white text-2xl font-black italic uppercase italic leading-none">{selectedTenant.name}</h3>
+                            <p className="text-[#f2b90d] text-[10px] font-black uppercase tracking-[0.3em] mt-2 opacity-60">ADMINISTRAÇÃO DE UNIDADE</p>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => handleAction(selectedTenant.active ? 'pause' : 'resume')}
+                                    className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all flex items-center justify-center gap-2 ${selectedTenant.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500 hover:text-black' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">{selectedTenant.active ? 'pause_circle' : 'play_circle'}</span>
+                                    {selectedTenant.active ? 'Pausar Acesso' : 'Ativar Acesso'}
+                                </button>
+                                <button
+                                    onClick={() => handleAction('delete')}
+                                    className="py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[18px]">delete_forever</span>
+                                    Excluir Perfil
+                                </button>
                             </div>
 
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => handleAction(selectedTenant.active ? 'pause' : 'resume')}
-                                        className={`py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all flex items-center justify-center gap-2 ${selectedTenant.active ? 'bg-amber-500/10 text-amber-500 border-amber-500/20 hover:bg-amber-500 hover:text-black' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`}
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">{selectedTenant.active ? 'pause_circle' : 'play_circle'}</span>
-                                        {selectedTenant.active ? 'Pausar Acesso' : 'Ativar Acesso'}
-                                    </button>
-                                    <button
-                                        onClick={() => handleAction('delete')}
-                                        className="py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center gap-2"
-                                    >
-                                        <span className="material-symbols-outlined text-[18px]">delete_forever</span>
-                                        Excluir Perfil
-                                    </button>
+                            <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-white text-[11px] font-black uppercase tracking-widest opacity-40">Dados do Estabelecimento</h4>
+                                    <div className="text-[9px] font-black uppercase tracking-tighter opacity-30 text-white">ID: {selectedTenant.id.slice(0, 8)}</div>
                                 </div>
 
-                                <div className="p-8 rounded-[2rem] bg-white/5 border border-white/5 space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <h4 className="text-white text-[11px] font-black uppercase tracking-widest opacity-40">Dados do Estabelecimento</h4>
-                                        <div className="text-[9px] font-black uppercase tracking-tighter opacity-30 text-white">ID: {selectedTenant.id.slice(0, 8)}</div>
-                                    </div>
-
-                                    <div className="space-y-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Nome da Loja</label>
-                                            <input
-                                                type="text"
-                                                defaultValue={selectedTenant.name}
-                                                onChange={(e) => {
-                                                    const newName = e.target.value;
-                                                    const newSlug = normalizeSlug(newName);
-                                                    setSelectedTenant({ ...selectedTenant, name: newName, slug: newSlug });
-                                                }}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
-                                            />
-                                        </div>
-
-                                        {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - INICIO */}
-                                        <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/10">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className="text-xl">🖼️</span>
-                                                <label className="text-[11px] font-black uppercase text-[#f2b90d]">
-                                                    Alterar Logo do Estabelecimento
-                                                </label>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <input
-                                                    type="text"
-                                                    value={selectedTenant.logo_url || ''}
-                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
-                                                    placeholder="Cole a URL da imagem aqui..."
-                                                    className="w-full bg-black/60 border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f2b90d] transition-all"
-                                                />
-
-                                                <div className="flex flex-col gap-1 text-[10px] text-zinc-400 font-medium px-1">
-                                                    <p className="flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[12px]">info</span>
-                                                        Formatos aceitos: JPG, PNG, WEBP
-                                                    </p>
-                                                    <p className="flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[12px]">fit_screen</span>
-                                                        Tamanho recomendado: 500x500px (Quadrado)
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - FIM */}
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Slug (URL de Acesso)</label>
-                                            <div className="relative">
-                                                <span className="absolute left-4 top-3.5 text-xs text-white/30 font-bold">/</span>
-                                                <input
-                                                    type="text"
-                                                    value={selectedTenant.slug}
-                                                    onChange={(e) => {
-                                                        const newSlug = normalizeSlug(e.target.value);
-                                                        setSelectedTenant({ ...selectedTenant, slug: newSlug });
-                                                    }}
-                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pl-8 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all font-mono"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tipo de Negócio</label>
-                                            <div className="relative">
-                                                <select
-                                                    value={selectedTenant.business_type}
-                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, business_type: e.target.value })}
-                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all appearance-none cursor-pointer"
-                                                >
-                                                    <option className="bg-white text-black font-bold" value="barbearia">Barbearia</option>
-                                                    <option className="bg-white text-black font-bold" value="salao">Salão de Beleza</option>
-                                                    <option className="bg-white text-black font-bold" value="estetica">Clínica Estética</option>
-                                                    <option className="bg-white text-black font-bold" value="esmalteria">Esmalteria</option>
-                                                    <option className="bg-white text-black font-bold" value="spa">SPA</option>
-                                                </select>
-                                                <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Status Pagamento</label>
-                                            <div className="relative">
-                                                <select
-                                                    value={selectedTenant.has_paid ? 'paid' : 'pending'}
-                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, has_paid: e.target.value === 'paid' })}
-                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
-                                                >
-                                                    <option className="bg-white text-emerald-600 font-bold" value="paid">PAGO / OK</option>
-                                                    <option className="bg-white text-red-600 font-bold" value="pending">PENDENTE</option>
-                                                </select>
-                                                <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
-                                            <input
-                                                type="text"
-                                                defaultValue={selectedTenant.phone}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
-                                                placeholder="(00) 00000-0000"
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
-                                            />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
-                                            <input
-                                                type="text"
-                                                defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
-                                                onChange={(e) => {
-                                                    const newProfiles = [...(selectedTenant.profiles || [])];
-                                                    if (newProfiles[0]) {
-                                                        newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
-                                                    } else {
-                                                        newProfiles[0] = { full_name: e.target.value };
-                                                    }
-                                                    setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
-                                                }}
-                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
-                                            />
-                                        </div>
-                                    </div>
-
+                                <div className="space-y-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Nome da Loja</label>
                                         <input
                                             type="text"
-                                            defaultValue={selectedTenant.address}
-                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
-                                            placeholder="Rua, Número, Bairro, Cidade"
+                                            defaultValue={selectedTenant.name}
+                                            onChange={(e) => {
+                                                const newName = e.target.value;
+                                                const newSlug = normalizeSlug(newName);
+                                                setSelectedTenant({ ...selectedTenant, name: newName, slug: newSlug });
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
+                                        />
+                                    </div>
+
+                                    {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - INICIO */}
+                                    <div className="space-y-3 bg-white/5 p-4 rounded-xl border border-white/10">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-xl">🖼️</span>
+                                            <label className="text-[11px] font-black uppercase text-[#f2b90d]">
+                                                Alterar Logo do Estabelecimento
+                                            </label>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <input
+                                                type="text"
+                                                value={selectedTenant.logo_url || ''}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
+                                                placeholder="Cole a URL da imagem aqui..."
+                                                className="w-full bg-black/60 border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f2b90d] transition-all"
+                                            />
+
+                                            <div className="flex flex-col gap-1 text-[10px] text-zinc-400 font-medium px-1">
+                                                <p className="flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[12px]">info</span>
+                                                    Formatos aceitos: JPG, PNG, WEBP
+                                                </p>
+                                                <p className="flex items-center gap-1">
+                                                    <span className="material-symbols-outlined text-[12px]">fit_screen</span>
+                                                    Tamanho recomendado: 500x500px (Quadrado)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - FIM */}
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Slug (URL de Acesso)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-4 top-3.5 text-xs text-white/30 font-bold">/</span>
+                                            <input
+                                                type="text"
+                                                value={selectedTenant.slug}
+                                                onChange={(e) => {
+                                                    const newSlug = normalizeSlug(e.target.value);
+                                                    setSelectedTenant({ ...selectedTenant, slug: newSlug });
+                                                }}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 pl-8 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Tipo de Negócio</label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedTenant.business_type}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, business_type: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all appearance-none cursor-pointer"
+                                            >
+                                                <option className="bg-white text-black font-bold" value="barbearia">Barbearia</option>
+                                                <option className="bg-white text-black font-bold" value="salao">Salão de Beleza</option>
+                                                <option className="bg-white text-black font-bold" value="estetica">Clínica Estética</option>
+                                                <option className="bg-white text-black font-bold" value="esmalteria">Esmalteria</option>
+                                                <option className="bg-white text-black font-bold" value="spa">SPA</option>
+                                            </select>
+                                            <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Status Pagamento</label>
+                                        <div className="relative">
+                                            <select
+                                                value={selectedTenant.has_paid ? 'paid' : 'pending'}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, has_paid: e.target.value === 'paid' })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none appearance-none"
+                                            >
+                                                <option className="bg-white text-emerald-600 font-bold" value="paid">PAGO / OK</option>
+                                                <option className="bg-white text-red-600 font-bold" value="pending">PENDENTE</option>
+                                            </select>
+                                            <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
+                                        <input
+                                            type="text"
+                                            defaultValue={selectedTenant.phone}
+                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
+                                            placeholder="(00) 00000-0000"
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
+                                        <input
+                                            type="text"
+                                            defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
+                                            onChange={(e) => {
+                                                const newProfiles = [...(selectedTenant.profiles || [])];
+                                                if (newProfiles[0]) {
+                                                    newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
+                                                } else {
+                                                    newProfiles[0] = { full_name: e.target.value };
+                                                }
+                                                setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
+                                            }}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-3 mt-8">
-                                    <button
-                                        onClick={() => setIsEditModalOpen(false)}
-                                        className="bg-white/5 text-slate-400 font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:text-white transition-all"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        disabled={saving}
-                                        onClick={() => handleAction('save', {
-                                            name: selectedTenant.name,
-                                            slug: selectedTenant.slug,
-                                            business_type: selectedTenant.business_type,
-                                            has_paid: selectedTenant.has_paid,
-                                            phone: selectedTenant.phone,
-                                            address: selectedTenant.address,
-                                            owner_name: selectedTenant.profiles?.[0]?.full_name,
-                                            logo_url: selectedTenant.logo_url
-                                        })}
-                                        className="bg-[#f2b90d] text-black font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-                                    >
-                                        {saving ? 'Salvando...' : 'Salvar Alterações'}
-                                    </button>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
+                                    <input
+                                        type="text"
+                                        defaultValue={selectedTenant.address}
+                                        onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
+                                        placeholder="Rua, Número, Bairro, Cidade"
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                    />
                                 </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 mt-8">
+                                <button
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="bg-white/5 text-slate-400 font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:text-white transition-all"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    disabled={saving}
+                                    onClick={() => handleAction('save', {
+                                        name: selectedTenant.name,
+                                        slug: selectedTenant.slug,
+                                        business_type: selectedTenant.business_type,
+                                        has_paid: selectedTenant.has_paid,
+                                        phone: selectedTenant.phone,
+                                        address: selectedTenant.address,
+                                        owner_name: selectedTenant.profiles?.[0]?.full_name,
+                                        logo_url: selectedTenant.logo_url
+                                    })}
+                                    className="bg-[#f2b90d] text-black font-black py-4 rounded-2xl uppercase tracking-widest text-[9px] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+                                >
+                                    {saving ? 'Salvando...' : 'Salvar Alterações'}
+                                </button>
                             </div>
                         </div>
                     </div>
-                )
-            }
-        </div >
-    );
+                </div>
+            )
+        }
+    </div >
+);
 }
