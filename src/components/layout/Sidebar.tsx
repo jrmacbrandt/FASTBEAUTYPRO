@@ -54,11 +54,13 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         if (isMasterArea) return [
             { label: 'Painel Master', icon: 'dashboard', path: '/admin-master' },
+            { label: 'Comunicados', icon: 'broadcast_on_personal', path: '/admin-master/comunicados' },
             { label: 'Cupons Globais', icon: 'local_offer', path: '/admin-master/cupons' },
         ];
 
         if (isAdminArea) return [
             { label: 'Dashboard', icon: 'dashboard', path: '/admin' },
+            { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/profissional' },
             { label: 'Comissões', icon: 'payments', path: '/profissional/comissoes' },

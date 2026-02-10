@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { OriginTracker } from "@/components/OriginTracker";
 
 export const metadata: Metadata = {
   title: "FastBeauty Pro - Barber & Salon",
@@ -22,6 +23,7 @@ export default function RootLayout({
         <style dangerouslySetInnerHTML={{ __html: `body { font-family: 'Manrope', sans-serif; }` }} />
       </head>
       <body>
+        <OriginTracker />
         {children}
       </body>
     </html>

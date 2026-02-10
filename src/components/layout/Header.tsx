@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { NotificationBell } from '../NotificationBell';
 
 interface HeaderProps {
     title: string;
@@ -37,6 +38,9 @@ const Header: React.FC<HeaderProps> = ({ title, theme, onMenuToggle }) => {
 
             <div className="flex items-center gap-2 md:gap-4">
                 <div className="flex items-center rounded-full p-1 border shadow-sm" style={{ backgroundColor: `${theme.cardBg}80`, borderColor: theme.border }}>
+                    <div className="px-2 border-r border-white/5">
+                        <NotificationBell />
+                    </div>
                     <button className="size-8 md:size-10 rounded-full flex items-center justify-center transition-all" style={{ color: theme.primary }} title="Acessibilidade">
                         <span className="material-symbols-outlined text-[16px] md:text-[20px] font-bold">format_size</span>
                     </button>
