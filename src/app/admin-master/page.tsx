@@ -259,8 +259,13 @@ export default function MasterDashboardPage() {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${t.active ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
-                                                    {t.active ? 'ATIVO' : 'PAUSADO'}
+                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${t.status === 'pending_approval'
+                                                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                        : t.active
+                                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                    }`}>
+                                                    {t.status === 'pending_approval' ? 'PENDENTE' : (t.active ? 'ATIVO' : 'PAUSADO')}
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>

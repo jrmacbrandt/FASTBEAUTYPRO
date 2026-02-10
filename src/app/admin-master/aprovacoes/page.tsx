@@ -34,25 +34,84 @@ export default function MasterAprovacoesPage() {
         fetchPending();
     }, []);
 
+    const [couponCode, setCouponCode] = useState('');
+
     const handleApprove = async (tenantId: string) => {
-        if (!confirm('Tem certeza que deseja aprovar este estabelecimento vitaliciamente?')) return;
+        if (!confirm('Tem certeza que deseja LIBERAR TOTALMENTE este estabelecimento? \n\nIsso concederá acesso VITALÍCIO e ILIMITADO.')) return;
 
         const { error } = await supabase
             .from('tenants')
             .update({
                 status: 'active',
                 subscription_plan: 'unlimited',
-                trial_ends_at: null // or set far future
+                trial_ends_at: null,
+                active: true
             })
             .eq('id', tenantId);
 
         if (error) {
             alert('Erro ao aprovar: ' + error.message);
         } else {
-            alert('Estabelecimento aprovado com sucesso!');
+            alert('Estabelecimento LIBERADO com sucesso!');
             fetchPending();
         }
     };
+
+    const handleApproveWithCoupon = async (tenantId: string) => {
+        if (!couponCode) return alert('Digite um código de cupom.');
+
+        // 1. Validate Coupon
+        const { data: coupon, error: couponError } = await supabase
+            .from('coupons')
+            .select('*')
+            .eq('code', couponCode.toUpperCase().trim())
+            .eq('active', true)
+            .single();
+
+        if (couponError || !coupon) {
+            return alert('Cupom inválido ou não encontrado.');
+        }
+
+        if (coupon.used_count >= coupon.max_uses) {
+            return alert('Este cupom atingiu o limite de usos.');
+        }
+
+        // 2. Determine Plan
+        let appliedPlan = 'trial';
+        let trialEndsAt = null;
+
+        if (coupon.discount_type === 'full_access') {
+            appliedPlan = 'unlimited';
+        } else if (coupon.discount_type === 'trial_30') {
+            const d = new Date();
+            d.setDate(d.getDate() + 30);
+            trialEndsAt = d.toISOString();
+        }
+
+        // 3. Update Tenant
+        const { error: updateError } = await supabase
+            .from('tenants')
+            .update({
+                status: 'active',
+                subscription_plan: appliedPlan,
+                trial_ends_at: trialEndsAt,
+                coupon_used: coupon.code,
+                active: true
+            })
+            .eq('id', tenantId);
+
+        if (updateError) {
+            return alert('Erro ao aplicar cupom: ' + updateError.message);
+        }
+
+        // 4. Update Coupon Usage
+        await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
+
+        alert(`Cupom ${coupon.code} aplicado com sucesso!`);
+        setCouponCode('');
+        fetchPending();
+    };
+
 
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-700 text-slate-100">
@@ -110,12 +169,33 @@ export default function MasterAprovacoesPage() {
                                     </div>
                                 )}
 
-                                <div className="mt-auto pt-4 flex gap-3">
+                                <div className="mt-auto pt-4 space-y-3">
+                                    {/* Opção 1: Cupom */}
+                                    <div className="bg-white/5 p-3 rounded-xl space-y-2 border border-white/5">
+                                        <label className="text-[9px] font-black uppercase text-slate-500 block">Liberar via Cupom</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="CÓDIGO"
+                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-white uppercase focus:outline-none focus:border-[#f2b90d]"
+                                                value={couponCode}
+                                                onChange={(e) => setCouponCode(e.target.value)}
+                                            />
+                                            <button
+                                                onClick={() => handleApproveWithCoupon(tenant.id)}
+                                                className="bg-white/10 hover:bg-[#f2b90d] hover:text-black text-white p-2 rounded-lg transition-colors"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">check</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Opção 2: Liberar Total */}
                                     <button
                                         onClick={() => handleApprove(tenant.id)}
-                                        className="flex-1 bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase tracking-widest text-[10px] py-3 rounded-xl transition-all shadow-lg hover:shadow-[#f2b90d]/20 active:scale-95"
+                                        className="w-full bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[10px] py-3 rounded-xl transition-all border border-emerald-500/20"
                                     >
-                                        APROVAR ACESSO
+                                        LIBERAR ACESSO TOTAL
                                     </button>
                                 </div>
                             </div>
