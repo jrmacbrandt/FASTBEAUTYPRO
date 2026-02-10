@@ -54,6 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         if (isMasterArea) return [
             { label: 'Painel Master', icon: 'dashboard', path: '/admin-master' },
+            { label: 'Aprovações', icon: 'check_circle', path: '/admin-master/aprovacoes' },
             { label: 'Comunicados', icon: 'broadcast_on_personal', path: '/admin-master/comunicados' },
             { label: 'Cupons Globais', icon: 'local_offer', path: '/admin-master/cupons' },
         ];

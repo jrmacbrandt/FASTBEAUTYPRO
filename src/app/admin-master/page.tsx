@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic';
 export default function MasterDashboardPage() {
     const [tenants, setTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [pendingCount, setPendingCount] = useState(0);
     const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
 
     // Management State
@@ -19,11 +21,23 @@ export default function MasterDashboardPage() {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
         if (savedType) setBusinessType(savedType);
         fetchTenants();
+        fetchPendingCount();
     }, []);
 
     const colors = businessType === 'salon'
         ? { primary: '#fb7185', bg: '#fff1f2', text: '#881337', textMuted: '#be123c', cardBg: '#ffffff', tableBorder: '#fb718540' } // Rose Theme
         : { primary: '#f59e0b', bg: '#0f172a', text: '#f1f5f9', textMuted: '#94a3b8', cardBg: '#1e293b', tableBorder: '#f59e0b40' }; // Amber Theme
+
+    const fetchPendingCount = async () => {
+        const { count, error } = await supabase
+            .from('tenants')
+            .select('*', { count: 'exact', head: true })
+            .eq('status', 'pending_approval');
+
+        if (!error && count !== null) {
+            setPendingCount(count);
+        }
+    };
 
     const fetchTenants = async () => {
         setLoading(true);
@@ -179,6 +193,25 @@ export default function MasterDashboardPage() {
 
     return (
         <div className="space-y-12 animate-in fade-in duration-500">
+            {pendingCount > 0 && (
+                <div className="bg-amber-500/10 border border-amber-500/20 rounded-[2rem] p-8 flex items-center justify-between shadow-xl backdrop-blur-sm relative overflow-hidden group">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
+                    <div className="flex items-center gap-6 relative z-10">
+                        <div className="size-16 rounded-full bg-amber-500/20 flex items-center justify-center animate-pulse">
+                            <span className="material-symbols-outlined text-3xl text-amber-500">priority_high</span>
+                        </div>
+                        <div>
+                            <h3 className="text-2xl font-black italic text-white uppercase tracking-tight">Atenção Necessária</h3>
+                            <p className="text-amber-500 font-bold text-sm mt-1">Existem {pendingCount} novas solicitações de adesão pendentes.</p>
+                        </div>
+                    </div>
+                    <Link href="/admin-master/aprovacoes" className="bg-amber-500 text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2">
+                        Ver Solicitações
+                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </Link>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {metrics.map((m, i) => (
                     <div key={i} className="p-8 rounded-[2rem] border relative group transition-all shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
