@@ -44,7 +44,7 @@ export default function MasterAprovacoesPage() {
 
         setProcessing(tenantId);
         try {
-            const { error } = await supabase
+            const { data, error } = await supabase
                 .from('tenants')
                 .update({
                     status: 'active',
@@ -52,12 +52,18 @@ export default function MasterAprovacoesPage() {
                     trial_ends_at: null,
                     active: true
                 })
-                .eq('id', tenantId);
+                .eq('id', tenantId)
+                .select(); // Request returned data
 
             if (error) throw error;
 
+            if (!data || data.length === 0) {
+                alert('ATENÇÃO: O banco de dados não retornou confirmação da atualização. Pode ser um bloqueio de permissão (RLS). Verifique se você é o "dono" do registro ou Super Admin.');
+                throw new Error('Falha na verificação pós-update (0 registros alterados).');
+            }
+
             // Success feedback
-            alert('ACESSO LIBERADO COM SUCESSO!\n\nO estabelecimento foi ativado e movido para o Painel Master.');
+            alert(`SUCESSO REAL! Estabelecimento "${data[0].name}" ativado.\nID: ${data[0].id}\nStatus: ${data[0].status}`);
 
             // Refresh data
             await fetchPending();
@@ -102,7 +108,7 @@ export default function MasterAprovacoesPage() {
             }
 
             // 3. Update Tenant
-            const { error: updateError } = await supabase
+            const { data: updatedTenant, error: updateError } = await supabase
                 .from('tenants')
                 .update({
                     status: 'active',
@@ -111,9 +117,14 @@ export default function MasterAprovacoesPage() {
                     coupon_used: coupon.code,
                     active: true
                 })
-                .eq('id', tenantId);
+                .eq('id', tenantId)
+                .select();
 
             if (updateError) throw new Error('Falha ao atualizar estabelecimento: ' + updateError.message);
+
+            if (!updatedTenant || updatedTenant.length === 0) {
+                throw new Error('RLS BLOCK: O banco não permitiu a alteração deste registro.');
+            }
 
             // 4. Update Coupon Usage
             await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
