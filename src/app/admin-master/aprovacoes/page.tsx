@@ -50,8 +50,7 @@ export default function MasterAprovacoesPage() {
                     status: 'active',
                     subscription_plan: 'unlimited',
                     trial_ends_at: null,
-                    active: true,
-                    updated_at: new Date().toISOString()
+                    active: true
                 })
                 .eq('id', tenantId);
 
@@ -110,8 +109,7 @@ export default function MasterAprovacoesPage() {
                     subscription_plan: appliedPlan,
                     trial_ends_at: trialEndsAt,
                     coupon_used: coupon.code,
-                    active: true,
-                    updated_at: new Date().toISOString()
+                    active: true
                 })
                 .eq('id', tenantId);
 
