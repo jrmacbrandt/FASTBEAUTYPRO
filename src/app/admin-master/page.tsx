@@ -30,10 +30,13 @@ export default function MasterDashboardPage() {
         const { data, error } = await supabase
             .from('tenants')
             .select('*, profiles!profiles_tenant_id_fkey(*)')
+            .neq('status', 'pending_approval')
             .order('created_at', { ascending: false });
 
         if (!error && data) {
-            setTenants(data);
+            // Client-side safeguard to ensure pending_approval are hidden
+            const filtered = data.filter(t => t.status !== 'pending_approval');
+            setTenants(filtered);
         }
         setLoading(false);
     };
@@ -260,10 +263,10 @@ export default function MasterDashboardPage() {
                                             </td>
                                             <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
                                                 <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${t.status === 'pending_approval'
-                                                        ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                                        : t.active
-                                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                                            : 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                    : t.active
+                                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                                        : 'bg-red-500/10 text-red-500 border-red-500/20'
                                                     }`}>
                                                     {t.status === 'pending_approval' ? 'PENDENTE' : (t.active ? 'ATIVO' : 'PAUSADO')}
                                                 </span>
