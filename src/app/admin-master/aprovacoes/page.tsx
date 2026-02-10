@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function MasterAprovacoesPage() {
@@ -34,82 +35,103 @@ export default function MasterAprovacoesPage() {
         fetchPending();
     }, []);
 
+    const router = useRouter(); // Import useRouter at the top if not present, checking imports below
     const [couponCode, setCouponCode] = useState('');
+    const [processing, setProcessing] = useState<string | null>(null);
 
     const handleApprove = async (tenantId: string) => {
-        if (!confirm('Tem certeza que deseja LIBERAR TOTALMENTE este estabelecimento? \n\nIsso concederá acesso VITALÍCIO e ILIMITADO.')) return;
+        if (!confirm('CONFIRMAR LIBERAÇÃO TOTAL?\n\nEsta ação concederá:\n- Status: ATIVO\n- Plano: ILIMITADO\n- Validade: INDETERMINADA\n\nDeseja continuar?')) return;
 
-        const { error } = await supabase
-            .from('tenants')
-            .update({
-                status: 'active',
-                subscription_plan: 'unlimited',
-                trial_ends_at: null,
-                active: true
-            })
-            .eq('id', tenantId);
+        setProcessing(tenantId);
+        try {
+            const { error } = await supabase
+                .from('tenants')
+                .update({
+                    status: 'active',
+                    subscription_plan: 'unlimited',
+                    trial_ends_at: null,
+                    active: true,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', tenantId);
 
-        if (error) {
-            alert('Erro ao aprovar: ' + error.message);
-        } else {
-            alert('Estabelecimento LIBERADO com sucesso!');
-            fetchPending();
+            if (error) throw error;
+
+            // Success feedback
+            alert('ACESSO LIBERADO COM SUCESSO!\n\nO estabelecimento foi ativado e movido para o Painel Master.');
+
+            // Refresh data
+            await fetchPending();
+            router.refresh(); // Forces server components to re-fetch if needed and updates client cache
+
+            // Dispatch custom event to notify other tabs/components if needed (optional but good for syncing)
+            window.dispatchEvent(new Event('tenant-approved'));
+
+        } catch (err: any) {
+            alert('ERRO AO LIBERAR: ' + err.message);
+        } finally {
+            setProcessing(null);
         }
     };
 
     const handleApproveWithCoupon = async (tenantId: string) => {
-        if (!couponCode) return alert('Digite um código de cupom.');
+        if (!couponCode) return alert('Por favor, digite o código do cupom.');
 
-        // 1. Validate Coupon
-        const { data: coupon, error: couponError } = await supabase
-            .from('coupons')
-            .select('*')
-            .eq('code', couponCode.toUpperCase().trim())
-            .eq('active', true)
-            .single();
+        setProcessing(tenantId);
+        try {
+            // 1. Validate Coupon
+            const { data: coupon, error: couponError } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('code', couponCode.toUpperCase().trim())
+                .eq('active', true)
+                .single();
 
-        if (couponError || !coupon) {
-            return alert('Cupom inválido ou não encontrado.');
+            if (couponError || !coupon) throw new Error('Cupom inválido ou não encontrado.');
+            if (coupon.used_count >= coupon.max_uses) throw new Error('Este cupom atingiu o limite máximo de usos.');
+
+            // 2. Determine Plan Rules
+            let appliedPlan = 'trial';
+            let trialEndsAt = null;
+
+            if (coupon.discount_type === 'full_access') {
+                appliedPlan = 'unlimited';
+            } else if (coupon.discount_type === 'trial_30') {
+                const d = new Date();
+                d.setDate(d.getDate() + 30);
+                trialEndsAt = d.toISOString();
+            }
+
+            // 3. Update Tenant
+            const { error: updateError } = await supabase
+                .from('tenants')
+                .update({
+                    status: 'active',
+                    subscription_plan: appliedPlan,
+                    trial_ends_at: trialEndsAt,
+                    coupon_used: coupon.code,
+                    active: true,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', tenantId);
+
+            if (updateError) throw new Error('Falha ao atualizar estabelecimento: ' + updateError.message);
+
+            // 4. Update Coupon Usage
+            await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
+
+            alert(`SUCESSO! Cupom ${coupon.code} aplicado.\nEstabelecimento ativado conforme regras.`);
+            setCouponCode('');
+
+            await fetchPending();
+            router.refresh();
+            window.dispatchEvent(new Event('tenant-approved'));
+
+        } catch (err: any) {
+            alert('ERRO: ' + err.message);
+        } finally {
+            setProcessing(null);
         }
-
-        if (coupon.used_count >= coupon.max_uses) {
-            return alert('Este cupom atingiu o limite de usos.');
-        }
-
-        // 2. Determine Plan
-        let appliedPlan = 'trial';
-        let trialEndsAt = null;
-
-        if (coupon.discount_type === 'full_access') {
-            appliedPlan = 'unlimited';
-        } else if (coupon.discount_type === 'trial_30') {
-            const d = new Date();
-            d.setDate(d.getDate() + 30);
-            trialEndsAt = d.toISOString();
-        }
-
-        // 3. Update Tenant
-        const { error: updateError } = await supabase
-            .from('tenants')
-            .update({
-                status: 'active',
-                subscription_plan: appliedPlan,
-                trial_ends_at: trialEndsAt,
-                coupon_used: coupon.code,
-                active: true
-            })
-            .eq('id', tenantId);
-
-        if (updateError) {
-            return alert('Erro ao aplicar cupom: ' + updateError.message);
-        }
-
-        // 4. Update Coupon Usage
-        await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
-
-        alert(`Cupom ${coupon.code} aplicado com sucesso!`);
-        setCouponCode('');
-        fetchPending();
     };
 
 
@@ -193,9 +215,10 @@ export default function MasterAprovacoesPage() {
                                     {/* Opção 2: Liberar Total */}
                                     <button
                                         onClick={() => handleApprove(tenant.id)}
-                                        className="w-full bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[10px] py-3 rounded-xl transition-all border border-emerald-500/20"
+                                        disabled={processing === tenant.id}
+                                        className="w-full bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[10px] py-3 rounded-xl transition-all border border-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                     >
-                                        LIBERAR ACESSO TOTAL
+                                        {processing === tenant.id ? 'PROCESSANDO...' : 'LIBERAR ACESSO TOTAL'}
                                     </button>
                                 </div>
                             </div>

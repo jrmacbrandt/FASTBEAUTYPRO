@@ -20,8 +20,31 @@ export default function MasterDashboardPage() {
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
         if (savedType) setBusinessType(savedType);
+
+        // Initial Fetch
         fetchTenants();
         fetchPendingCount();
+
+        // Listen for internal approval events
+        const handleApprovalUpdate = () => {
+            console.log('🔄 Tenant approved! Refreshing dashboard...');
+            fetchTenants();
+            fetchPendingCount();
+        };
+
+        window.addEventListener('tenant-approved', handleApprovalUpdate);
+
+        // Optional: Poll or focus re-fetch to ensure freshness
+        const onFocus = () => {
+            fetchTenants();
+            fetchPendingCount();
+        }
+        window.addEventListener('focus', onFocus);
+
+        return () => {
+            window.removeEventListener('tenant-approved', handleApprovalUpdate);
+            window.removeEventListener('focus', onFocus);
+        };
     }, []);
 
     const colors = businessType === 'salon'
