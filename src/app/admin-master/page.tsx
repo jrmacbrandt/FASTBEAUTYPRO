@@ -248,6 +248,14 @@ export default function MasterDashboardPage() {
             <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                 <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
                     <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>INQUILINOS NA PLATAFORMA</h3>
+                    <button
+                        onClick={() => { fetchTenants(); fetchPendingCount(); }}
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-50 hover:opacity-100 transition-opacity"
+                        style={{ color: colors.text }}
+                    >
+                        <span className={`material-symbols-outlined text-[16px] ${loading ? 'animate-spin' : ''}`}>refresh</span>
+                        Atualizar Lista
+                    </button>
                 </div>
                 <div className="p-8">
                     {loading ? (
