@@ -106,6 +106,11 @@ export default function MasterDashboardPage() {
                     alert('AVISO: O banco confirmou a exclusão, mas a unidade ainda existe. Tente atualizar a página.');
                 } else {
                     console.log('[MasterAction-V3] ✅ VERIFICATION PASSED: Tenant deleted successfully');
+
+                    // FORCE UI UPDATE LOCAL STATE
+                    setTenants(prev => prev.filter(t => t.id !== targetTenant.id));
+                    setIsEditModalOpen(false);
+
                     alert('UNIDADE EXCLUÍDA COM SUCESSO! (V3)');
                 }
             } else if (action === 'pause' || action === 'resume') {
