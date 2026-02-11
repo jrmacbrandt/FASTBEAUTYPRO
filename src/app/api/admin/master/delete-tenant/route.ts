@@ -47,6 +47,11 @@ export async function POST(req: NextRequest) {
 
         const owner = profiles?.[0];
 
+        // ** PROTEÇÃO MASTER **
+        if (owner?.email === 'jrmacbrandt@gmail.com') {
+            return NextResponse.json({ error: 'O Administrador Master é intocável e não pode ser removido.' }, { status: 403 });
+        }
+
         // 2. Delete the Auth User (if owner exists)
         if (owner && owner.id) {
             console.log(`[HardDelete] Deleting Auth User: ${owner.email} (${owner.id})`);
