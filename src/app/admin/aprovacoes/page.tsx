@@ -12,6 +12,8 @@ export default function ProfessionalApprovalsPage() {
     const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
     const [processing, setProcessing] = useState<string | null>(null);
 
+    const [allTenantProfiles, setAllTenantProfiles] = useState<any[]>([]);
+
     const router = useRouter();
 
     useEffect(() => {
@@ -47,17 +49,20 @@ export default function ProfessionalApprovalsPage() {
 
         setCurrentUserTenantId(userProfile.tenant_id);
 
-        // 2. Fetch Pending Professionals for this Tenant
+        // 2. Fetch ALL Profiles for this Tenant (for Debugging)
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
             .eq('tenant_id', userProfile.tenant_id)
-            .eq('status', 'pending')
-            .neq('role', 'owner') // Ensure we don't list ourselves or other owners if logic changes
             .order('created_at', { ascending: false });
 
-        if (error) console.error(error);
-        else setPendingProfessionals(data || []);
+        if (error) {
+            console.error(error);
+        } else {
+            setAllTenantProfiles(data || []);
+            // Filter pending for the main view
+            setPendingProfessionals(data?.filter(p => p.status === 'pending') || []);
+        }
 
         setLoading(false);
     };
@@ -160,6 +165,43 @@ export default function ProfessionalApprovalsPage() {
                     ))}
                 </div>
             )}
+
+            {/* DEBUG SECTION */}
+            <div className="mt-8 p-6 bg-black/50 rounded-2xl border border-white/5 opacity-60 hover:opacity-100 transition-opacity">
+                <h4 className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-4">DIAGNÓSTICO DO SISTEMA (DEBUG)</h4>
+                <div className="font-mono text-[10px] space-y-2 text-slate-400">
+                    <p>Tenant ID Atual: {currentUserTenantId || 'Carregando...'}</p>
+                    <p>Total Perfis Encontrados: {allTenantProfiles.length}</p>
+                    <p>Pendentes: {pendingProfessionals.length}</p>
+
+                    <div className="mt-4 border-t border-white/5 pt-4">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="text-slate-600 border-b border-dashed border-white/5">
+                                    <th className="pb-2">NOME</th>
+                                    <th className="pb-2">EMAIL</th>
+                                    <th className="pb-2">ROLE</th>
+                                    <th className="pb-2">STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {allTenantProfiles.map(p => (
+                                    <tr key={p.id} className="border-b border-white/5 last:border-0 hover:bg-white/5">
+                                        <td className="py-2 text-white">{p.full_name}</td>
+                                        <td className="py-2">{p.email}</td>
+                                        <td className="py-2 uppercase text-xs">{p.role}</td>
+                                        <td className="py-2 uppercase text-xs">
+                                            <span className={`px-1.5 py-0.5 rounded ${p.status === 'active' ? 'bg-emerald-500/20 text-emerald-500' : (p.status === 'pending' ? 'bg-amber-500/20 text-amber-500' : 'bg-red-500/20 text-red-500')}`}>
+                                                {p.status}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

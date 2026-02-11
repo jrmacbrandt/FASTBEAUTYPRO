@@ -2,23 +2,29 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
-// Initialize Supabase Admin Client with Service Role Key
-// This bypasses RLS and allows deletion of Auth Users
-const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-        auth: {
-            autoRefreshToken: false,
-            persistSession: false
-        }
-    }
-);
-
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { tenant_id } = body;
+
+        // Initialize Supabase Admin Client with Service Role Key
+        // This bypasses RLS and allows deletion of Auth Users
+        const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!serviceRoleKey) {
+            console.error('SUPABASE_SERVICE_ROLE_KEY is missing');
+            return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+        }
+
+        const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            serviceRoleKey,
+            {
+                auth: {
+                    autoRefreshToken: false,
+                    persistSession: false
+                }
+            }
+        );
 
         if (!tenant_id) {
             return NextResponse.json({ error: 'Missing tenant_id' }, { status: 400 });

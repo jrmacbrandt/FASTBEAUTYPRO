@@ -44,7 +44,8 @@ export default function TeamManagementPage() {
                 .eq('tenant_id', currentUser.tenant_id);
 
             if (!error && data) {
-                setBarbers(data);
+                // Filter out owners to prevent them from appearing in the team list
+                setBarbers(data.filter(p => p.role !== 'owner'));
             }
         }
         setLoading(false);
