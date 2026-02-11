@@ -134,6 +134,37 @@ export default function NewCampaignPage() {
                     </div>
                 </section>
 
+                {/* VISUALIZAÇÃO PRÉVIA (TESTE) */}
+                <section className="bg-black/40 p-6 rounded-2xl border border-white/5">
+                    <h3 className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-widest">Pré-visualização (Simulação)</h3>
+
+                    <div className="flex gap-4 items-start">
+                        <div className="bg-[#075e54] p-4 rounded-lg text-white text-sm max-w-sm shadow-lg relative">
+                            {/* Ponta do balão do WhatsApp */}
+                            <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-[#075e54] border-l-[10px] border-l-transparent transform rotate-90"></div>
+
+                            <p className="whitespace-pre-wrap">{template.replace('{name}', 'Cliente')}</p>
+                            <span className="text-[10px] text-white/60 block text-right mt-1">10:42</span>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-white/5">
+                        <p className="text-xs text-slate-500 mb-2">Link Gerado (Exemplo para um cliente):</p>
+                        <code className="block bg-black/50 p-3 rounded-lg text-[10px] text-emerald-400 font-mono break-all border border-white/5">
+                            {`https://wa.me/5511999999999?text=${encodeURIComponent(template.replace('{name}', 'Cliente'))}`}
+                        </code>
+                        <a
+                            href={`https://wa.me/5511999999999?text=${encodeURIComponent(template.replace('{name}', 'Cliente'))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 text-xs font-bold text-[#f2b90d] mt-3 hover:underline"
+                        >
+                            <span className="material-symbols-outlined text-sm">open_in_new</span>
+                            Testar Link Real
+                        </a>
+                    </div>
+                </section>
+
                 <div className="pt-6 border-t border-white/5 flex justify-end">
                     <button
                         onClick={handleCreate}

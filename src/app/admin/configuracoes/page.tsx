@@ -43,6 +43,7 @@ export default function EstablishmentSettingsPage() {
                 name: tenant.name,
                 slug: tenant.slug,
                 business_hours: tenant.business_hours,
+                loyalty_target: tenant.loyalty_target
                 // other fields...
             })
             .eq('id', tenant.id);
@@ -80,6 +81,20 @@ export default function EstablishmentSettingsPage() {
                             <div className="relative">
                                 <span className="absolute left-4 top-3.5 md:top-4 text-[#f2b90d] font-black opacity-40 text-[10px] md:text-xs">fastbeauty.pro/</span>
                                 <input type="text" className="w-full bg-black border border-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 pl-[95px] md:pl-[125px] font-bold text-white text-sm md:text-base focus:border-[#f2b90d]/50 outline-none" value={tenant.slug} onChange={e => setTenant({ ...tenant, slug: e.target.value })} />
+                            </div>
+                        </div>
+                        <div className="space-y-1.5 md:space-y-2">
+                            <label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-60">Meta de Fidelidade (Cortes para ganhar 1)</label>
+                            <div className="flex items-center gap-4 bg-black border border-white/5 rounded-xl md:rounded-2xl p-3 md:p-4">
+                                <span className="material-symbols-outlined text-[#f2b90d]">military_tech</span>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    className="w-full bg-transparent font-bold text-white text-sm md:text-base outline-none"
+                                    value={tenant.loyalty_target || 5}
+                                    onChange={e => setTenant({ ...tenant, loyalty_target: parseInt(e.target.value) })}
+                                />
+                                <span className="text-xs text-slate-500 font-bold uppercase">S E L O S</span>
                             </div>
                         </div>
                     </div>

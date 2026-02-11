@@ -81,9 +81,12 @@ export async function middleware(request: NextRequest) {
         .select(`
             role, 
             status, 
-            tenants (
+            tenant (
                 active,
-                has_paid
+                has_paid,
+                status,
+                subscription_plan,
+                trial_ends_at
             )
         `)
         .eq('id', user.id)
@@ -91,11 +94,21 @@ export async function middleware(request: NextRequest) {
 
     const role = profile?.role;
     const status = profile?.status;
-    const tenantData = (profile as any)?.tenants;
+    const tenantData = (profile as any)?.tenant || (profile as any)?.tenants; // Handle rename/aliases if any
     // Handle array or object response (Supabase quirk)
     const tenantObj = Array.isArray(tenantData) ? tenantData[0] : tenantData;
+
     const isActive = tenantObj?.active !== false; // Strict check for false
     const hasPaid = tenantObj?.has_paid;
+    const subscriptionPlan = tenantObj?.subscription_plan;
+    const trialEndsAt = tenantObj?.trial_ends_at;
+
+    // Access Logic Calculation
+    const isUnlimited = subscriptionPlan === 'unlimited';
+    const isTrialActive = subscriptionPlan === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date();
+
+    // Grant access if: Paid OR Unlimited OR Active Trial
+    const hasAccess = hasPaid || isUnlimited || isTrialActive;
 
     const isSuspendedPage = url.pathname === '/unidade-suspensa';
 
@@ -116,7 +129,8 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(url);
     }
 
-    if (role === 'owner' && hasPaid === false && !isPaymentPage && tenantStatus !== 'pending_approval') {
+    // Redirect to Payment if NO ACCESS (Logic: Not Paid AND Not Unlimited AND Not Trial)
+    if (role === 'owner' && !hasAccess && !isPaymentPage && tenantStatus !== 'pending_approval') {
         url.pathname = '/pagamento-pendente';
         return NextResponse.redirect(url);
     }

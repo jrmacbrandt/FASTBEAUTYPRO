@@ -50,7 +50,8 @@ export default function MasterAprovacoesPage() {
                     status: 'active',
                     subscription_plan: 'unlimited',
                     trial_ends_at: null,
-                    active: true
+                    active: true,
+                    has_paid: true // Force paid status for unlimited access override
                 })
                 .eq('id', tenantId)
                 .select(); // Request returned data
@@ -115,7 +116,8 @@ export default function MasterAprovacoesPage() {
                     subscription_plan: appliedPlan,
                     trial_ends_at: trialEndsAt,
                     coupon_used: coupon.code,
-                    active: true
+                    active: true,
+                    has_paid: appliedPlan === 'unlimited' ? true : false // Only set paid if full access, otherwise respect trial logic
                 })
                 .eq('id', tenantId)
                 .select();

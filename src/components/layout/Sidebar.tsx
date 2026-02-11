@@ -9,6 +9,11 @@ interface SidebarProps {
     user: {
         role: string;
         full_name: string;
+        tenant?: {
+            subscription_plan: string;
+            trial_ends_at: string | null;
+            created_at: string;
+        };
     } | null;
     theme: {
         primary: string;
@@ -61,6 +66,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         if (isAdminArea) return [
             { label: 'Dashboard', icon: 'dashboard', path: '/admin' },
+            { label: 'Clube VIP', icon: 'diamond', path: '/admin/assinaturas' },
+            { label: 'Scanner (Check-in)', icon: 'qr_code_scanner', path: '/admin/scanner' },
             { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/profissional' },
@@ -68,6 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'Equipe', icon: 'group', path: '/admin/equipe' },
             { label: 'Mensagem', icon: 'chat_bubble', path: '/admin/mensagens' },
             { label: 'Estoque', icon: 'inventory_2', path: '/admin/estoque' },
+            { label: 'Relatórios', icon: 'bar_chart', path: '/admin/relatorios' },
             { label: 'Configurações', icon: 'settings', path: '/admin/configuracoes' },
         ];
 
@@ -146,6 +154,35 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                         </p>
                         <p className="text-[11px] font-black truncate" style={{ color: theme.text }}>{user?.full_name || 'Membro FastBeauty'}</p>
                     </div>
+
+                    {/* STATUS ASSINATURA */}
+                    {user?.tenant && (
+                        <div className="mb-4 px-3 py-2 rounded-lg border border-dashed border-white/10 opacity-70 hover:opacity-100 transition-opacity">
+                            <div className="flex justify-between items-center mb-1">
+                                <span className="text-[8px] uppercase font-bold tracking-wider" style={{ color: theme.text }}>Plano Ativo</span>
+                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded text-[7px]"
+                                    style={{ backgroundColor: user.tenant.subscription_plan === 'unlimited' ? '#10b98120' : '#f59e0b20', color: user.tenant.subscription_plan === 'unlimited' ? '#10b981' : '#f59e0b' }}>
+                                    {user.tenant.subscription_plan === 'unlimited' ? 'FULL' : 'TRIAL'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-[8px] mb-0.5" style={{ color: theme.text }}>
+                                <span className="opacity-60">Desde:</span>
+                                <span className="font-mono font-bold">
+                                    {new Date(user.tenant.created_at).toLocaleDateString('pt-BR')}
+                                </span>
+                            </div>
+                            <div className="flex justify-between items-center text-[8px]" style={{ color: theme.text }}>
+                                <span className="opacity-60">Expira:</span>
+                                <span className="font-mono font-bold">
+                                    {user.tenant.subscription_plan === 'unlimited'
+                                        ? 'INDETERMINADO'
+                                        : user.tenant.trial_ends_at
+                                            ? new Date(user.tenant.trial_ends_at).toLocaleDateString('pt-BR')
+                                            : 'N/A'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
 
                     <button
                         onClick={handleLogout}

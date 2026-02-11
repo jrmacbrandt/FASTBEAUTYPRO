@@ -83,6 +83,14 @@ export function generateWhatsAppLink(phone: string, template: string, clientName
     // Encode
     const encodedMessage = encodeURIComponent(message);
 
+    // Sanitize Phone (Remove non-digits)
+    let cleanPhone = phone.replace(/\D/g, '');
+
+    // Add Country Code if missing (assuming BR for now)
+    if (cleanPhone.length <= 11) {
+        cleanPhone = `55${cleanPhone}`;
+    }
+
     // Retornar URL
-    return `https://wa.me/55${phone}?text=${encodedMessage}`;
+    return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
 }

@@ -14,6 +14,47 @@ export default function CashierCheckoutPage() {
         fetchPendingOrders();
     }, []);
 
+    const [voucher, setVoucher] = useState<any>(null);
+
+    // Fetch voucher when selected changes
+    useEffect(() => {
+        if (selected?.appointment_id && selected?.appointment_id.length > 0) { // Using formatted object structure
+            // The formatted object has 'appointment_id', but we need client_id which is not in formatted object.
+            // We need to fetch client_id from appointment or pass it down.
+            // The query at line 37 fetches appointments!appointment_id.
+            // Let's check line 37-43. It fetches profiles(full_name), services(name).
+            // It does NOT fetch client_id directly?
+            // Actually appointments table usually has client_id.
+            // Let's fetch client_id in the main query first to be safe.
+        }
+    }, [selected]);
+
+    // Changing strategy: calculate logic inside effect based on 'raw' data if needed, or update fetch.
+    // Let's just put the state here and I will update the fetchPendingOrders to include client_id.
+
+    const checkLoyaltyVoucher = async (clientId: string) => {
+        if (!clientId) return;
+        const { data: client } = await supabase.from('clients').select('phone').eq('id', clientId).single();
+        if (!client?.phone) return;
+
+        const { data: vouchers } = await supabase
+            .from('loyalty_vouchers')
+            .select('*')
+            .eq('client_phone', client.phone)
+            .eq('status', 'active')
+            .limit(1);
+
+        setVoucher(vouchers?.[0] || null);
+    };
+
+    useEffect(() => {
+        if (selected?.raw?.appointments?.client_id) {
+            checkLoyaltyVoucher(selected.raw.appointments.client_id);
+        } else {
+            setVoucher(null);
+        }
+    }, [selected]);
+
     const fetchPendingOrders = async () => {
         setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
@@ -26,15 +67,40 @@ export default function CashierCheckoutPage() {
             .single();
 
         if (profile?.tenant_id) {
+            // Fetch ORDERS that are pending (Waiting for Payment)
             const { data, error } = await supabase
-                .from('appointments')
-                .select('*, profiles(full_name), services(name)')
+                .from('orders')
+                .select(`
+                    id, 
+                    total_value, 
+                    status, 
+                    finalized_at,
+                    appointments!appointment_id (
+                        id, 
+                        customer_name, 
+                        appointment_time, 
+                        client_id,
+                        profiles(full_name),
+                        services(name)
+                    )
+                `)
                 .eq('tenant_id', profile.tenant_id)
-                .eq('status', 'completed') // In this context, 'completed' might mean finished by barber but unpaid
-                .order('appointment_time', { ascending: true });
+                .eq('status', 'pending_payment')
+                .order('finalized_at', { ascending: true });
 
             if (!error && data) {
-                setOrders(data);
+                // Formatting for UI
+                const formatted = data.map(o => ({
+                    id: o.id, // Order ID
+                    appointment_id: o.appointments?.id,
+                    customer_name: o.appointments?.customer_name,
+                    barber_name: o.appointments?.profiles?.full_name,
+                    service_name: o.appointments?.services?.name,
+                    time: o.appointments?.appointment_time,
+                    total_price: o.total_value,
+                    raw: o
+                }));
+                setOrders(formatted);
             }
         }
         setLoading(false);
@@ -43,16 +109,26 @@ export default function CashierCheckoutPage() {
     const handleConfirmPayment = async () => {
         if (!selected) return;
 
-        const { error } = await supabase
-            .from('appointments')
-            .update({ status: 'paid' }) // New status for paid appointments
+        // 1. Update ORDER to 'paid' (Triggers Stock Deduction)
+        const { error: orderError } = await supabase
+            .from('orders')
+            .update({ status: 'paid' })
             .eq('id', selected.id);
 
-        if (!error) {
-            alert(`Pagamento de R$ ${selected.total_price},00 confirmado!`);
-            setSelected(null);
-            fetchPendingOrders();
+        if (orderError) {
+            alert('Erro ao processar pagamento: ' + orderError.message);
+            return;
         }
+
+        // 2. Update APPOINTMENT to 'paid' (Close the loop)
+        await supabase
+            .from('appointments')
+            .update({ status: 'paid' })
+            .eq('id', selected.appointment_id);
+
+        alert(`Pagamento de R$ ${selected.total_price.toFixed(2)} confirmado!\nEstoque atualizado.`);
+        setSelected(null);
+        fetchPendingOrders();
     };
 
     return (
@@ -84,12 +160,14 @@ export default function CashierCheckoutPage() {
                                     </div>
                                     <div className="min-w-0">
                                         <h4 className="text-white font-bold text-base md:text-lg italic tracking-tight truncate">{cmd.customer_name}</h4>
-                                        <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">Rec: {cmd.profiles?.full_name}</p>
+                                        <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">Prof: {cmd.barber_name}</p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-[#f2b90d] text-xl md:text-2xl font-black italic tracking-tighter">RS {(cmd.total_price || 0).toFixed(2)}</p>
-                                    <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase">{cmd.appointment_time.split('T')[1].substring(0, 5)}</p>
+                                    <p className="text-[#f2b90d] text-xl md:text-2xl font-black italic tracking-tighter">R$ {(cmd.total_price || 0).toFixed(2)}</p>
+                                    <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase">
+                                        {cmd.time ? new Date(cmd.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                    </p>
                                 </div>
                             </button>
                         ))
@@ -111,9 +189,9 @@ export default function CashierCheckoutPage() {
                         </div>
 
                         <div className="space-y-3 md:space-y-4 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
+                            {/* Ideally fetch items here too, but for speed just showing service */}
                             <div className="flex justify-between items-center text-xs font-bold border-b border-white/5 pb-2">
-                                <span className="text-slate-400 italic font-black uppercase tracking-widest text-[9px] truncate mr-4">{selected.services?.name}</span>
-                                <span className="text-emerald-500/60 text-[8px] font-black uppercase shrink-0">OK</span>
+                                <span className="text-slate-400 italic font-black uppercase tracking-widest text-[9px] truncate mr-4">{selected.service_name} + Extras</span>
                             </div>
                         </div>
 
@@ -126,12 +204,43 @@ export default function CashierCheckoutPage() {
                                     </button>
                                 ))}
                             </div>
+
+                            {/* Loyalty Voucher Alert */}
+                            {voucher && (
+                                <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between animate-in fade-in">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
+                                        <div>
+                                            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Corte Grátis Disponível</p>
+                                            <p className="text-emerald-500/60 text-[8px] font-bold">Fidelidade Atingida</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!selected) return;
+                                            if (confirm('Confirmar uso do Voucher? O total será zerado.')) {
+                                                // 1. Update Order Value
+                                                await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
+                                                // 2. Mark Voucher Used
+                                                await supabase.from('loyalty_vouchers').update({ status: 'used', used_at: new Date().toISOString() }).eq('id', voucher.id);
+                                                // 3. UI Update
+                                                setSelected({ ...selected, total_price: 0 });
+                                                setVoucher(null);
+                                                alert('Voucher aplicado com sucesso!');
+                                            }
+                                        }}
+                                        className="bg-emerald-500 text-black text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg hover:bg-emerald-400"
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         <div className="pt-5 md:pt-6 border-t border-white/5">
                             <div className="flex justify-between items-end mb-5 md:mb-6">
                                 <span className="text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50">Total</span>
-                                <span className="text-[#f2b90d] text-3xl md:text-4xl font-black italic tracking-tighter">RS {(selected.total_price || 0).toFixed(2)}</span>
+                                <span className="text-[#f2b90d] text-3xl md:text-4xl font-black italic tracking-tighter">R$ {(selected.total_price || 0).toFixed(2)}</span>
                             </div>
                             <button
                                 onClick={handleConfirmPayment}

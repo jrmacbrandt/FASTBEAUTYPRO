@@ -23,8 +23,18 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
 
         supabase.auth.getSession().then(({ data: { session } }) => {
             if (session) {
-                supabase.from('profiles').select('*').eq('id', session.user.id).single()
-                    .then(({ data }) => setUser(data));
+                // Fetch User Profile + Tenant Details for Subscription Display
+                supabase.from('profiles')
+                    .select('*, tenants(*)') // Fetch linked tenant data
+                    .eq('id', session.user.id)
+                    .single()
+                    .then(({ data }) => {
+                        if (data) {
+                            // Normalize structure if needed (Supabase returns arrays for 1:N)
+                            const tenant = Array.isArray(data.tenants) ? data.tenants[0] : data.tenants;
+                            setUser({ ...data, tenant });
+                        }
+                    });
             }
         });
     }, []);

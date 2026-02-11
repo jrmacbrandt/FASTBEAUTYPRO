@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useParams } from 'next/navigation';
+import QRCode from "react-qr-code";
 
 export default function CarteirinhaPage() {
     const params = useParams();
@@ -54,7 +55,8 @@ export default function CarteirinhaPage() {
             .select('*')
             .eq('tenant_id', tenant.id)
             .eq('client_phone', phone)
-            .eq('status', 'ATIVO')
+            .eq('client_phone', phone)
+            .eq('status', 'active')
             .maybeSingle();
 
         if (subData) setSubscription(subData);
@@ -181,9 +183,17 @@ export default function CarteirinhaPage() {
                                     <p className="text-[9px] font-black uppercase tracking-widest text-slate-500">Validade</p>
                                     <p className="font-bold text-sm">{new Date(subscription.expires_at).toLocaleDateString()}</p>
                                 </div>
-                                <div className="size-12 bg-white rounded-lg flex items-center justify-center">
-                                    {/* QR Code Placeholder */}
-                                    <span className="material-symbols-outlined text-black text-2xl">qr_code_2</span>
+                                <div className="p-2 bg-white rounded-lg flex items-center justify-center">
+                                    <QRCode
+                                        value={JSON.stringify({
+                                            phone: clientPhone,
+                                            tenant_id: tenant.id,
+                                            type: 'fastbeauty_checkin'
+                                        })}
+                                        size={48}
+                                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                                        viewBox={`0 0 256 256`}
+                                    />
                                 </div>
                             </div>
                         </div>
