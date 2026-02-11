@@ -58,9 +58,14 @@ export class AuthGuard {
         const isUnlimited = plan === 'unlimited'; // Plano Mestre
         const hasPaid = tenant.has_paid === true; // Pagamento Confirmado
         const isTrialValid = trialEnds && trialEnds > now; // Trial em andamento
+        const isActiveStatus = tenant.active === true || tenant.status === 'active'; // Aprovado pelo Admin
 
         // 3. Decisão Final
         if (isUnlimited) return { canAccess: true, reason: 'master_override', details: { plan, trialEnds: null, hasPaid, active: true } };
+
+        // FIX V4.0: Se estiver ATIVO (Aprovado), libera acesso independente do pagamento.
+        if (isActiveStatus) return { canAccess: true, reason: 'ok', details: { plan, trialEnds: null, hasPaid, active: true } };
+
         if (hasPaid) return { canAccess: true, reason: 'ok', details: { plan, trialEnds: null, hasPaid, active: true } };
         if (isTrialValid) return { canAccess: true, reason: 'trial_active', details: { plan, trialEnds: tenant.trial_ends_at, hasPaid, active: true } };
 
@@ -68,7 +73,7 @@ export class AuthGuard {
         return {
             canAccess: false,
             reason: trialEnds ? 'expired' : 'no_payment',
-            redirectPath: '/admin/pagamento',
+            redirectPath: '/pagamento-pendente',
             details: { plan, trialEnds: tenant.trial_ends_at, hasPaid, active: true }
         };
     }
