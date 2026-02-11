@@ -22,6 +22,12 @@ export default function TeamManagementPage() {
     const [editingBarber, setEditingBarber] = useState<Profile | null>(null);
 
     useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('tab') === 'pending') {
+                setActiveTab('pending');
+            }
+        }
         fetchTeam();
     }, []);
 
@@ -52,19 +58,40 @@ export default function TeamManagementPage() {
     };
 
     const handleAction = async (id: string, action: 'approve' | 'suspend' | 'delete') => {
+        // Optimistic Update
+        const previousBarbers = [...barbers];
+
         if (action === 'delete') {
+            setBarbers(prev => prev.filter(b => b.id !== id));
             const { error } = await supabase.from('profiles').delete().eq('id', id);
-            if (!error) fetchTeam();
+            if (error) {
+                // Revert on error
+                setBarbers(previousBarbers);
+                alert('Erro ao excluir: ' + error.message);
+            }
             return;
         }
 
         const newStatus = action === 'approve' ? 'active' : 'suspended';
+
+        // Apply optimistic update locally
+        setBarbers(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
+
         const { error } = await supabase
             .from('profiles')
             .update({ status: newStatus })
             .eq('id', id);
 
-        if (!error) fetchTeam();
+        if (error) {
+            // Revert on error
+            setBarbers(previousBarbers);
+            alert('Erro ao atualizar status: ' + error.message);
+        } else {
+            // Dispatch event for sidebar/dashboard update
+            if (action === 'approve') {
+                window.dispatchEvent(new Event('professional-approved'));
+            }
+        }
     };
 
     const pendingCount = barbers.filter(b => b.status === 'pending').length;

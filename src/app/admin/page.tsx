@@ -80,7 +80,7 @@ export default function OwnerDashboardPage() {
                             <p className="font-bold text-xs md:text-sm mt-1" style={{ color: colors.primary }}>Existem {pendingCount} profissionais aguardando aprovação.</p>
                         </div>
                     </div>
-                    <Link href="/admin/aprovacoes" className="w-full md:w-auto px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}>
+                    <Link href="/admin/equipe?tab=pending" className="w-full md:w-auto px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}>
                         Ver Solicitações
                         <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </Link>

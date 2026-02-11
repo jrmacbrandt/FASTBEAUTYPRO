@@ -92,14 +92,13 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         if (isAdminArea) return [
             { label: 'Dashboard', icon: 'dashboard', path: '/admin' },
-            ...(pendingCount > 0 ? [{ label: 'Aprovações', icon: 'verified_user', path: '/admin/aprovacoes', badge: pendingCount }] : []),
             { label: 'Clube VIP', icon: 'diamond', path: '/admin/assinaturas' },
             { label: 'Scanner (Check-in)', icon: 'qr_code_scanner', path: '/admin/scanner' },
             { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/profissional' },
             { label: 'Comissões', icon: 'payments', path: '/profissional/comissoes' },
-            { label: 'Equipe', icon: 'group', path: '/admin/equipe' },
+            { label: 'Equipe', icon: 'group', path: '/admin/equipe', badge: pendingCount },
             { label: 'Mensagem', icon: 'chat_bubble', path: '/admin/mensagens' },
             { label: 'Estoque', icon: 'inventory_2', path: '/admin/estoque' },
             { label: 'Relatórios', icon: 'bar_chart', path: '/admin/relatorios' },
