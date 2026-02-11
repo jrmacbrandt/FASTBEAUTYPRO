@@ -93,52 +93,77 @@ export async function middleware(request: NextRequest) {
         subscriptionPlan = 'unlimited';
     }
 
-    // Access Calculation
-    const isUnlimited = subscriptionPlan === 'unlimited';
-    const isTrialActive = subscriptionPlan === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date();
-    const hasAccess = hasPaid || isUnlimited || isTrialActive;
-
     const isSuspendedPage = url.pathname === '/unidade-suspensa';
 
-    // 3. Status Checks (Skip for Master)
-    if (role !== 'master') {
-        // Suspended Tenant
-        if (!isActive && !isSuspendedPage) {
+    // ----------------------------------------------------------------
+    // NEW STRICT LOGIC (USER DEFINED V4.0)
+    // ----------------------------------------------------------------
+
+    // 1. MASTER Logic
+    // Only jrmacbrandt@gmail.com (Whitelisted) access /admin-master. 
+    // Already handled by Role Override above then Routing below.
+
+    // 2. OWNER Logic (Admin)
+    // Rule: IF Approved (Active) -> Admin Panel.
+    //       IF NOT Approved -> Payment/Coupon Screen.
+    if (role === 'owner') {
+        // A. Suspended Check (Priority 1)
+        if (tenantObj?.status === 'suspended' && !isSuspendedPage) {
             url.pathname = '/unidade-suspensa';
             return NextResponse.redirect(url);
         }
-        // Pending Professional
-        if (role === 'barber' && status === 'pending' && !isApprovalPage) {
-            url.pathname = '/aguardando-aprovacao';
-            return NextResponse.redirect(url);
-        }
-        // Pending Owner (New)
-        const tenantStatus = tenantObj?.status;
-        if (role === 'owner' && tenantStatus === 'pending_approval' && !isApprovalPage) {
-            url.pathname = '/aguardando-aprovacao';
-            return NextResponse.redirect(url);
-        }
-        // Payment Check (Owners only)
-        if (role === 'owner' && !hasAccess && !isPaymentPage && tenantStatus !== 'pending_approval') {
+
+        // B. Approval Check
+        // "SE SIM [APROVADO] --- PAINEL ADMINISTRATIVO DA LOJA"
+        // "SE NÃO --- TELA DE PAGAMENTO OU CODIGO CUPOM"
+        // We use 'isActive' (from tenant.active) as the "Approved" flag.
+        // We ignore 'has_paid' for blocking because the user explicitly said "If Approved -> Panel".
+        // Payment status might be pending but if Master approved, they enter.
+
+        const isApproved = isActive; // tenant.active is true
+
+        if (!isApproved && !isPaymentPage && !isSuspendedPage) {
+            // Not Approved? -> Payment/Coupon
             url.pathname = '/pagamento-pendente';
+            return NextResponse.redirect(url);
+        }
+
+        // If Approved? -> Allow flow to proceed (will hit routing check below)
+    }
+
+    // 3. PROFESSIONAL Logic
+    // Rule: IF Approved (Active) -> Pro Panel.
+    //       IF NOT Approved -> Waiting Approval.
+    if (role === 'barber') {
+        // A. Approval Check
+        // "SE APROVADO PELO ADMINISTRADOR DA LOJA--SEU PAINEL PROFISSIONAL"
+        // "SE NÃO --- TELA DE AGUARDANDO APROVAÇÃO"
+
+        const isProApproved = status === 'active';
+
+        if (!isProApproved && !isApprovalPage) {
+            url.pathname = '/aguardando-aprovacao';
             return NextResponse.redirect(url);
         }
     }
 
-    // 4. Strict Routing (Definitive Separation)
-    // If user is on an Auth page OR a Pending page (but is valid), redirect to their home.
-    const isValidOwner = role === 'owner' && hasAccess;
-    const isValidPro = role === 'barber' && status === 'active';
+    // ----------------------------------------------------------------
+    // ROUTING & REDIRECTION (KEEP USERS IN THEIR LANE)
+    // ----------------------------------------------------------------
+
+    // Redirect logged users from auth/pending pages if they are now VALID
     const isValidMaster = role === 'master';
+    const isValidOwner = role === 'owner' && isActive; // Only need Active
+    const isValidPro = role === 'barber' && status === 'active';
 
-    const isRestrictedPage = isAuthPage || isPaymentPage || isApprovalPage;
-
-    if (isRestrictedPage) {
+    // If on a "Gatekeeper" page but already have access, send Home.
+    if (isAuthPage || isPaymentPage || isApprovalPage) {
         if (isValidMaster) {
             url.pathname = '/admin-master';
             return NextResponse.redirect(url);
         }
         if (isValidOwner) {
+            // Fix: Owners was going to Payment/Approval incorrectly.
             url.pathname = '/admin';
             return NextResponse.redirect(url);
         }
@@ -148,16 +173,22 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    // 5. Hierarchy Protection (Prevent Role Leaks)
-    // Master can access everything (no restriction block)
+    // STRICT AREA PROTECTION
 
-    // Owner trying to access Master areas
+    // 1. Master trying to go elsewhere? (Optional, usually Master can roam, but let's stick to panel)
+    if (role === 'master' && !isMasterPage) {
+        // Allow Master to view other pages? User said "Direcionado para sua respectiva area".
+        // Let's force Master to /admin-master unless explicitly inspecting?
+        // For now, let's just protect the other areas FROM non-masters.
+    }
+
+    // 2. Owner trying to access Master Area
     if (role === 'owner' && isMasterPage) {
         url.pathname = '/admin';
         return NextResponse.redirect(url);
     }
 
-    // Professional trying to access Admin or Master areas
+    // 3. Pro trying to access Admin/Master
     if (role === 'barber' && (isAdminPage || isMasterPage)) {
         url.pathname = '/profissional';
         return NextResponse.redirect(url);
