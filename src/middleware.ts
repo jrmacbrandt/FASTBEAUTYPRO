@@ -116,11 +116,11 @@ export async function middleware(request: NextRequest) {
         // B. Approval Check
         // "SE SIM [APROVADO] --- PAINEL ADMINISTRATIVO DA LOJA"
         // "SE NÃO --- TELA DE PAGAMENTO OU CODIGO CUPOM"
-        // We use 'isActive' (from tenant.active) as the "Approved" flag.
-        // We ignore 'has_paid' for blocking because the user explicitly said "If Approved -> Panel".
-        // Payment status might be pending but if Master approved, they enter.
 
-        const isApproved = isActive; // tenant.active is true
+        // Fix: Check both Boolean 'active' and String 'status' to avoid data inconsistency gaps.
+        // User reports "Approved" (Status: Ativo) but middleware was blocking.
+        const isStatusActive = tenantObj?.status === 'active';
+        const isApproved = isActive || isStatusActive;
 
         if (!isApproved && !isPaymentPage && !isSuspendedPage) {
             // Not Approved? -> Payment/Coupon
@@ -153,7 +153,10 @@ export async function middleware(request: NextRequest) {
 
     // Redirect logged users from auth/pending pages if they are now VALID
     const isValidMaster = role === 'master';
-    const isValidOwner = role === 'owner' && isActive; // Only need Active
+
+    // Fix: Valid Owner = Active Boolean OR Active String
+    const isValidOwner = role === 'owner' && (isActive || tenantObj?.status === 'active');
+
     const isValidPro = role === 'barber' && status === 'active';
 
     // If on a "Gatekeeper" page but already have access, send Home.
