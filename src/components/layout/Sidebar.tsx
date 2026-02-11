@@ -45,6 +45,32 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
         sessionStorage.setItem('elite_sidebar_scroll', String(e.currentTarget.scrollTop));
     };
 
+    const [pendingCount, setPendingCount] = React.useState(0);
+
+    const fetchPending = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+        if (!profile?.tenant_id) return;
+
+        const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('tenant_id', profile.tenant_id)
+            .eq('status', 'pending');
+
+        setPendingCount(count || 0);
+    };
+
+    React.useEffect(() => {
+        fetchPending();
+        // Listen only to explicit approval events to avoid loop
+        const handleUpdate = () => fetchPending();
+        window.addEventListener('professional-approved', handleUpdate);
+        return () => window.removeEventListener('professional-approved', handleUpdate);
+    }, []);
+
     const handleLogout = async () => {
         await supabase.auth.signOut();
         localStorage.removeItem('elite_user');
@@ -66,6 +92,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         if (isAdminArea) return [
             { label: 'Dashboard', icon: 'dashboard', path: '/admin' },
+            ...(pendingCount > 0 ? [{ label: 'Aprovações', icon: 'verified_user', path: '/admin/aprovacoes', badge: pendingCount }] : []),
             { label: 'Clube VIP', icon: 'diamond', path: '/admin/assinaturas' },
             { label: 'Scanner (Check-in)', icon: 'qr_code_scanner', path: '/admin/scanner' },
             { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
@@ -141,6 +168,13 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                             >
                                 <span className="material-symbols-outlined text-[22px] mr-3.5">{item.icon}</span>
                                 <span className="text-sm tracking-tight">{item.label}</span>
+                                {/* @ts-ignore */}
+                                {(item.badge || 0) > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white text-[9px] font-black rounded-full size-5 flex items-center justify-center animate-pulse">
+                                        {/* @ts-ignore */}
+                                        {item.badge}
+                                    </span>
+                                )}
                                 {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 rounded-r-full shadow-lg" style={{ backgroundColor: theme.primary, boxShadow: `0 0 10px ${theme.primary}` }}></div>}
                             </Link>
                         );
