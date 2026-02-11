@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser();
 
     // ----------------------------------------------------
-    // Access Control Logic (Ported from previous version)
+    // Access Control Logic (Definitive Fix)
     // ----------------------------------------------------
     const url = request.nextUrl.clone();
     const isAuthPage = url.pathname === '/login' || url.pathname === '/login-master';
@@ -71,60 +71,94 @@ export async function middleware(request: NextRequest) {
         .eq('id', user.id)
         .single();
 
-    const role = profile?.role;
+    // --- DEFINITIVE FIX: ROLE OVERRIDE ---
+    // Use AuthGuard to check if email is in the hardcoded Master Whitelist.
+    // If yes, FORCE role to 'master' regardless of DB value.
+    const isMasterOverride = AuthGuard.isMaster(user.email, profile?.role);
+    const role = isMasterOverride ? 'master' : profile?.role;
+
     const status = profile?.status;
     const tenantData = (profile as any)?.tenant || (profile as any)?.tenants;
     const tenantObj = Array.isArray(tenantData) ? tenantData[0] : tenantData;
 
     const isActive = tenantObj?.active !== false;
-    const hasPaid = tenantObj?.has_paid;
-    const subscriptionPlan = tenantObj?.subscription_plan;
+    let hasPaid = tenantObj?.has_paid;
+    let subscriptionPlan = tenantObj?.subscription_plan;
     const trialEndsAt = tenantObj?.trial_ends_at;
 
-    // Access Logic
+    // --- DEFINITIVE FIX: ACCESS OVERRIDE ---
+    // If Master, grant unlimited access automatically.
+    if (role === 'master') {
+        hasPaid = true;
+        subscriptionPlan = 'unlimited';
+    }
+
+    // Access Calculation
     const isUnlimited = subscriptionPlan === 'unlimited';
     const isTrialActive = subscriptionPlan === 'trial' && trialEndsAt && new Date(trialEndsAt) > new Date();
     const hasAccess = hasPaid || isUnlimited || isTrialActive;
+
     const isSuspendedPage = url.pathname === '/unidade-suspensa';
 
-    // 3. Active check
-    if (role !== 'master' && !isActive && !isSuspendedPage) {
-        url.pathname = '/unidade-suspensa';
-        return NextResponse.redirect(url);
+    // 3. Status Checks (Skip for Master)
+    if (role !== 'master') {
+        // Suspended Tenant
+        if (!isActive && !isSuspendedPage) {
+            url.pathname = '/unidade-suspensa';
+            return NextResponse.redirect(url);
+        }
+        // Pending Professional
+        if (role === 'barber' && status === 'pending' && !isApprovalPage) {
+            url.pathname = '/aguardando-aprovacao';
+            return NextResponse.redirect(url);
+        }
+        // Pending Owner (New)
+        const tenantStatus = tenantObj?.status;
+        if (role === 'owner' && tenantStatus === 'pending_approval' && !isApprovalPage) {
+            url.pathname = '/aguardando-aprovacao';
+            return NextResponse.redirect(url);
+        }
+        // Payment Check (Owners only)
+        if (role === 'owner' && !hasAccess && !isPaymentPage && tenantStatus !== 'pending_approval') {
+            url.pathname = '/pagamento-pendente';
+            return NextResponse.redirect(url);
+        }
     }
-    if (role === 'barber' && status === 'pending' && !isApprovalPage) {
-        url.pathname = '/aguardando-aprovacao';
+
+    // 4. Strict Routing (Definitive Separation)
+    // If user is on an Auth page OR a Pending page (but is valid), redirect to their home.
+    const isValidOwner = role === 'owner' && hasAccess;
+    const isValidPro = role === 'barber' && status === 'active';
+    const isValidMaster = role === 'master';
+
+    const isRestrictedPage = isAuthPage || isPaymentPage || isApprovalPage;
+
+    if (isRestrictedPage) {
+        if (isValidMaster) {
+            url.pathname = '/admin-master';
+            return NextResponse.redirect(url);
+        }
+        if (isValidOwner) {
+            url.pathname = '/admin';
+            return NextResponse.redirect(url);
+        }
+        if (isValidPro) {
+            url.pathname = '/profissional';
+            return NextResponse.redirect(url);
+        }
+    }
+
+    // 5. Hierarchy Protection (Prevent Role Leaks)
+    // Master can access everything (no restriction block)
+
+    // Owner trying to access Master areas
+    if (role === 'owner' && isMasterPage) {
+        url.pathname = '/admin';
         return NextResponse.redirect(url);
     }
 
-    // Check for pending_approval
-    const tenantStatus = tenantObj?.status;
-    if (role === 'owner' && tenantStatus === 'pending_approval' && !isApprovalPage) {
-        url.pathname = '/aguardando-aprovacao';
-        return NextResponse.redirect(url);
-    }
-
-    // Redirect to Payment
-    if (role === 'owner' && !hasAccess && !isPaymentPage && tenantStatus !== 'pending_approval') {
-        url.pathname = '/pagamento-pendente';
-        return NextResponse.redirect(url);
-    }
-
-    // 4. Redirect logged users from auth/pending pages
-    if (isAuthPage || ((isPaymentPage || isApprovalPage) && ((role === 'owner' && hasPaid) || (role === 'barber' && status === 'active')))) {
-        if (role === 'master') url.pathname = '/admin-master';
-        else if (role === 'owner') url.pathname = '/admin';
-        else url.pathname = '/profissional';
-        return NextResponse.redirect(url);
-    }
-
-    // 5. Role restrictions
-    if (isMasterPage && role !== 'master') {
-        url.pathname = role === 'owner' ? '/admin' : '/profissional';
-        return NextResponse.redirect(url);
-    }
-
-    if (isAdminPage && role === 'barber') {
+    // Professional trying to access Admin or Master areas
+    if (role === 'barber' && (isAdminPage || isMasterPage)) {
         url.pathname = '/profissional';
         return NextResponse.redirect(url);
     }
