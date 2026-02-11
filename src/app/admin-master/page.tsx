@@ -123,19 +123,23 @@ export default function MasterDashboardPage() {
                 console.log('[MasterAction-V3] ✅ User confirmed deletion');
                 console.log('[MasterAction-V3] Starting cleanup for:', targetTenant.id);
 
-                // Nuclear Option: Call server-side cascade delete function
-                console.log('[MasterAction-V3] Invoking server-side cascade delete...');
+                // Nuclear Option: Call server-side API (Hard Delete)
+                console.log('[MasterAction-V4] Invoking new Hard Delete API...');
 
-                const { error: rpcError } = await supabase.rpc('delete_tenant_cascade', {
-                    target_tenant_id: targetTenant.id
+                const response = await fetch('/api/admin/master/delete-tenant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: targetTenant.id })
                 });
 
-                if (rpcError) {
-                    console.error('[MasterAction-V3] ❌ RPC ERROR:', rpcError);
-                    throw new Error('Erro no RPC de exclusão: ' + rpcError.message);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    console.error('[MasterAction-V4] ❌ API ERROR:', result.error);
+                    throw new Error('Erro na API de exclusão: ' + (result.error || 'Erro desconhecido'));
                 }
 
-                console.log('[MasterAction-V3] ✅ RPC completed successfully');
+                console.log('[MasterAction-V4] ✅ API completed successfully:', result.message);
 
                 // Verification
                 console.log('[MasterAction-V3] Verifying deletion...');
