@@ -25,12 +25,14 @@ ALTER TABLE service_materials ENABLE ROW LEVEL SECURITY;
 
 -- 3. RLS Policies
 -- Allow access only to users belonging to the same tenant
+DROP POLICY IF EXISTS "service_materials_isolation" ON service_materials;
+
 CREATE POLICY "service_materials_isolation" ON service_materials
     USING (tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()))
     WITH CHECK (tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
 
 -- 4. Create Index for Performance
-CREATE INDEX idx_service_materials_service ON service_materials(service_id);
-CREATE INDEX idx_service_materials_product ON service_materials(product_id);
+CREATE INDEX IF NOT EXISTS idx_service_materials_service ON service_materials(service_id);
+CREATE INDEX IF NOT EXISTS idx_service_materials_product ON service_materials(product_id);
 
 COMMIT;
