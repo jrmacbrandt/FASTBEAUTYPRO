@@ -5,10 +5,10 @@ import { OriginTracker } from "@/components/OriginTracker";
 export const metadata: Metadata = {
   title: "FastBeauty Pro - Barber & Salon",
   description: "Digitalize a operação da sua barbearia ou salão.",
-  manifest: "/manifest.json?v=2",
+  manifest: "/manifest.json?v=3",
   icons: {
-    icon: "/icon.png?v=2",
-    apple: "/apple-icon.png?v=2",
+    icon: "/icon.png?v=3",
+    apple: "/apple-icon.png?v=3",
   },
 };
 
