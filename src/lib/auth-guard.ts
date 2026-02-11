@@ -1,5 +1,5 @@
 
-import { createClient } from '@supabase/supabase-js';
+
 
 /**
  * Interface rigorosa para o status de acesso do Tenant.
