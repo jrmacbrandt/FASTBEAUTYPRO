@@ -32,39 +32,35 @@ export async function POST(req: NextRequest) {
 
         console.log(`[HardDelete] Starting nuclear deletion for tenant: ${tenant_id}`);
 
-        // 1. Find the Owner Profile linked to this Tenant
-        // We need the profile ID because it matches the Auth User ID
-        const { data: profiles, error: profileError } = await supabaseAdmin
+        // 1. Find ALL Profiles linked to this Tenant (Owner + Professionals)
+        const { data: allProfiles, error: profileError } = await supabaseAdmin
             .from('profiles')
             .select('id, email, role')
-            .eq('tenant_id', tenant_id)
-            .eq('role', 'owner'); // Target the owner specifically
+            .eq('tenant_id', tenant_id);
 
         if (profileError) {
-            console.error('[HardDelete] Error finding owner:', profileError);
-            return NextResponse.json({ error: 'Failed to find owner profile' }, { status: 500 });
+            console.error('[HardDelete] Error finding profiles:', profileError);
+            return NextResponse.json({ error: 'Falha ao buscar perfis vinculados' }, { status: 500 });
         }
 
-        const owner = profiles?.[0];
-
-        // ** PROTEÇÃO MASTER **
-        if (owner?.email === 'jrmacbrandt@gmail.com') {
-            return NextResponse.json({ error: 'O Administrador Master é intocável e não pode ser removido.' }, { status: 403 });
-        }
-
-        // 2. Delete the Auth User (if owner exists)
-        if (owner && owner.id) {
-            console.log(`[HardDelete] Deleting Auth User: ${owner.email} (${owner.id})`);
-            const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(owner.id);
-
-            if (deleteUserError) {
-                console.error('[HardDelete] Failed to delete Auth User:', deleteUserError);
-                // We continue... sometimes user is already gone but profile remains
-            } else {
-                console.log('[HardDelete] Auth User deleted successfully.');
-            }
+        if (!allProfiles || allProfiles.length === 0) {
+            console.warn('[HardDelete] No profiles found. Proceeding to delete tenant record only.');
         } else {
-            console.warn('[HardDelete] No owner profile found. Proceeding to delete tenant data only.');
+            // ** PROTEÇÃO MASTER E EXECUÇÃO DE EXCLUSÃO **
+            console.log(`[HardDelete] Found ${allProfiles.length} profiles to remove.`);
+
+            for (const profile of allProfiles) {
+                if (profile.email === 'jrmacbrandt@gmail.com') {
+                    return NextResponse.json({ error: 'Operação abortada: O Administrador Master está vinculado a esta loja e não pode ser removido.' }, { status: 403 });
+                }
+
+                console.log(`[HardDelete] Removing Auth User: ${profile.email} (${profile.id})`);
+                const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+
+                if (deleteUserError) {
+                    console.error(`[HardDelete] Failed to delete Auth User ${profile.email}:`, deleteUserError.message);
+                }
+            }
         }
 
         // 3. Delete the Tenant Data (Cascade should handle relations, but we force delete the tenant root)
