@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { supabase } from '@/lib/supabase';
 import {
     BarChart,
     Bar,
@@ -35,7 +35,7 @@ const MetricCard = ({ title, value, subtext, icon: Icon, color }: any) => (
 );
 
 export default function ReportsPage() {
-    const supabase = createClientComponentClient();
+    // Removed createClientComponentClient, using singleton
     const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState({
         revenue: 0,
@@ -53,7 +53,10 @@ export default function ReportsPage() {
         try {
             setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            if (!user) {
+                setLoading(false);
+                return;
+            }
 
             const { data: profile } = await supabase
                 .from('profiles')
@@ -61,7 +64,10 @@ export default function ReportsPage() {
                 .eq('id', user.id)
                 .single();
 
-            if (!profile?.tenant_id) return;
+            if (!profile?.tenant_id) {
+                setLoading(false);
+                return;
+            }
 
             // 1. Fetch Completed Orders (Revenue)
             const { data: orders } = await supabase
@@ -128,7 +134,9 @@ export default function ReportsPage() {
                 Lucro: dailyStats[date].revenue - dailyStats[date].cost
             })).sort((a, b) => {
                 // Simple sort by string date (DD/MM/YYYY) - might need better parsing for strict chronological
-                return new Date(a.name.split('/').reverse().join('-')).getTime() - new Date(b.name.split('/').reverse().join('-')).getTime();
+                const [dayA, monthA, yearA] = a.name.split('/');
+                const [dayB, monthB, yearB] = b.name.split('/');
+                return new Date(Number(yearA), Number(monthA) - 1, Number(dayA)).getTime() - new Date(Number(yearB), Number(monthB) - 1, Number(dayB)).getTime();
             });
 
             setChartData(formattedChartData.slice(-7)); // Last 7 days
@@ -184,21 +192,23 @@ export default function ReportsPage() {
             </div>
 
             {/* Charts Area */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-zinc-100 h-[400px]">
-                <h3 className="text-lg font-semibold text-zinc-800 mb-6">Performance Diária</h3>
-                <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                        <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
-                        <Tooltip
-                            contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Legend />
-                        <Bar dataKey="Receita" fill="#10b981" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Custo" fill="#ef4444" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                </ResponsiveContainer>
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-zinc-100 h-[400px] flex flex-col">
+                <h3 className="text-lg font-semibold text-zinc-800 mb-6 shrink-0">Performance Diária</h3>
+                <div className="flex-1 w-full min-h-0">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                            <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `R$${value}`} />
+                            <Tooltip
+                                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                            />
+                            <Legend />
+                            <Bar dataKey="Receita" fill="#10b981" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="Custo" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
             </div>
         </div>
     );
