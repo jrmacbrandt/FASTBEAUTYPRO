@@ -5,6 +5,19 @@ import { OriginTracker } from "@/components/OriginTracker";
 export const metadata: Metadata = {
   title: "FastBeauty Pro - Barber & Salon",
   description: "Digitalize a operação da sua barbearia ou salão.",
+  manifest: "/manifest.json?v=2",
+  icons: {
+    icon: "/icon.png?v=2",
+    apple: "/apple-icon.png?v=2",
+  },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  themeColor: "#f2b90d",
 };
 
 export default function RootLayout({
