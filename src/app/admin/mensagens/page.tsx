@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { sendNotification } from '@/lib/notifications';
 
 export default function TeamMessagesPage() {
     const [team, setTeam] = useState<{ id: string, full_name: string }[]>([]);
@@ -9,6 +10,7 @@ export default function TeamMessagesPage() {
     const [messageText, setMessageText] = useState('');
     const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
     const [loading, setLoading] = useState(true);
+    const [tenantId, setTenantId] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchTeam = async () => {
@@ -22,6 +24,7 @@ export default function TeamMessagesPage() {
                 .single();
 
             if (profile?.tenant_id) {
+                setTenantId(profile.tenant_id);
                 const { data } = await supabase
                     .from('profiles')
                     .select('id, full_name')
@@ -51,17 +54,31 @@ export default function TeamMessagesPage() {
         }
     };
 
-    const handleSendMessage = () => {
-        if (!messageText.trim() || selectedRecipients.length === 0) return;
+    const handleSendMessage = async () => {
+        if (!messageText.trim() || selectedRecipients.length === 0 || !tenantId) return;
         setStatus('sending');
 
-        // Logic for sending (Mock for now as per v4.0 design)
-        setTimeout(() => {
+        try {
+            await Promise.all(selectedRecipients.map(recipientId =>
+                sendNotification(
+                    recipientId,
+                    'Novo Comunicado Administrativo',
+                    messageText,
+                    'team_alert',
+                    'normal',
+                    tenantId
+                )
+            ));
+
             setStatus('success');
             setMessageText('');
             setSelectedRecipients([]);
             setTimeout(() => setStatus('idle'), 3000);
-        }, 1200);
+        } catch (error) {
+            console.error('Error sending team messages:', error);
+            setStatus('error');
+            setTimeout(() => setStatus('idle'), 3000);
+        }
     };
 
     const isAllSelected = team.length > 0 && selectedRecipients.length === team.length;

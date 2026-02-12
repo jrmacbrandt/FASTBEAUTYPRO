@@ -19,7 +19,7 @@ export async function sendNotification(
     receiverId: string,
     title: string,
     message: string,
-    type: Notification['type'] = 'info',
+    type: Notification['type'] = 'team_alert',
     priority: Notification['priority'] = 'normal',
     tenantId?: string // Opcional se for Master -> Global
 ) {
