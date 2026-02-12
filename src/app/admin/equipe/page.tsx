@@ -58,8 +58,9 @@ export default function TeamManagementPage() {
     };
 
     const handleAction = async (id: string, action: 'approve' | 'suspend' | 'delete') => {
-        // Optimistic Update
         const previousBarbers = [...barbers];
+        const currentBarber = barbers.find(b => b.id === id);
+        if (!currentBarber) return;
 
         if (action === 'delete') {
             if (!confirm('Deseja excluir DEFINITIVAMENTE este profissional? Esta ação não pode ser desfeita.')) return;
@@ -90,7 +91,7 @@ export default function TeamManagementPage() {
             return;
         }
 
-        const newStatus = action === 'approve' ? 'active' : 'suspended';
+        const newStatus = action === 'approve' ? 'active' : (currentBarber.status === 'active' ? 'suspended' : 'active');
 
         // Apply optimistic update locally
         setBarbers(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
