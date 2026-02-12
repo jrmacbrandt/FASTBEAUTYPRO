@@ -1,28 +1,70 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function TeamMessagesPage() {
-    const [recipient, setRecipient] = useState('all');
+    const [team, setTeam] = useState<{ id: string, full_name: string }[]>([]);
+    const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
     const [messageText, setMessageText] = useState('');
     const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+    const [loading, setLoading] = useState(true);
 
-    const team = [
-        { id: 'all', name: 'Toda a Equipe' },
-        { id: 'b1', name: 'James Carter' },
-        { id: 'b2', name: 'Leo Miller' },
-    ];
+    useEffect(() => {
+        const fetchTeam = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('tenant_id')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profile?.tenant_id) {
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('tenant_id', profile.tenant_id)
+                    .eq('status', 'active')
+                    .neq('role', 'owner');
+
+                if (data) setTeam(data);
+            }
+            setLoading(false);
+        };
+
+        fetchTeam();
+    }, []);
+
+    const handleToggleRecipient = (id: string) => {
+        setSelectedRecipients(prev =>
+            prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedRecipients(team.map(t => t.id));
+        } else {
+            setSelectedRecipients([]);
+        }
+    };
 
     const handleSendMessage = () => {
-        if (!messageText.trim()) return;
+        if (!messageText.trim() || selectedRecipients.length === 0) return;
         setStatus('sending');
 
+        // Logic for sending (Mock for now as per v4.0 design)
         setTimeout(() => {
             setStatus('success');
             setMessageText('');
+            setSelectedRecipients([]);
             setTimeout(() => setStatus('idle'), 3000);
         }, 1200);
     };
+
+    const isAllSelected = team.length > 0 && selectedRecipients.length === team.length;
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative pb-20 px-4 md:px-0">
@@ -49,18 +91,52 @@ export default function TeamMessagesPage() {
                     </div>
                 </div>
 
-                <div className="space-y-4 md:space-y-6">
-                    <div className="space-y-1.5 md:space-y-2">
-                        <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest italic opacity-60">Para</label>
-                        <select
-                            value={recipient}
-                            onChange={(e) => setRecipient(e.target.value)}
-                            className="w-full bg-black border border-white/10 rounded-xl md:rounded-2xl py-3 md:py-4 px-4 md:px-6 text-white font-bold outline-none focus:border-[#f2b90d] text-sm md:text-base cursor-pointer"
-                        >
-                            {team.map(t => (
-                                <option key={t.id} value={t.id}>{t.name}</option>
+                <div className="space-y-4 md:space-y-8">
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between px-2">
+                            <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest italic opacity-60">Destinatários ({selectedRecipients.length})</label>
+
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                                <span className="text-[9px] font-black uppercase text-slate-500 group-hover:text-[#f2b90d] transition-colors">Selecionar Todos</span>
+                                <div className="relative">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only"
+                                        checked={isAllSelected}
+                                        onChange={(e) => handleSelectAll(e.target.checked)}
+                                    />
+                                    <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${isAllSelected ? 'bg-[#f2b90d] border-[#f2b90d]' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
+                                        {isAllSelected && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                            {loading ? (
+                                <div className="col-span-full py-10 flex flex-col items-center opacity-30">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#f2b90d] mb-2"></div>
+                                    <p className="text-[10px] font-black uppercase tracking-widest">Carregando...</p>
+                                </div>
+                            ) : team.map(member => (
+                                <label
+                                    key={member.id}
+                                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer group ${selectedRecipients.includes(member.id) ? 'bg-[#f2b90d]/10 border-[#f2b90d]/30' : 'bg-black/40 border-white/5 hover:border-white/10'}`}
+                                    onClick={() => handleToggleRecipient(member.id)}
+                                >
+                                    <div className="relative">
+                                        <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${selectedRecipients.includes(member.id) ? 'bg-[#f2b90d] border-[#f2b90d]' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
+                                            {selectedRecipients.includes(member.id) && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
+                                        </div>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className={`font-black uppercase italic tracking-tight text-sm truncate ${selectedRecipients.includes(member.id) ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                                            {member.full_name}
+                                        </p>
+                                    </div>
+                                </label>
                             ))}
-                        </select>
+                        </div>
                     </div>
 
                     <div className="space-y-1.5 md:space-y-2">
@@ -76,13 +152,18 @@ export default function TeamMessagesPage() {
 
                     <button
                         onClick={handleSendMessage}
-                        disabled={status === 'sending' || !messageText.trim()}
+                        disabled={status === 'sending' || !messageText.trim() || selectedRecipients.length === 0}
                         className="w-full bg-[#f2b90d] hover:bg-[#d9a50c] text-black font-black py-4 md:py-6 rounded-2xl md:rounded-[1.8rem] text-base md:text-lg shadow-2xl shadow-[#f2b90d]/20 transition-all flex items-center justify-center gap-3 uppercase italic active:scale-95 disabled:opacity-50"
                     >
                         {status === 'sending' ? 'ENVIANDO...' : 'ENVIAR AGORA'}
                     </button>
+
+                    {selectedRecipients.length === 0 && messageText.trim().length > 0 && (
+                        <p className="text-center text-[9px] font-black uppercase text-amber-500/60 animate-pulse">Selecione ao menos um destinatário</p>
+                    )}
                 </div>
             </div>
         </div>
     );
 }
+
