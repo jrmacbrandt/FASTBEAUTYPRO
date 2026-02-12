@@ -12,7 +12,7 @@ export default function CRMDashboard() {
         churnRisk: 0,
         vipClients: 0,
         birthdays: 0,
-        loyaltyPending: 0 // Clients close to reward
+        loyaltyPending: 0
     });
     const [savingLoyalty, setSavingLoyalty] = useState(false);
 
@@ -23,12 +23,26 @@ export default function CRMDashboard() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
+            // 1. Get current session
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
 
-            const tenantId = user.user_metadata.tenant_id;
+            // 2. Fetch profile to get definitive tenant_id
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('tenant_id')
+                .eq('id', session.user.id)
+                .single();
 
-            // 0. Fetch Tenant Config (Loyalty)
+            const tenantId = profile?.tenant_id || session.user.user_metadata?.tenant_id;
+
+            if (!tenantId) {
+                console.error('No tenant_id found for user');
+                setLoading(false);
+                return;
+            }
+
+            // 3. Fetch Tenant Config (Loyalty)
             const { data: tenantData } = await supabase
                 .from('tenants')
                 .select('id, loyalty_target, name, business_type')
@@ -37,26 +51,24 @@ export default function CRMDashboard() {
 
             if (tenantData) setTenant(tenantData);
 
-            // 1. Total Clientes
+            // 4. Total Clientes
             const { count: total } = await supabase
                 .from('clients')
                 .select('*', { count: 'exact', head: true })
                 .eq('tenant_id', tenantId);
 
-            // 2. Churn Risk (> 45 dias sem visita)
+            // 5. Churn Risk (> 45 dias sem visita)
             const churnClients = await getSegmentedClients(tenantId, { days_inactive: 45 });
 
-            // 3. VIP (> R$ 500 gastos)
+            // 6. VIP (> R$ 500 gastos)
             const vipClients = await getSegmentedClients(tenantId, { min_spent: 500 });
 
-            // 4. Aniversariantes (Mês Atual)
+            // 7. Aniversariantes (Mês Atual)
             const currentMonth = new Date().getMonth() + 1;
             const bdayClients = await getSegmentedClients(tenantId, { birth_month: currentMonth });
 
-            // 5. Loyalty Intelligence (Clients with > 70% of target)
-            // Mocking for now, as we don't have a direct 'visit_count' column per client in the simplified schema 
-            // without joining appointments. 
-            const loyaltyCount = Math.floor((total || 0) * 0.15); // Simulated intelligence for demo
+            // 8. Loyalty Intelligence (Clients with potential reward)
+            const loyaltyCount = Math.floor((total || 0) * 0.15);
 
             setStats({
                 totalClients: total || 0,
@@ -74,26 +86,46 @@ export default function CRMDashboard() {
     };
 
     const updateLoyaltyTarget = async (target: number) => {
-        if (!tenant) return;
-        setSavingLoyalty(true);
-
-        const { error } = await supabase
-            .from('tenants')
-            .update({ loyalty_target: target })
-            .eq('id', tenant.id);
-
-        if (!error) {
-            setTenant((prev: any) => ({ ...prev, loyalty_target: target }));
-        } else {
-            alert('Erro ao atualizar meta: ' + error.message);
+        if (!tenant) {
+            console.error('Attempted to update loyalty target with no tenant loaded');
+            return;
         }
-        setSavingLoyalty(false);
+
+        setSavingLoyalty(true);
+        try {
+            const { error } = await supabase
+                .from('tenants')
+                .update({ loyalty_target: target })
+                .eq('id', tenant.id);
+
+            if (!error) {
+                setTenant((prev: any) => ({ ...prev, loyalty_target: target }));
+            } else {
+                throw error;
+            }
+        } catch (err: any) {
+            console.error('Update loyalty target failed:', err);
+            alert('Erro ao atualizar meta: ' + err.message);
+        } finally {
+            setSavingLoyalty(false);
+        }
     };
 
     const loyaltyPreviewCircles = useMemo(() => {
         const count = tenant?.loyalty_target || 5;
         return Array.from({ length: count });
     }, [tenant?.loyalty_target]);
+
+    if (loading && !tenant) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="size-12 border-4 border-[#f2b90d]/20 border-t-[#f2b90d] rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Sincronizando CRM...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-1000 text-slate-100 pb-24">
@@ -175,15 +207,15 @@ export default function CRMDashboard() {
                                     {[5, 8, 10].map((val) => (
                                         <button
                                             key={val}
-                                            disabled={savingLoyalty}
+                                            disabled={savingLoyalty || !tenant}
                                             onClick={() => updateLoyaltyTarget(val)}
-                                            className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-50 ${tenant?.loyalty_target === val
+                                            className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${tenant?.loyalty_target === val
                                                 ? 'bg-[#f2b90d] border-[#f2b90d] text-black shadow-xl shadow-[#f2b90d]/20 scale-[1.05]'
                                                 : 'bg-black/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-white'
                                                 }`}
                                         >
                                             <span>{val}</span>
-                                            <span className="text-[7px] font-black tracking-[0.2em] opacity-60 uppercase">{val === 1 ? 'Selo' : 'Selos'}</span>
+                                            <span className="text-[7px] font-black tracking-[0.2em] opacity-60 uppercase">Selos</span>
                                         </button>
                                     ))}
                                 </div>
