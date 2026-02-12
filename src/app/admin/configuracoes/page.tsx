@@ -121,16 +121,72 @@ export default function EstablishmentSettingsPage() {
                 <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in">
                     <h4 className="text-lg md:text-xl font-black italic uppercase text-white">Horário de Funcionamento</h4>
                     <div className="space-y-4">
-                        {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map(day => (
-                            <div key={day} className="flex items-center justify-between p-4 rounded-xl border border-white/5 bg-black/20">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 w-24">{day}</span>
-                                <div className="flex items-center gap-4">
-                                    <input type="time" defaultValue="09:00" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-white outline-none" />
-                                    <span className="text-white/20 text-xs">até</span>
-                                    <input type="time" defaultValue="19:00" className="bg-black border border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-white outline-none" />
+                        {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'].map((day, index) => {
+                            const dayKey = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'][index];
+                            const currentDay = tenant.business_hours?.[dayKey] || { open: '09:00', close: '19:00', isOpen: true };
+
+                            // Helper function to update hours state locally before saving
+                            const updateHours = (field: string, value: any) => {
+                                setTenant((prev: any) => ({
+                                    ...prev,
+                                    business_hours: {
+                                        ...prev.business_hours,
+                                        [dayKey]: { ...currentDay, [field]: value }
+                                    }
+                                }));
+                            };
+
+                            // Generate time options (06:00 to 23:30 in 30min intervals)
+                            const timeOptions = [];
+                            for (let h = 6; h <= 23; h++) {
+                                for (let m = 0; m < 60; m += 30) {
+                                    const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                                    timeOptions.push(time);
+                                }
+                            }
+
+                            return (
+                                <div key={day} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-2xl border ${currentDay.isOpen ? 'border-white/10 bg-black/20' : 'border-white/5 bg-white/[0.02]'} gap-4 transition-all duration-300`}>
+                                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                                        <div className="flex items-center gap-3">
+                                            <div onClick={() => updateHours('isOpen', !currentDay.isOpen)} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${currentDay.isOpen ? 'bg-[#f2b90d]/20' : 'bg-slate-700/50'}`}>
+                                                <div className={`absolute top-1 size-4 rounded-full shadow-md transition-all duration-300 ${currentDay.isOpen ? 'right-1 bg-[#f2b90d]' : 'left-1 bg-slate-500'}`} />
+                                            </div>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest w-20 transition-colors ${currentDay.isOpen ? 'text-white' : 'text-slate-600'}`}>{day}</span>
+                                        </div>
+                                        <span className={`text-[9px] font-bold uppercase tracking-widest md:hidden ${currentDay.isOpen ? 'text-emerald-500' : 'text-slate-600'}`}>
+                                            {currentDay.isOpen ? 'ABERTO' : 'FECHADO'}
+                                        </span>
+                                    </div>
+
+                                    <div className={`flex items-center gap-2 w-full md:w-auto justify-end transition-opacity duration-300 ${currentDay.isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-30 pointer-events-none'}`}>
+                                        <div className="relative group">
+                                            <select
+                                                value={currentDay.open}
+                                                onChange={(e) => updateHours('open', e.target.value)}
+                                                disabled={!currentDay.isOpen}
+                                                className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
+                                            >
+                                                {timeOptions.map(t => <option key={`open-${t}`} value={t}>{t}</option>)}
+                                            </select>
+                                            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
+                                        </div>
+                                        <span className="text-white/20 text-[10px] font-black uppercase">ATÉ</span>
+                                        <div className="relative group">
+                                            <select
+                                                value={currentDay.close}
+                                                onChange={(e) => updateHours('close', e.target.value)}
+                                                disabled={!currentDay.isOpen}
+                                                className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
+                                            >
+                                                {timeOptions.map(t => <option key={`close-${t}`} value={t}>{t}</option>)}
+                                            </select>
+                                            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
