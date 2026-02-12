@@ -21,6 +21,20 @@ export default function CRMDashboard() {
     const [selectedClients, setSelectedClients] = useState<string[]>([]);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // CRM v4.5 State 
+    const [activeFilter, setActiveFilter] = useState<'all' | 'churn' | 'vip' | 'birthdays' | 'loyalty'>('all');
+    const [engagementData, setEngagementData] = useState<{ [key: string]: any[] }>({
+        all: [],
+        churn: [],
+        vip: [],
+        birthdays: [],
+        loyalty: []
+    });
+    const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
+    const [campaignClient, setCampaignClient] = useState<any>(null);
+    const [campaignMessage, setCampaignMessage] = useState('');
+    const [updatingContact, setUpdatingContact] = useState<string | null>(null);
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -98,12 +112,47 @@ export default function CRMDashboard() {
                 ).length;
             }
 
+            // 7. Store all for engagement table
+            const allClients = await supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name');
+
+            // Map loyalty clients (those in countsMap >= 70% threshold)
+            const loyaltyClientsData = (allClients.data || []).filter(c => {
+                // we need to check countsMap from step 6 
+                return false; // placeholder, will refine below
+            });
+
+            // Re-run step 6 loyalty check with client data
+            const loyaltyClientsList: any[] = [];
+            if (appointments && appointments.length > 0) {
+                const countsMap: Record<string, number> = {};
+                appointments.forEach(ap => {
+                    if (ap.client_id) {
+                        countsMap[ap.client_id] = (countsMap[ap.client_id] || 0) + 1;
+                    }
+                });
+                const threshold = Math.ceil(currentTarget * 0.7);
+                (allClients.data || []).forEach(c => {
+                    const count = countsMap[c.id] || 0;
+                    if (count >= threshold && count < currentTarget) {
+                        loyaltyClientsList.push({ ...c, stamps_count: count });
+                    }
+                });
+            }
+
+            setEngagementData({
+                all: allClients.data || [],
+                churn: churnClients,
+                vip: vipClients,
+                birthdays: bdayClients,
+                loyalty: loyaltyClientsList
+            });
+
             setStats({
                 totalClients: total || 0,
                 churnRisk: churnClients.length,
                 vipClients: vipClients.length,
                 birthdays: bdayClients.length,
-                loyaltyPending: loyaltyPendingCount
+                loyaltyPending: loyaltyClientsList.length
             });
 
         } catch (error) {
@@ -190,6 +239,50 @@ export default function CRMDashboard() {
         }
     };
 
+    const openCampaignModal = (client: any, type: 'recovery' | 'birthday' | 'loyalty' | 'manual') => {
+        setCampaignClient(client);
+        let template = '';
+        const firstName = client.name.split(' ')[0];
+        const storeName = tenant?.name || 'nossa loja';
+
+        if (type === 'recovery') {
+            template = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
+        } else if (type === 'birthday') {
+            template = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
+        } else if (type === 'loyalty') {
+            const stamps = client.stamps_count || 0;
+            template = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
+        }
+
+        setCampaignMessage(template);
+        setIsCampaignModalOpen(true);
+    };
+
+    const handleWhatsAppSend = async () => {
+        if (!campaignClient) return;
+
+        setUpdatingContact(campaignClient.id);
+        try {
+            // Update last_contact_at
+            await supabase
+                .from('clients')
+                .update({ last_contact_at: new Date().toISOString() })
+                .eq('id', campaignClient.id);
+
+            const phone = campaignClient.phone.replace(/\D/g, '');
+            const encodedMsg = encodeURIComponent(campaignMessage);
+            const url = `https://wa.me/${phone}?text=${encodedMsg}`;
+
+            window.open(url, '_blank');
+            setIsCampaignModalOpen(false);
+            fetchData(); // Refresh to update "Último Contato" status
+        } catch (error) {
+            console.error('Update contact failed:', error);
+        } finally {
+            setUpdatingContact(null);
+        }
+    };
+
     // Correcting the change detection: ensure we check the exact values
     const hasChanges = tenant && Number(selectedLoyaltyTarget) !== Number(tenant.loyalty_target);
 
@@ -241,6 +334,8 @@ export default function CRMDashboard() {
                     desc="Clientes Reais"
                     onAction={openClientManager}
                     actionLabel="EDITAR"
+                    isActive={activeFilter === 'all'}
+                    onClick={() => setActiveFilter('all')}
                 />
                 <MetricCard
                     title="Risco de Evasão"
@@ -249,6 +344,8 @@ export default function CRMDashboard() {
                     color="text-rose-500"
                     desc="+45 dias sem visita"
                     alert={stats.churnRisk > 0}
+                    isActive={activeFilter === 'churn'}
+                    onClick={() => setActiveFilter('churn')}
                 />
                 <MetricCard
                     title="Clientes VIP"
@@ -256,6 +353,8 @@ export default function CRMDashboard() {
                     icon="auto_awesome"
                     color="text-emerald-400"
                     desc="LTV > R$ 500"
+                    isActive={activeFilter === 'vip'}
+                    onClick={() => setActiveFilter('vip')}
                 />
                 <MetricCard
                     title="Próximos Prêmios"
@@ -264,6 +363,8 @@ export default function CRMDashboard() {
                     color="text-cyan-400"
                     desc="> 70% da meta"
                     alert={stats.loyaltyPending > 0}
+                    isActive={activeFilter === 'loyalty'}
+                    onClick={() => setActiveFilter('loyalty')}
                 />
             </div>
 
@@ -365,27 +466,70 @@ export default function CRMDashboard() {
                             </div>
                         </div>
 
-                        <div className="flex-1 flex flex-col items-center justify-center text-center p-10 border-2 border-dashed border-white/5 rounded-[2.5rem] bg-white/[0.01]">
-                            <div className="size-20 rounded-[2rem] bg-white/5 flex items-center justify-center mb-6 ring-8 ring-white/[0.02]">
-                                <span className="material-symbols-outlined text-4xl text-slate-600">rocket_launch</span>
-                            </div>
-                            <p className="text-white font-black italic uppercase text-lg tracking-tight mb-2">Pronto para decolar?</p>
-                            <p className="text-[10px] text-slate-500 max-w-xs font-bold uppercase tracking-widest leading-relaxed">
-                                Use os filtros inteligência acima para selecionar clientes em risco e dispare campanhas personalizadas via WhatsApp.
-                            </p>
-
-                            <div className="mt-10 grid grid-cols-2 gap-4 w-full max-w-md">
-                                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left hover:bg-white/[0.08] transition-all cursor-pointer group">
-                                    <span className="material-symbols-outlined text-rose-500 text-xl mb-2 group-hover:scale-110 transition-transform">person_remove</span>
-                                    <p className="text-[9px] font-black uppercase text-white mb-1">Churn Control</p>
-                                    <p className="text-[8px] font-medium text-slate-500">Recupere clientes sumidos</p>
-                                </div>
-                                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left hover:bg-white/[0.08] transition-all cursor-pointer group">
-                                    <span className="material-symbols-outlined text-emerald-500 text-xl mb-2 group-hover:scale-110 transition-transform">celebration</span>
-                                    <p className="text-[9px] font-black uppercase text-white mb-1">Aniversariantes</p>
-                                    <p className="text-[8px] font-medium text-slate-500">Crie mimos especiais</p>
-                                </div>
-                            </div>
+                        <div className="flex-1 overflow-x-auto">
+                            <table className="w-full text-left border-separate border-spacing-y-2">
+                                <thead>
+                                    <tr className="text-[8px] font-black uppercase tracking-widest text-slate-500">
+                                        <th className="px-6 py-2">Cliente</th>
+                                        <th className="px-6 py-2 text-center">Última Visita</th>
+                                        <th className="px-6 py-2 text-center">Último Contato</th>
+                                        <th className="px-6 py-2 text-right">Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(engagementData[activeFilter] || []).length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} className="py-12 text-center opacity-30">
+                                                <span className="material-symbols-outlined text-4xl mb-2 block">person_search</span>
+                                                <p className="text-[10px] font-black uppercase tracking-widest">Nenhum cliente neste filtro</p>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        engagementData[activeFilter].slice(0, 5).map((client) => (
+                                            <tr key={client.id} className="group/row bg-white/[0.02] hover:bg-white/[0.05] transition-all border border-white/5">
+                                                <td className="px-6 py-4 rounded-l-2xl border-y border-l border-white/5">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="size-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black italic text-[#f2b90d]">
+                                                            {client.name.charAt(0)}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[11px] font-black uppercase italic text-white leading-none">{client.name}</p>
+                                                            <p className="text-[8px] text-slate-500 font-bold mt-1 uppercase tracking-tighter">LTV: R$ {client.total_spent || '0,00'}</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 border-y border-white/5 text-center">
+                                                    <p className="text-[10px] font-bold text-slate-300">
+                                                        {client.last_visit ? new Date(client.last_visit).toLocaleDateString() : '--'}
+                                                    </p>
+                                                </td>
+                                                <td className="px-6 py-4 border-y border-white/5 text-center">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : 'text-slate-600'}`}>
+                                                            {client.last_contact_at ? 'Abordado' : 'Aguardando'}
+                                                        </span>
+                                                        <span className="text-[7px] text-slate-700">
+                                                            {client.last_contact_at ? new Date(client.last_contact_at).toLocaleDateString() : 'NUNCA'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-4 rounded-r-2xl border-y border-r border-white/5 text-right">
+                                                    <button
+                                                        onClick={() => openCampaignModal(client, (activeFilter === 'churn' ? 'recovery' : activeFilter === 'loyalty' ? 'loyalty' : 'manual'))}
+                                                        disabled={updatingContact === client.id}
+                                                        className="size-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-black transition-all flex items-center justify-center group/btn active:scale-90 disabled:opacity-30"
+                                                    >
+                                                        <span className="material-symbols-outlined text-lg">{updatingContact === client.id ? 'sync' : 'chat'}</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                            {engagementData[activeFilter].length > 5 && (
+                                <p className="text-center text-[8px] font-black uppercase tracking-widest text-slate-600 mt-4 italic">+ {engagementData[activeFilter].length - 5} clientes ocultos. Use filtros para refinar.</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -477,13 +621,94 @@ export default function CRMDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* MODAL: CAMPANHA WHATSAPP (TEMPLATES INTELIGENTES) */}
+            {isCampaignModalOpen && campaignClient && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase text-white leading-none mb-1">Engajar Cliente</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{campaignClient.name}</p>
+                            </div>
+                            <button onClick={() => setIsCampaignModalOpen(false)} className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-500">
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-8 space-y-6">
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
+                                    onClick={() => openCampaignModal(campaignClient, 'recovery')}
+                                    className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex flex-col items-center gap-1 group"
+                                >
+                                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform">person_remove</span>
+                                    <span className="text-[8px] font-black uppercase">Recuperar</span>
+                                </button>
+                                <button
+                                    onClick={() => openCampaignModal(campaignClient, 'birthday')}
+                                    className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all flex flex-col items-center gap-1 group"
+                                >
+                                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform">celebration</span>
+                                    <span className="text-[8px] font-black uppercase">Aniversário</span>
+                                </button>
+                                <button
+                                    onClick={() => openCampaignModal(campaignClient, 'loyalty')}
+                                    className="p-3 rounded-2xl bg-[#f2b90d]/10 border border-[#f2b90d]/20 text-[#f2b90d] hover:bg-[#f2b90d] hover:text-black transition-all flex flex-col items-center gap-1 group"
+                                >
+                                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform">loyalty</span>
+                                    <span className="text-[8px] font-black uppercase">Fidelidade</span>
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Mensagem do WhatsApp</label>
+                                <textarea
+                                    value={campaignMessage}
+                                    onChange={(e) => setCampaignMessage(e.target.value)}
+                                    rows={5}
+                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder:text-slate-700 focus:border-[#f2b90d]/30 focus:outline-none transition-all resize-none"
+                                />
+                                <div className="flex items-center gap-2 px-1">
+                                    <span className="size-1.5 rounded-full bg-[#f2b90d] animate-pulse"></span>
+                                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest italic">Variáveis ativas: {campaignClient.name.split(' ')[0]} | {tenant?.name}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-white/5 flex gap-4 bg-black/20">
+                            <button
+                                onClick={() => setIsCampaignModalOpen(false)}
+                                className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all"
+                            >
+                                CANCELAR
+                            </button>
+                            <button
+                                onClick={handleWhatsAppSend}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3"
+                            >
+                                <span className="material-symbols-outlined text-lg">send</span>
+                                DISPARAR AGORA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel }: any) {
+function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel, isActive, onClick }: any) {
     return (
-        <div className={`bg-[#121214] border ${alert ? 'border-rose-500/30 bg-rose-500/[0.02]' : 'border-white/5'} p-6 rounded-[2rem] transition-all duration-500 group hover:translate-y-[-4px] hover:border-white/20 shadow-xl overflow-hidden relative`}>
+        <div
+            onClick={onClick}
+            className={`bg-[#121214] border ${isActive ? 'border-[#f2b90d] ring-4 ring-[#f2b90d]/10' : alert ? 'border-rose-500/30 bg-rose-500/[0.02]' : 'border-white/5'} p-6 rounded-[2rem] transition-all duration-500 group hover:translate-y-[-4px] hover:border-white/20 shadow-xl overflow-hidden relative ${onClick ? 'cursor-pointer' : ''}`}
+        >
+            {/* Action Icon (Quick Action Indicator) */}
+            <div className={`absolute top-4 right-4 text-[18px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 ${color}`}>
+                <span className="material-symbols-outlined">north_east</span>
+            </div>
+
             {/* Decoration */}
             <div className={`absolute -bottom-4 -right-4 size-20 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity ${color.replace('text-', 'bg-')}`}>
                 <span className="material-symbols-outlined text-8xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">{icon}</span>
@@ -494,7 +719,7 @@ function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLa
                     <span className={`material-symbols-outlined ${color} text-2xl group-hover:scale-110 transition-transform duration-500`}>{icon}</span>
                     {onAction && (
                         <button
-                            onClick={(e) => { e.preventDefault(); onAction(); }}
+                            onClick={(e) => { e.stopPropagation(); onAction(); }}
                             className="bg-white/5 hover:bg-[#f2b90d] hover:text-black border border-white/10 text-[8px] font-black uppercase px-3 py-1.5 rounded-full transition-all"
                         >
                             {actionLabel}
