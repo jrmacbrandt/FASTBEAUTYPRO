@@ -100,10 +100,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'Comissões', icon: 'payments', path: '/profissional/comissoes' },
             { label: 'Equipe', icon: 'group', path: '/admin/equipe', badge: pendingCount },
             { label: 'Mensagem', icon: 'chat_bubble', path: '/admin/mensagens' },
+            { label: 'Serviços', icon: 'content_cut', path: '/admin/servicos' },
             { label: 'Estoque', icon: 'inventory_2', path: '/admin/estoque' },
             { label: 'Relatórios', icon: 'bar_chart', path: '/admin/relatorios' },
             { label: 'Configurações', icon: 'settings', path: '/admin/configuracoes' },
         ];
+
 
         return [
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/profissional' },

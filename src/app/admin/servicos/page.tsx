@@ -1,0 +1,221 @@
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+
+export const dynamic = 'force-dynamic';
+
+export default function ServicesPage() {
+    const [services, setServices] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [showForm, setShowForm] = useState(false);
+
+    const [newService, setNewService] = useState({
+        name: '',
+        price: '',
+        duration_minutes: ''
+    });
+
+    const [tenantId, setTenantId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const loadInitialData = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('tenant_id')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profile?.tenant_id) {
+                setTenantId(profile.tenant_id);
+                fetchServices(profile.tenant_id);
+            }
+        };
+
+        loadInitialData();
+    }, []);
+
+    const fetchServices = async (tid: string) => {
+        setLoading(true);
+        const { data } = await supabase
+            .from('services')
+            .select('*')
+            .eq('tenant_id', tid)
+            .order('name');
+
+        if (data) setServices(data);
+        setLoading(false);
+    };
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!tenantId) return;
+
+        setIsSaving(true);
+        const { error } = await supabase
+            .from('services')
+            .insert({
+                tenant_id: tenantId,
+                name: newService.name,
+                price: parseFloat(newService.price.replace(',', '.')),
+                duration_minutes: parseInt(newService.duration_minutes),
+                active: true
+            });
+
+        if (!error) {
+            setNewService({ name: '', price: '', duration_minutes: '' });
+            setShowForm(false);
+            fetchServices(tenantId);
+        } else {
+            alert('Erro ao salvar serviço: ' + error.message);
+        }
+        setIsSaving(false);
+    };
+
+    const toggleStatus = async (id: string, currentStatus: boolean) => {
+        const { error } = await supabase
+            .from('services')
+            .update({ active: !currentStatus })
+            .eq('id', id);
+
+        if (!error && tenantId) {
+            fetchServices(tenantId);
+        }
+    };
+
+    return (
+        <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-20">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white">
+                        Gestão de <span className="text-[#f2b90d]">Serviços</span>
+                    </h2>
+                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-1">
+                        Configure seu catálogo de atendimento
+                    </p>
+                </div>
+
+                <button
+                    onClick={() => setShowForm(!showForm)}
+                    className="flex items-center gap-3 bg-[#f2b90d] text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[#f2b90d]/20"
+                >
+                    <span className="material-symbols-outlined">{showForm ? 'close' : 'add'}</span>
+                    {showForm ? 'CANCELAR' : 'NOVO SERVIÇO'}
+                </button>
+            </div>
+
+            {showForm && (
+                <div className="bg-[#121214] border border-[#f2b90d]/20 p-8 md:p-12 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-500">
+                    <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nome do Serviço</label>
+                            <input
+                                required
+                                type="text"
+                                placeholder="ex: Corte Degradê"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all"
+                                value={newService.name}
+                                onChange={e => setNewService({ ...newService, name: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Preço (R$)</label>
+                            <input
+                                required
+                                type="text"
+                                placeholder="0,00"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all"
+                                value={newService.price}
+                                onChange={e => setNewService({ ...newService, price: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Tempo (minutos)</label>
+                            <input
+                                required
+                                type="number"
+                                placeholder="30"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all"
+                                value={newService.duration_minutes}
+                                onChange={e => setNewService({ ...newService, duration_minutes: e.target.value })}
+                            />
+                        </div>
+                        <div className="md:col-span-3 pt-4">
+                            <button
+                                type="submit"
+                                disabled={isSaving}
+                                className="w-full bg-emerald-500 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-emerald-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            >
+                                <span className="material-symbols-outlined">save</span>
+                                {isSaving ? 'SALVANDO...' : 'CADASTRAR SERVIÇO'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            <div className="bg-[#121214] border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                        <thead>
+                            <tr className="bg-white/5">
+                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Serviço</th>
+                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Preço</th>
+                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Duração</th>
+                                <th className="text-right px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={4} className="px-8 py-10 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">
+                                        Carregando lista...
+                                    </td>
+                                </tr>
+                            ) : services.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="px-8 py-20 text-center">
+                                        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Nenhum serviço cadastrado.</p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                services.map(service => (
+                                    <tr key={service.id} className="group hover:bg-white/[0.02] transition-colors">
+                                        <td className="px-8 py-6">
+                                            <span className="text-white font-black italic uppercase tracking-tight">{service.name}</span>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <span className="text-[#f2b90d] font-black italic">R$ {service.price?.toFixed(2).replace('.', ',')}</span>
+                                        </td>
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-2 text-slate-400">
+                                                <span className="material-symbols-outlined text-[16px]">schedule</span>
+                                                <span className="font-bold text-xs uppercase tracking-widest">{service.duration_minutes} min</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <button
+                                                onClick={() => toggleStatus(service.id, service.active)}
+                                                className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${service.active ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 opacity-50'}`}
+                                            >
+                                                {service.active ? 'ATIVO' : 'PAUSADO'}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div className="pt-4 text-center">
+                <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/10 italic">Gerenciamento de Ativos • FastBeauty Pro v4.0</p>
+            </div>
+        </div>
+    );
+}
