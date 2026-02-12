@@ -19,17 +19,43 @@ export default function MasterComunicadosPage() {
     useEffect(() => {
         const fetchOwners = async () => {
             setLoading(true);
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, tenant_id')
-                .in('role', ['owner', 'admin'])
-                .eq('status', 'active');
+            try {
+                // Fetch tenants (active only) and join with their profiles (owners)
+                // We use the same join pattern as the dashboard for guaranteed access
+                const { data, error } = await supabase
+                    .from('tenants')
+                    .select('id, name, profiles!profiles_tenant_id_fkey(id, full_name, role, status)')
+                    .eq('active', true)
+                    .neq('status', 'pending_approval');
 
-            if (!error && data) {
-                setOwners(data);
+                if (error) throw error;
+
+                if (data) {
+                    const extractedOwners = data.flatMap(t => {
+                        // Find potential owners (owner or admin role)
+                        const profiles = (t.profiles as any[]) || [];
+                        const ownersList = profiles.filter(p => p.role === 'owner' || p.role === 'admin' || p.role === 'master');
+
+                        // If no specific owner is identified by role, fallback to the first active profile
+                        const targetProfiles = ownersList.length > 0
+                            ? ownersList
+                            : [profiles.find(p => p.status === 'active') || profiles[0]].filter(Boolean);
+
+                        return targetProfiles.map(p => ({
+                            id: p.id,
+                            full_name: `${t.name} (${p.full_name})`,
+                            tenant_id: t.id
+                        }));
+                    });
+
+                    setOwners(extractedOwners);
+                }
+            } catch (err: any) {
+                console.error('Master fetch owners error:', err);
+            } finally {
+                setLoading(false);
+                await fetchHistory();
             }
-            setLoading(false);
-            await fetchHistory();
         };
 
         fetchOwners();
