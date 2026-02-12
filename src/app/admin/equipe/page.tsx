@@ -81,6 +81,8 @@ export default function TeamManagementPage() {
                 if (!response.ok) throw new Error(result.error);
 
                 fetchTeam();
+                window.dispatchEvent(new Event('professional-approved'));
+                window.dispatchEvent(new Event('team-updated'));
             } catch (error: any) {
                 setBarbers(previousBarbers);
                 alert('Erro ao excluir: ' + error.message);
@@ -104,9 +106,8 @@ export default function TeamManagementPage() {
             alert('Erro ao atualizar status: ' + error.message);
         } else {
             // Dispatch event for sidebar/dashboard update
-            if (action === 'approve') {
-                window.dispatchEvent(new Event('professional-approved'));
-            }
+            window.dispatchEvent(new Event('professional-approved'));
+            window.dispatchEvent(new Event('team-updated'));
         }
     };
 

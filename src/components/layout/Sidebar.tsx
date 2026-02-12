@@ -114,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'Histórico', icon: 'history', path: '/profissional/historico' },
             { label: 'Configuração', icon: 'settings', path: '/profissional/configuracao' },
         ];
-    }, [pathname]);
+    }, [pathname, pendingCount]);
 
     const isSalon = businessType === 'salon';
 
