@@ -40,6 +40,7 @@ export interface Profile {
   avatar_url: string;
   service_commission: number;
   product_commission: number;
+  phone?: string;
 }
 
 export interface Service {

@@ -48,8 +48,8 @@ export default function CashierCheckoutPage() {
     };
 
     useEffect(() => {
-        if (selected?.raw?.appointments?.client_id) {
-            checkLoyaltyVoucher(selected.raw.appointments.client_id);
+        if (selected?.client_id) {
+            checkLoyaltyVoucher(selected.client_id);
         } else {
             setVoucher(null);
         }
@@ -73,6 +73,7 @@ export default function CashierCheckoutPage() {
                 .select(`
                     id, 
                     total_value, 
+                    commission_amount,
                     status, 
                     finalized_at,
                     appointments!appointment_id (
@@ -90,7 +91,7 @@ export default function CashierCheckoutPage() {
 
             if (!error && data) {
                 // Formatting for UI
-                const formatted = data.map(o => ({
+                const formatted = data.map((o: any) => ({
                     id: o.id, // Order ID
                     appointment_id: o.appointments?.id,
                     customer_name: o.appointments?.customer_name,
@@ -98,6 +99,8 @@ export default function CashierCheckoutPage() {
                     service_name: o.appointments?.services?.name,
                     time: o.appointments?.appointment_time,
                     total_price: o.total_value,
+                    commission: o.commission_amount,
+                    client_id: o.appointments?.client_id, // Expose client_id for voucher check
                     raw: o
                 }));
                 setOrders(formatted);

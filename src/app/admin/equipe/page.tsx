@@ -6,17 +6,7 @@ import { processImage } from '@/lib/image-processing';
 
 export const dynamic = 'force-dynamic';
 
-interface Profile {
-    id: string;
-    full_name: string;
-    email?: string;
-    role: string;
-    status: string;
-    service_commission: number;
-    cpf?: string;
-    phone?: string;
-    avatar_url?: string;
-}
+import { Profile, UserStatus } from '@/types';
 
 export default function TeamManagementPage() {
     const [barbers, setBarbers] = useState<Profile[]>([]);
@@ -32,7 +22,8 @@ export default function TeamManagementPage() {
         cpf: '',
         phone: '',
         service_commission: 50,
-        status: 'active'
+        product_commission: 0,
+        status: UserStatus.ACTIVE
     });
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -64,7 +55,8 @@ export default function TeamManagementPage() {
                 cpf: formatCPF(editingBarber.cpf || ''),
                 phone: formatPhone(editingBarber.phone || ''),
                 service_commission: editingBarber.service_commission || 50,
-                status: editingBarber.status || 'active'
+                product_commission: editingBarber.product_commission || 0,
+                status: editingBarber.status || UserStatus.ACTIVE
             });
             setAvatarPreview(editingBarber.avatar_url || null);
         } else {
@@ -74,7 +66,8 @@ export default function TeamManagementPage() {
                 cpf: '',
                 phone: '',
                 service_commission: 50,
-                status: 'active'
+                product_commission: 80,
+                status: UserStatus.ACTIVE
             });
             setAvatarPreview(null);
         }
@@ -168,7 +161,7 @@ export default function TeamManagementPage() {
             return;
         }
 
-        const newStatus = action === 'approve' ? 'active' : (currentBarber.status === 'active' ? 'suspended' : 'active');
+        const newStatus = action === 'approve' ? UserStatus.ACTIVE : (currentBarber.status === UserStatus.ACTIVE ? UserStatus.SUSPENDED : UserStatus.ACTIVE);
 
         // Apply optimistic update locally
         setBarbers(prev => prev.map(b => b.id === id ? { ...b, status: newStatus } : b));
@@ -226,6 +219,7 @@ export default function TeamManagementPage() {
                         cpf: formData.cpf.replace(/\D/g, ''),
                         phone: formData.phone.replace(/\D/g, ''),
                         service_commission: Number(formData.service_commission),
+                        product_commission: Number(formData.product_commission),
                         status: formData.status,
                         avatar_url: avatarUrl
                     })
@@ -250,8 +244,8 @@ export default function TeamManagementPage() {
         }
     };
 
-    const pendingCount = barbers.filter(b => b.status === 'pending').length;
-    const filteredBarbers = barbers.filter(b => activeTab === 'team' ? b.status !== 'pending' : b.status === 'pending');
+    const pendingCount = barbers.filter(b => b.status === UserStatus.PENDING).length;
+    const filteredBarbers = barbers.filter(b => activeTab === 'team' ? b.status !== UserStatus.PENDING : b.status === UserStatus.PENDING);
 
     return (
         <div className="space-y-8 pb-20">
@@ -296,7 +290,7 @@ export default function TeamManagementPage() {
                                         <span className="bg-white/5 text-slate-400 text-[8px] md:text-[9px] font-black uppercase px-2 md:px-3 py-1 rounded-full border border-white/5">
                                             {barber.role}
                                         </span>
-                                        <span className={`text-[8px] md:text-[9px] font-black uppercase px-2 md:px-3 py-1 rounded-full border ${barber.status === 'active' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                                        <span className={`text-[8px] md:text-[9px] font-black uppercase px-2 md:px-3 py-1 rounded-full border ${barber.status === UserStatus.ACTIVE ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                                             'bg-red-500/10 text-red-500 border-red-500/20'
                                             }`}>
                                             {barber.status}
@@ -311,7 +305,7 @@ export default function TeamManagementPage() {
                                     <p className="text-[#f2b90d] text-2xl md:text-3xl font-black italic tracking-tighter">{barber.service_commission}%</p>
                                 </div>
                                 <div className="flex gap-2 w-full md:w-auto">
-                                    {barber.status === 'pending' ? (
+                                    {barber.status === UserStatus.PENDING ? (
                                         <>
                                             <button onClick={() => handleAction(barber.id, 'approve')} className="flex-1 md:flex-none bg-emerald-500 text-white px-4 md:px-6 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">APROVAR</button>
                                             <button onClick={() => handleAction(barber.id, 'delete')} className="flex-1 md:md:flex-none bg-red-500/10 text-red-500 px-4 md:px-6 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase active:scale-95 transition-all">REJEITAR</button>
@@ -324,8 +318,8 @@ export default function TeamManagementPage() {
                                             >
                                                 <span className="material-symbols-outlined text-[20px]">edit</span>
                                             </button>
-                                            <button onClick={() => handleAction(barber.id, 'suspend')} className={`flex-[2] md:flex-none px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest ${barber.status === 'active' ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'} active:scale-95 transition-all`}>
-                                                {barber.status === 'active' ? 'SUSPENDER' : 'REATIVAR'}
+                                            <button onClick={() => handleAction(barber.id, 'suspend')} className={`flex-[2] md:flex-none px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest ${barber.status === UserStatus.ACTIVE ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'} active:scale-95 transition-all`}>
+                                                {barber.status === UserStatus.ACTIVE ? 'SUSPENDER' : 'REATIVAR'}
                                             </button>
                                             <button onClick={() => handleAction(barber.id, 'delete')} className="flex-1 md:flex-none p-2 text-slate-400 hover:text-red-500 transition-colors"><span className="material-symbols-outlined text-[20px]">delete</span></button>
                                         </div>
@@ -420,7 +414,7 @@ export default function TeamManagementPage() {
 
                             <div className="grid grid-cols-2 gap-6 pt-4 border-t border-white/5">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão (%)</label>
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão Serviços (%)</label>
                                     <input
                                         type="number"
                                         className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
@@ -429,15 +423,13 @@ export default function TeamManagementPage() {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Status</label>
-                                    <select
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão Produtos (%)</label>
+                                    <input
+                                        type="number"
                                         className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
-                                        value={formData.status}
-                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                    >
-                                        <option value="active">ATIVO</option>
-                                        <option value="suspended">SUSPENSO</option>
-                                    </select>
+                                        value={formData.product_commission}
+                                        onChange={(e) => setFormData({ ...formData, product_commission: Number(e.target.value) })}
+                                    />
                                 </div>
                             </div>
 

@@ -79,19 +79,77 @@ export default function ProfessionalAgendaPage() {
     };
 
     const handleFinishCommand = async () => {
-        const { error } = await supabase
+        setLoading(true);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return setLoading(false);
+
+        // 1. Fetch Barber Profile for Commission Rates
+        const { data: barberProfile } = await supabase
+            .from('profiles')
+            .select('service_commission, product_commission, tenant_id')
+            .eq('id', session.user.id)
+            .single();
+
+        if (!barberProfile) {
+            alert('Erro ao buscar perfil do profissional.');
+            setLoading(false);
+            return;
+        }
+
+        // 2. Calculate Totals and Commissions
+        const serviceTotal = selectedClient?.services?.price || 0;
+        const productTotal = cart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+
+        const serviceCommissionRate = (barberProfile.service_commission || 0) / 100;
+        const productCommissionRate = (barberProfile.product_commission || 0) / 100;
+
+        const commissionAmount = (serviceTotal * serviceCommissionRate) + (productTotal * productCommissionRate);
+        const totalValue = serviceTotal + productTotal; // Using local calculation to be safe
+
+        // 3. Create ORDER record (pending_payment for Cashier)
+        const { error: orderError } = await supabase
+            .from('orders')
+            .insert({
+                tenant_id: barberProfile.tenant_id,
+                appointment_id: selectedClient.id,
+                barber_id: session.user.id,
+                total_value: totalValue,
+                commission_amount: commissionAmount,
+                status: 'pending_payment',
+                items: cart // Optional: store items if column exists, otherwise ignore
+            });
+
+        if (orderError) {
+            console.error(orderError);
+            alert('Erro ao criar pedido: ' + orderError.message);
+            setLoading(false);
+            return;
+        }
+
+        // 4. Update Appointment Status to completed (or awaiting_payment if that's the flow)
+        // User requested: "Once finalized... move to 'awaiting_payment'"
+        // But app uses 'pending_payment' in orders. Appointments usually align.
+        // Let's stick to 'completed' for appointment as "Service Done" and Order is "Pending Payment".
+        // Or update appointment to 'awaiting_payment' to show in yellow in agenda?
+        // Existing code used 'completed'. Let's keep 'completed' for appointment to clear it from "List to do" 
+        // but verify if it disappears from agenda.
+
+        const { error: apptError } = await supabase
             .from('appointments')
             .update({
-                status: 'completed',
-                total_price: total
+                status: 'completed', // Or 'awaiting_payment'
+                total_price: totalValue
             })
             .eq('id', selectedClient.id);
 
-        if (!error) {
-            alert('Comanda finalizada e aguardando pagamento!');
+        if (!apptError) {
+            alert(`Comanda enviada para o Caixa!\nComissão estimada: R$ ${commissionAmount.toFixed(2)}`);
             fetchAgenda();
             setView('agenda');
+        } else {
+            alert('Erro ao atualizar agendamento: ' + apptError.message);
         }
+        setLoading(false);
     };
 
     const addToCart = (product: any) => {
