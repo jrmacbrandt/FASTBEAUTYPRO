@@ -11,7 +11,9 @@ export default function TeamMessagesPage() {
     const [messageTitle, setMessageTitle] = useState('NOVO COMUNICADO');
     const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
     const [loading, setLoading] = useState(true);
+    const [historyLoading, setHistoryLoading] = useState(true);
     const [tenantId, setTenantId] = useState<string | null>(null);
+    const [history, setHistory] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchTeam = async () => {
@@ -34,12 +36,31 @@ export default function TeamMessagesPage() {
                     .neq('role', 'owner');
 
                 if (data) setTeam(data);
+                await fetchHistory(profile.tenant_id);
             }
             setLoading(false);
+            setHistoryLoading(false);
         };
 
         fetchTeam();
     }, []);
+
+    const fetchHistory = async (tId: string) => {
+        const { data, error } = await supabase
+            .from('notifications')
+            .select(`
+                id,
+                title,
+                message,
+                created_at,
+                receiver_profile:profiles!receiver_id (full_name)
+            `)
+            .eq('tenant_id', tId)
+            .eq('type', 'team_alert')
+            .order('created_at', { ascending: false });
+
+        if (!error && data) setHistory(data);
+    };
 
     const handleToggleRecipient = (id: string) => {
         setSelectedRecipients(prev =>
@@ -87,12 +108,28 @@ export default function TeamMessagesPage() {
             setMessageText('');
             setMessageTitle('NOVO COMUNICADO');
             setSelectedRecipients([]);
+            if (tenantId) await fetchHistory(tenantId);
             setTimeout(() => setStatus('idle'), 3000);
         } catch (error: any) {
             console.error('Erro detalhado ao enviar:', error);
             alert('Erro ao enviar comunicado: ' + (error.message || 'Verifique o console'));
             setStatus('error');
             setTimeout(() => setStatus('idle'), 3000);
+        }
+    };
+
+    const handleDeleteMessage = async (id: string) => {
+        if (!confirm('Deseja excluir permanentemente este comunicado? O destinatário não terá mais acesso a ele.')) return;
+
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', id);
+
+        if (!error) {
+            setHistory(prev => prev.filter(item => item.id !== id));
+        } else {
+            alert('Erro ao excluir mensagem: ' + error.message);
         }
     };
 
@@ -203,6 +240,58 @@ export default function TeamMessagesPage() {
 
                     {selectedRecipients.length === 0 && messageText.trim().length > 0 && (
                         <p className="text-center text-[9px] font-black uppercase text-amber-500/60 animate-pulse">Selecione ao menos um destinatário</p>
+                    )}
+                </div>
+            </div>
+
+            {/* Histórico de Comunicados */}
+            <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl">
+                <div className="flex items-center justify-between mb-6 md:mb-10">
+                    <div className="flex items-center gap-3 md:gap-4">
+                        <div className="size-12 md:size-14 bg-amber-500/10 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-500 shrink-0">
+                            <span className="material-symbols-outlined text-2xl md:text-3xl">history</span>
+                        </div>
+                        <div>
+                            <h3 className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tight leading-none mb-1">Histórico</h3>
+                            <p className="text-slate-500 text-[8px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Mensagens enviadas anteriormente</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
+                    {historyLoading ? (
+                        <div className="py-20 flex flex-col items-center opacity-30">
+                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-amber-500 mb-4"></div>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Carregando histórico...</p>
+                        </div>
+                    ) : history.length === 0 ? (
+                        <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[2rem] opacity-20">
+                            <span className="material-symbols-outlined text-5xl mb-4 text-slate-500">inventory_2</span>
+                            <p className="text-[10px] font-black uppercase tracking-widest">Nenhum comunicado enviado</p>
+                        </div>
+                    ) : (
+                        history.map((item) => (
+                            <div key={item.id} className="bg-black/40 border border-white/5 p-5 md:p-6 rounded-3xl group hover:border-amber-500/20 transition-all">
+                                <div className="flex justify-between items-start gap-4">
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-500/80 italic">Para: {item.receiver_profile?.full_name || 'Profissional'}</span>
+                                            <span className="size-1 bg-slate-700 rounded-full" />
+                                            <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(item.created_at).toLocaleDateString()} às {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
+                                        <h4 className="text-sm font-black text-white italic uppercase truncate mb-1">{item.title}</h4>
+                                        <p className="text-xs text-slate-400 font-medium line-clamp-2 leading-relaxed opacity-70 italic">{item.message}</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDeleteMessage(item.id)}
+                                        className="size-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all group-hover:scale-110 active:scale-90 shadow-lg shadow-red-500/0 hover:shadow-red-500/20"
+                                        title="Excluir Permanentemente"
+                                    >
+                                        <span className="material-symbols-outlined text-xl">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                        ))
                     )}
                 </div>
             </div>
