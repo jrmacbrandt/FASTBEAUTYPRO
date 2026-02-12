@@ -35,6 +35,13 @@ export default function CRMDashboard() {
     const [campaignMessage, setCampaignMessage] = useState('');
     const [updatingContact, setUpdatingContact] = useState<string | null>(null);
 
+    // CRM v5.0 Queue State
+    const [queue, setQueue] = useState<any[]>([]);
+    const [isQueueActive, setIsQueueActive] = useState(false);
+    const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
+    const [queueFinished, setQueueFinished] = useState(false);
+    const [isNextLoading, setIsNextLoading] = useState(false);
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -62,7 +69,7 @@ export default function CRMDashboard() {
             // 1. Fetch Tenant Config (Loyalty)
             const { data: tenantData } = await supabase
                 .from('tenants')
-                .select('id, loyalty_target, name, business_type')
+                .select('id, loyalty_target, name, business_type, phone')
                 .eq('id', tenantId)
                 .single();
 
@@ -264,6 +271,74 @@ export default function CRMDashboard() {
         }
     };
 
+    // CRM v5.0 Queue Functions
+    const startQueue = () => {
+        const list = engagementData[activeFilter] || [];
+        if (list.length === 0) return;
+        setQueue(list);
+        setCurrentQueueIndex(0);
+        setIsQueueActive(true);
+        setQueueFinished(false);
+    };
+
+    const handleQueueSend = async () => {
+        const client = queue[currentQueueIndex];
+        if (!client) return;
+
+        setIsNextLoading(true);
+        try {
+            // Log contact
+            await supabase
+                .from('clients')
+                .update({ last_contact_at: new Date().toISOString() })
+                .eq('id', client.id);
+
+            // Generate message based on activeFilter
+            let msg = '';
+            const firstName = client.name.split(' ')[0];
+            const storeName = tenant?.name || 'nossa loja';
+
+            if (activeFilter === 'churn') {
+                msg = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
+            } else if (activeFilter === 'birthdays') {
+                msg = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
+            } else if (activeFilter === 'vip') {
+                msg = `Olá, ${firstName}! 🌟 Passando para agradecer sua fidelidade à ${storeName}. Você é um cliente muito especial para nós e preparamos um mimo para sua próxima visita. Vamos marcar? 💎`;
+            } else if (activeFilter === 'loyalty') {
+                msg = `Oi, ${firstName}! 🌟 Passando para avisar que falta muito pouco para o seu prêmio do cartão fidelidade da ${storeName}. Garanta seu horário e complete seu cartão! 🏆`;
+            } else {
+                msg = `Olá, ${firstName}! 👋 Como você está? Passando para convidar você para uma nova visita à ${storeName}. Temos horários disponíveis para esta semana! ✂️`;
+            }
+
+            const phone = client.phone.replace(/\D/g, '');
+            const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+
+            window.open(url, '_blank');
+
+            // Wait 2 seconds before allowing next (anti-spam visual delay)
+            setTimeout(() => {
+                if (currentQueueIndex < queue.length - 1) {
+                    setCurrentQueueIndex(prev => prev + 1);
+                } else {
+                    setQueueFinished(true);
+                }
+                setIsNextLoading(false);
+            }, 2000);
+
+        } catch (error) {
+            console.error('Queue send failed:', error);
+            setIsNextLoading(false);
+        }
+    };
+
+    const skipQueueClient = () => {
+        if (currentQueueIndex < queue.length - 1) {
+            setCurrentQueueIndex(prev => prev + 1);
+        } else {
+            setQueueFinished(true);
+        }
+    };
+
     // Correcting the change detection: ensure we check the exact values
     const hasChanges = tenant && Number(selectedLoyaltyTarget) !== Number(tenant.loyalty_target);
 
@@ -306,7 +381,7 @@ export default function CRMDashboard() {
             </header>
 
             {/* KPI CARDS - Premium Refined with Real Data */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
                 <MetricCard
                     title="Base Ativa"
                     value={stats.totalClients}
@@ -327,6 +402,16 @@ export default function CRMDashboard() {
                     alert={stats.churnRisk > 0}
                     isActive={activeFilter === 'churn'}
                     onClick={() => setActiveFilter('churn')}
+                />
+                <MetricCard
+                    title="Aniversariantes"
+                    value={stats.birthdays}
+                    icon="cake"
+                    color="text-pink-500"
+                    desc="No mês atual"
+                    alert={stats.birthdays > 0}
+                    isActive={activeFilter === 'birthdays'}
+                    onClick={() => setActiveFilter('birthdays')}
                 />
                 <MetricCard
                     title="Clientes VIP"
@@ -435,11 +520,28 @@ export default function CRMDashboard() {
                 <div className="xl:col-span-7 space-y-6">
                     <div className="bg-[#121214] border border-white/5 rounded-[2.5rem] p-8 md:p-10 h-full flex flex-col shadow-2xl">
                         <div className="flex items-center justify-between mb-10">
-                            <div>
-                                <h3 className="text-xl font-black italic uppercase text-white mb-1">Central de Engajamento</h3>
-                                <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Motor de Retenção Ativo</p>
+                            <div className="flex items-center gap-6">
+                                <div>
+                                    <h3 className="text-xl font-black italic uppercase text-white mb-1">Central de Engajamento</h3>
+                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Motor de Retenção Ativo</p>
+                                </div>
+                                <button
+                                    onClick={() => window.location.href = `/admin/crm/nova-campanha?segment=${activeFilter}`}
+                                    className="bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[9px] tracking-widest px-4 py-2 rounded-xl transition-all shadow-lg active:scale-95"
+                                >
+                                    CRIAR ESTA CAMPANHA
+                                </button>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-4">
+                                {(engagementData[activeFilter] || []).length > 0 && (
+                                    <button
+                                        onClick={startQueue}
+                                        className="bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[9px] tracking-widest px-4 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">rocket_launch</span>
+                                        Iniciar Fila de Disparo
+                                    </button>
+                                )}
                                 <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
                                     <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                     Filtros Dinâmicos OK
@@ -672,6 +774,91 @@ export default function CRMDashboard() {
                                 DISPARAR AGORA
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: FILA DE DISPARO RÁPIDO (CRM v5.0) */}
+            {isQueueActive && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="w-full max-w-xl bg-[#0a0a0b] border border-white/10 rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(242,185,13,0.1)]">
+                        {/* Progress Bar */}
+                        <div className="h-1 bg-white/5 w-full">
+                            <div
+                                className="h-full bg-[#f2b90d] transition-all duration-700"
+                                style={{ width: `${((currentQueueIndex + (queueFinished ? 1 : 0)) / queue.length) * 100}%` }}
+                            ></div>
+                        </div>
+
+                        {queueFinished ? (
+                            <div className="p-12 text-center space-y-6">
+                                <div className="size-24 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                                    <span className="material-symbols-outlined text-5xl text-emerald-500">task_alt</span>
+                                </div>
+                                <h3 className="text-3xl font-black italic uppercase text-white">Missão Cumprida!</h3>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] max-w-xs mx-auto">
+                                    Parabéns! Você entrou em contato com {queue.length} clientes de forma recorde.
+                                </p>
+                                <button
+                                    onClick={() => { setIsQueueActive(false); fetchData(); }}
+                                    className="w-full bg-[#f2b90d] py-5 rounded-3xl text-black font-black uppercase tracking-widest transition-all hover:scale-105"
+                                >
+                                    FECHAR RELATÓRIO
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="p-10 space-y-8">
+                                <header className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-[#f2b90d] font-black uppercase text-[10px] tracking-widest mb-2 flex items-center gap-2">
+                                            <span className="size-2 rounded-full bg-[#f2b90d] animate-ping"></span>
+                                            Fila de Disparo Ativa
+                                        </p>
+                                        <h3 className="text-2xl font-black italic uppercase text-white">
+                                            {queue[currentQueueIndex]?.name}
+                                        </h3>
+                                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-tighter">
+                                            Cliente {currentQueueIndex + 1} de {queue.length} • {queue[currentQueueIndex]?.phone}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setIsQueueActive(false)} className="text-slate-500 hover:text-white transition-colors">
+                                        <span className="material-symbols-outlined">close</span>
+                                    </button>
+                                </header>
+
+                                <div className="bg-black/40 border border-white/5 rounded-3xl p-6 relative">
+                                    <div className="absolute -top-3 left-6 px-3 py-1 bg-[#075e54] rounded-full text-[8px] font-black uppercase tracking-widest text-white ring-4 ring-[#0a0a0b]">Preview WhatsApp</div>
+                                    <p className="text-sm text-slate-300 italic pt-2">
+                                        {activeFilter === 'churn' ? `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Sentimos sua falta...` :
+                                            activeFilter === 'birthdays' ? `Parabéns, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 🎉 Temos um presente...` :
+                                                `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Como você está?`}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={skipQueueClient}
+                                        className="py-5 rounded-3xl bg-white/5 border border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        PULAR
+                                        <span className="material-symbols-outlined text-sm">skip_next</span>
+                                    </button>
+                                    <button
+                                        onClick={handleQueueSend}
+                                        disabled={isNextLoading}
+                                        className="py-5 rounded-3xl bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
+                                    >
+                                        <span className="material-symbols-outlined text-xl">{isNextLoading ? 'sync' : 'send_and_archive'}</span>
+                                        {isNextLoading ? 'ENVIANDO...' : 'ENVIAR & PRÓXIMO'}
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-center gap-2">
+                                    <span className="size-1.5 rounded-full bg-slate-700"></span>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-600">Anti-Spam Manual Ativo • Siga as Normas do WhatsApp</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
