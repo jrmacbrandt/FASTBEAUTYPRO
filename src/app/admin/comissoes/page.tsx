@@ -79,10 +79,10 @@ export default function AdminCommissionsPage() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white">
-                        Painel de <span style={{ color: colors.primary }}>Comissões</span>
+                        <span style={{ color: colors.primary }}>Comissões</span>
                     </h2>
                     <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-1">
-                        Acompanhamento de performance e repasses
+                        Performance e Repasses
                     </p>
                 </div>
 
@@ -138,9 +138,9 @@ export default function AdminCommissionsPage() {
                                 <thead>
                                     <tr className="bg-white/[0.02]">
                                         <th className="text-left px-4 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Profissional</th>
-                                        <th className="text-center px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Total</th>
-                                        <th className="text-right px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Com. Serviços</th>
-                                        <th className="text-right px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Com. Produtos</th>
+                                        <th className="text-center px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Total Geral</th>
+                                        <th className="text-right px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">% Serviços</th>
+                                        <th className="text-right px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">% Produtos</th>
                                         <th className="text-right px-4 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Total Comissões</th>
                                     </tr>
                                 </thead>
