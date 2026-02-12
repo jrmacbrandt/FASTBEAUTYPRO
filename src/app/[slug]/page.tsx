@@ -324,7 +324,10 @@ export default function ShopLandingPage() {
                     )}
 
                     {step === 5 && (
-                        <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-lg mx-auto">
+                        <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-lg mx-auto relative">
+                            <button onClick={() => setStep(4)} className="absolute left-0 -top-16 md:-top-20 size-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-sm" style={{ color: '#ffffff' }}>
+                                <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+                            </button>
                             <div className="text-center mb-12">
                                 <div className="inline-flex size-20 rounded-[2rem] bg-[#f2b90d]/10 items-center justify-center text-[#f2b90d] mb-6 border border-[#f2b90d]/20 ring-4 ring-[#f2b90d]/5">
                                     <span className="material-symbols-outlined text-4xl">check_circle</span>
