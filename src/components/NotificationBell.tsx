@@ -104,8 +104,8 @@ export function NotificationBell() {
 
             {/* Modal de Leitura */}
             {selectedNotification && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90dvh] overflow-hidden animate-in zoom-in duration-300">
+                <div className="fixed inset-0 z-[200] flex items-start justify-center p-4 pt-24 md:pt-32 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col max-h-[70vh] md:max-h-[80vh] overflow-hidden animate-in fade-in duration-300">
                         <div className="p-8 md:p-10 flex flex-col min-h-0">
                             {/* Header (Fixo) */}
                             <div className="shrink-0">
@@ -113,7 +113,7 @@ export function NotificationBell() {
                                     <span className="material-symbols-outlined text-3xl">mark_email_unread</span>
                                 </div>
 
-                                <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-2 leading-tight">
+                                <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-2 leading-tight line-clamp-2">
                                     {selectedNotification.title}
                                 </h3>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] mb-8 opacity-60 italic">
@@ -121,7 +121,7 @@ export function NotificationBell() {
                                 </p>
                             </div>
 
-                            {/* Área de Texto (Única com Scroll) */}
+                            {/* Área de Texto (Rolagem Única) */}
                             <div className="bg-black/40 border border-white/5 rounded-3xl p-6 mb-8 overflow-y-auto custom-scrollbar flex-1 min-h-[100px]">
                                 <p className="text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">
                                     {selectedNotification.message}
@@ -129,12 +129,14 @@ export function NotificationBell() {
                             </div>
 
                             {/* Footer (Fixo) */}
-                            <button
-                                onClick={() => setSelectedNotification(null)}
-                                className="w-full bg-[#f2b90d] hover:bg-[#d9a50c] text-black font-black py-5 rounded-2xl transition-all uppercase italic tracking-widest text-sm shrink-0 shadow-lg active:scale-95"
-                            >
-                                FECHAR COMUNICADO
-                            </button>
+                            <div className="shrink-0">
+                                <button
+                                    onClick={() => setSelectedNotification(null)}
+                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50c] text-black font-black py-5 rounded-2xl transition-all uppercase italic tracking-widest text-sm shadow-lg active:scale-95"
+                                >
+                                    FECHAR COMUNICADO
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
