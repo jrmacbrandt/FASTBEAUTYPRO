@@ -20,35 +20,34 @@ export default function MasterComunicadosPage() {
         const fetchOwners = async () => {
             setLoading(true);
             try {
-                // Fetch tenants (active only) and join with their profiles (owners)
-                // We use the same join pattern as the dashboard for guaranteed access
+                // Use a consulta idêntica ao dashboard que sabemos que funciona
                 const { data, error } = await supabase
                     .from('tenants')
-                    .select('id, name, profiles!profiles_tenant_id_fkey(id, full_name, role, status)')
-                    .eq('active', true)
-                    .neq('status', 'pending_approval');
+                    .select('*, profiles!profiles_tenant_id_fkey(*)')
+                    .neq('status', 'pending_approval')
+                    .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
                 if (data) {
-                    const extractedOwners = data.flatMap(t => {
-                        // Find potential owners (owner or admin role)
-                        const profiles = (t.profiles as any[]) || [];
-                        const ownersList = profiles.filter(p => p.role === 'owner' || p.role === 'admin' || p.role === 'master');
+                    console.log('Dados brutos dos inquilinos:', data);
 
-                        // If no specific owner is identified by role, fallback to the first active profile
-                        const targetProfiles = ownersList.length > 0
-                            ? ownersList
-                            : [profiles.find(p => p.status === 'active') || profiles[0]].filter(Boolean);
+                    const extractedOwners = data.map(t => {
+                        // Pegamos o primeiro perfil associado (normalmente o dono)
+                        const profiles = Array.isArray(t.profiles) ? t.profiles : [];
+                        const ownerProfile = profiles[0];
 
-                        return targetProfiles.map(p => ({
-                            id: p.id,
-                            full_name: `${t.name} (${p.full_name})`,
+                        if (!ownerProfile) return null;
+
+                        return {
+                            id: ownerProfile.id,
+                            full_name: `${t.name.toUpperCase()} (${ownerProfile.full_name})`,
                             tenant_id: t.id
-                        }));
-                    });
+                        };
+                    }).filter(Boolean);
 
-                    setOwners(extractedOwners);
+                    console.log('Inquilinos extraídos para seleção:', extractedOwners);
+                    setOwners(extractedOwners as any);
                 }
             } catch (err: any) {
                 console.error('Master fetch owners error:', err);
