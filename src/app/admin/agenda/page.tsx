@@ -112,24 +112,26 @@ export default function AdminAgendaPage() {
                     <p className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">Visualize e gerencie todos os agendamentos da unidade.</p>
                 </div>
 
-                <div className="flex bg-black/40 p-1.5 rounded-2xl border border-white/5 w-full md:w-auto overflow-x-auto no-scrollbar">
-                    <button
-                        onClick={() => setSelectedProfessionalId('all')}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic whitespace-nowrap ${selectedProfessionalId === 'all' ? 'shadow-lg' : 'opacity-40 hover:opacity-100'}`}
-                        style={selectedProfessionalId === 'all' ? { backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' } : { color: colors.text }}
+                <div className="relative w-full md:w-64">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] opacity-50 pointer-events-none" style={{ color: colors.text }}>filter_list</span>
+                    <select
+                        value={selectedProfessionalId}
+                        onChange={(e) => setSelectedProfessionalId(e.target.value)}
+                        className="w-full appearance-none pl-12 pr-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic border outline-none cursor-pointer hover:bg-white/5"
+                        style={{
+                            backgroundColor: colors.cardBg,
+                            color: colors.text,
+                            borderColor: colors.border
+                        }}
                     >
-                        TODOS
-                    </button>
-                    {professionals.map(pro => (
-                        <button
-                            key={pro.id}
-                            onClick={() => setSelectedProfessionalId(pro.id)}
-                            className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic whitespace-nowrap ${selectedProfessionalId === pro.id ? 'shadow-lg' : 'opacity-40 hover:opacity-100'}`}
-                            style={selectedProfessionalId === pro.id ? { backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' } : { color: colors.text }}
-                        >
-                            {pro.full_name.split(' ')[0]}
-                        </button>
-                    ))}
+                        <option value="all">Todos os Profissionais</option>
+                        {professionals.map(pro => (
+                            <option key={pro.id} value={pro.id}>
+                                {pro.full_name}
+                            </option>
+                        ))}
+                    </select>
+                    <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-[18px] opacity-50 pointer-events-none" style={{ color: colors.text }}>expand_more</span>
                 </div>
             </header>
 
@@ -163,9 +165,9 @@ export default function AdminAgendaPage() {
                                     <span className="text-lg font-black italic tracking-tighter" style={{ color: colors.text }}>R$ {Number(item.services?.price || 0).toFixed(2)}</span>
                                 </div>
                                 <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border text-center w-full md:w-32 ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                        item.status === 'absent' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                                            item.status === 'paid' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                                'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                    item.status === 'absent' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                                        item.status === 'paid' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                                            'bg-amber-500/10 text-amber-500 border-amber-500/20'
                                     }`}>
                                     {item.status === 'completed' ? 'REALIZADO' :
                                         item.status === 'absent' ? 'AUSENTE' :
