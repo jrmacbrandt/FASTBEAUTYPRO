@@ -20,6 +20,27 @@ export default function TeamManagementPage() {
     const [activeTab, setActiveTab] = useState<'team' | 'pending'>('team');
     const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
     const [editingBarber, setEditingBarber] = useState<Profile | null>(null);
+    const [formData, setFormData] = useState({
+        full_name: '',
+        commission_rate: 50,
+        status: 'active'
+    });
+
+    useEffect(() => {
+        if (editingBarber) {
+            setFormData({
+                full_name: editingBarber.full_name,
+                commission_rate: editingBarber.commission_rate,
+                status: editingBarber.status
+            });
+        } else {
+            setFormData({
+                full_name: '',
+                commission_rate: 50,
+                status: 'active'
+            });
+        }
+    }, [editingBarber, isRegistrationModalOpen]);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -109,6 +130,34 @@ export default function TeamManagementPage() {
             // Dispatch event for sidebar/dashboard update
             window.dispatchEvent(new Event('professional-approved'));
             window.dispatchEvent(new Event('team-updated'));
+        }
+    };
+
+    const handleSave = async () => {
+        if (!formData.full_name) return alert('Nome é obrigatório');
+
+        if (editingBarber) {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    full_name: formData.full_name,
+                    commission_rate: Number(formData.commission_rate),
+                    status: formData.status
+                })
+                .eq('id', editingBarber.id);
+
+            if (!error) {
+                setEditingBarber(null);
+                fetchTeam();
+                window.dispatchEvent(new Event('team-updated'));
+            } else {
+                alert('Erro ao salvar: ' + error.message);
+            }
+        } else {
+            // Para novos registros via Admin, o fluxo ideal é convite, 
+            // mas aqui implementamos a criação direta se necessário ou alertamos.
+            alert('A criação de novos profissionais deve ser feita via convite ou link de cadastro para garantir a segurança da conta.');
+            setIsRegistrationModalOpen(false);
         }
     };
 
@@ -221,22 +270,40 @@ export default function TeamManagementPage() {
                         <div className="p-8 space-y-6">
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Nome Completo</label>
-                                <input type="text" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50" defaultValue={editingBarber?.full_name} placeholder="Ex: João da Silva" />
+                                <input
+                                    type="text"
+                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50"
+                                    value={formData.full_name}
+                                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                    placeholder="Ex: João da Silva"
+                                />
                             </div>
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão (%)</label>
-                                    <input type="number" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50" defaultValue={editingBarber?.commission_rate || 50} />
+                                    <input
+                                        type="number"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50"
+                                        value={formData.commission_rate}
+                                        onChange={(e) => setFormData({ ...formData, commission_rate: Number(e.target.value) })}
+                                    />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Status</label>
-                                    <select className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50">
+                                    <select
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50"
+                                        value={formData.status}
+                                        onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                                    >
                                         <option value="active">ATIVO</option>
                                         <option value="suspended">SUSPENSO</option>
                                     </select>
                                 </div>
                             </div>
-                            <button className="w-full bg-[#f2b90d] text-black font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl shadow-[#f2b90d]/20 active:scale-95 transition-all">
+                            <button
+                                onClick={handleSave}
+                                className="w-full bg-[#f2b90d] text-black font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl shadow-[#f2b90d]/20 active:scale-95 transition-all"
+                            >
                                 {editingBarber ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR CADASTRO'}
                             </button>
                         </div>
