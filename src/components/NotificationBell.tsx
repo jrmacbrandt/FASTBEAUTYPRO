@@ -105,8 +105,8 @@ export function NotificationBell() {
             {/* Modal de Leitura */}
             {selectedNotification && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col max-h-[92dvh] animate-in fade-in slide-in-from-bottom-4 duration-300">
-                        <div className="p-8 md:p-10 flex flex-col min-h-0 h-full">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col max-h-[80vh] animate-in fade-in duration-300">
+                        <div className="p-6 md:p-10 flex flex-col min-h-0">
                             {/* Header (Fixo) */}
                             <div className="shrink-0 mb-6 md:mb-8">
                                 <div className="size-12 md:size-16 bg-[#f2b90d]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#f2b90d] mb-4 md:mb-6">
