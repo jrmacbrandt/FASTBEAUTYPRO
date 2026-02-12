@@ -249,22 +249,8 @@ export default function CRMDashboard() {
                                 </div>
                             </div>
 
-                            {/* Save Button - Corrected visibility logic */}
-                            {hasChanges && (
-                                <div className="mb-8 animate-in zoom-in duration-300">
-                                    <button
-                                        onClick={handleSaveLoyalty}
-                                        disabled={savingLoyalty}
-                                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black italic uppercase text-xs tracking-widest py-4 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                                    >
-                                        <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : 'save'}</span>
-                                        {savingLoyalty ? 'SALVANDO EM TEMPO REAL...' : 'SALVAR ALTERAÇÕES'}
-                                    </button>
-                                </div>
-                            )}
-
                             {/* Intelligence Audit Preview */}
-                            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 relative overflow-hidden">
+                            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 relative overflow-hidden mb-8">
                                 <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-4 opacity-70">Visualização do App do Cliente</p>
                                 <div className="flex flex-wrap gap-2.5 justify-center py-4">
                                     {loyaltyPreviewCircles.map((_, i) => (
@@ -282,6 +268,20 @@ export default function CRMDashboard() {
                                 </div>
                                 <p className="text-[9px] text-center text-slate-500 mt-4 italic font-medium">Recompensa: 1 {tenant?.business_type === 'barber' ? 'Corte' : 'Serviço'} Grátis</p>
                             </div>
+
+                            {/* Unificado: Único Botão de Salvar no final do quadro */}
+                            {hasChanges && (
+                                <div className="animate-in slide-in-from-bottom-4 duration-500">
+                                    <button
+                                        onClick={handleSaveLoyalty}
+                                        disabled={savingLoyalty}
+                                        className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black italic uppercase text-xs tracking-widest py-5 rounded-2xl shadow-2xl shadow-[#f2b90d]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                                    >
+                                        <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : 'save_as'}</span>
+                                        {savingLoyalty ? 'Sincronizando...' : 'confirmar novas configurações'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* Status Footer */}
