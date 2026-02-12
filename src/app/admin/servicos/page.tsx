@@ -114,6 +114,23 @@ export default function ServicesPage() {
         }
     };
 
+    const handleDelete = async (id: string, name: string) => {
+        if (!window.confirm(`Tem certeza que deseja EXCLUIR permanentemente o serviço "${name}"?`)) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('services')
+            .delete()
+            .eq('id', id);
+
+        if (!error && tenantId) {
+            fetchServices(tenantId);
+        } else if (error) {
+            alert('Erro ao excluir serviço: ' + error.message);
+        }
+    };
+
     return (
         <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-20">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -245,6 +262,13 @@ export default function ServicesPage() {
                                                     title="Editar serviço"
                                                 >
                                                     <span className="material-symbols-outlined text-[20px] group-hover/btn:rotate-90 transition-transform duration-500">settings</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(service.id, service.name)}
+                                                    className="size-10 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-red-500 hover:border-red-500/30 transition-all flex items-center justify-center group/btn"
+                                                    title="Excluir serviço"
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px] group-hover/btn:scale-110 transition-transform">delete</span>
                                                 </button>
                                                 <button
                                                     onClick={() => toggleStatus(service.id, service.active)}
