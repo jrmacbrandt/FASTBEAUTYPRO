@@ -14,6 +14,8 @@ export default function TeamMessagesPage() {
     const [historyLoading, setHistoryLoading] = useState(true);
     const [tenantId, setTenantId] = useState<string | null>(null);
     const [history, setHistory] = useState<any[]>([]);
+    const [view, setView] = useState<'history' | 'create'>('history');
+    const [selectedHistoryItems, setSelectedHistoryItems] = useState<string[]>([]);
 
     useEffect(() => {
         const fetchTeam = async () => {
@@ -128,8 +130,40 @@ export default function TeamMessagesPage() {
 
         if (!error) {
             setHistory(prev => prev.filter(item => item.id !== id));
+            setSelectedHistoryItems(prev => prev.filter(i => i !== id));
         } else {
             alert('Erro ao excluir mensagem: ' + error.message);
+        }
+    };
+
+    const handleBulkDelete = async () => {
+        if (!selectedHistoryItems.length) return;
+        if (!confirm(`Deseja excluir permanentemente os ${selectedHistoryItems.length} comunicados selecionados?`)) return;
+
+        const { error } = await supabase
+            .from('notifications')
+            .delete()
+            .in('id', selectedHistoryItems);
+
+        if (!error) {
+            setHistory(prev => prev.filter(item => !selectedHistoryItems.includes(item.id)));
+            setSelectedHistoryItems([]);
+        } else {
+            alert('Erro ao excluir em massa: ' + error.message);
+        }
+    };
+
+    const toggleHistoryItemSelection = (id: string) => {
+        setSelectedHistoryItems(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleSelectAllHistory = (checked: boolean) => {
+        if (checked) {
+            setSelectedHistoryItems(history.map(item => item.id));
+        } else {
+            setSelectedHistoryItems([]);
         }
     };
 
@@ -149,152 +183,219 @@ export default function TeamMessagesPage() {
                 </div>
             )}
 
-            <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl">
-                <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-10">
-                    <div className="size-12 md:size-14 bg-[#f2b90d]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#f2b90d] shrink-0">
-                        <span className="material-symbols-outlined text-2xl md:text-3xl">chat_bubble</span>
+            {view === 'create' ? (
+                <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="flex items-center justify-between mb-6 md:mb-10">
+                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className="size-12 md:size-14 bg-[#f2b90d]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#f2b90d] shrink-0">
+                                <span className="material-symbols-outlined text-2xl md:text-3xl">chat_bubble</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tight leading-none mb-1">Novo Comunicado</h3>
+                                <p className="text-slate-500 text-[8px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Aviso geral para colaboradores</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setView('history')}
+                            className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-4 py-2 rounded-xl border border-white/5 flex items-center gap-2 text-[10px] font-black uppercase transition-all"
+                        >
+                            <span className="material-symbols-outlined text-sm">arrow_back</span>
+                            Voltar
+                        </button>
                     </div>
-                    <div>
-                        <h3 className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tight leading-none mb-1">Novo Comunicado</h3>
-                        <p className="text-slate-500 text-[8px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Aviso geral para colaboradores</p>
+
+                    <div className="space-y-4 md:space-y-8">
+                        {/* Destinatários */}
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between px-2">
+                                <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest italic opacity-60">Destinatários ({selectedRecipients.length})</label>
+
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <span className="text-[9px] font-black uppercase text-slate-500 group-hover:text-[#f2b90d] transition-colors">Selecionar Todos</span>
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only"
+                                            checked={isAllSelected}
+                                            onChange={(e) => handleSelectAll(e.target.checked)}
+                                        />
+                                        <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${isAllSelected ? 'bg-[#f2b90d] border-[#f2b90d]' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
+                                            {isAllSelected && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
+                                        </div>
+                                    </div>
+                                </label>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                                {loading ? (
+                                    <div className="col-span-full py-10 flex flex-col items-center opacity-30">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#f2b90d] mb-2"></div>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Carregando...</p>
+                                    </div>
+                                ) : team.map(member => (
+                                    <label
+                                        key={member.id}
+                                        className={`flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer group ${selectedRecipients.includes(member.id) ? 'bg-[#f2b90d]/10 border-[#f2b90d]/30' : 'bg-black/40 border-white/5 hover:border-white/10'}`}
+                                        onClick={() => handleToggleRecipient(member.id)}
+                                    >
+                                        <div className="relative">
+                                            <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${selectedRecipients.includes(member.id) ? 'bg-[#f2b90d] border-[#f2b90d]' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
+                                                {selectedRecipients.includes(member.id) && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
+                                            </div>
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <p className={`font-black uppercase italic tracking-tight text-sm truncate ${selectedRecipients.includes(member.id) ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                                                {member.full_name}
+                                            </p>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="space-y-1.5 md:space-y-2">
+                            <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest italic opacity-60">Título do Comunicado</label>
+                            <input
+                                type="text"
+                                placeholder="Ex: AVISO DE REUNIÃO, MANUTENÇÃO..."
+                                value={messageTitle}
+                                onChange={(e) => setMessageTitle(e.target.value)}
+                                className="w-full bg-black border border-white/10 rounded-xl md:rounded-2xl py-3 md:py-4 px-4 md:px-6 text-white font-bold outline-none focus:border-[#f2b90d] text-sm md:text-base placeholder:opacity-30"
+                            />
+                        </div>
+
+                        <div className="space-y-1.5 md:space-y-2">
+                            <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest italic opacity-60">Sua Mensagem</label>
+                            <textarea
+                                rows={5}
+                                placeholder="Digite o conteúdo aqui..."
+                                value={messageText}
+                                onChange={(e) => setMessageText(e.target.value)}
+                                className="w-full bg-black border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 text-white font-medium outline-none focus:border-[#f2b90d] resize-none text-sm md:text-base placeholder:opacity-30"
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleSendMessage}
+                            disabled={status === 'sending' || !messageText.trim() || selectedRecipients.length === 0}
+                            className="w-full bg-[#f2b90d] hover:bg-[#d9a50c] text-black font-black py-4 md:py-6 rounded-2xl md:rounded-[1.8rem] text-base md:text-lg shadow-2xl shadow-[#f2b90d]/20 transition-all flex items-center justify-center gap-3 uppercase italic active:scale-95 disabled:opacity-50"
+                        >
+                            {status === 'sending' ? 'ENVIANDO...' : 'ENVIAR AGORA'}
+                        </button>
+
+                        {selectedRecipients.length === 0 && messageText.trim().length > 0 && (
+                            <p className="text-center text-[9px] font-black uppercase text-amber-500/60 animate-pulse">Selecione ao menos um destinatário</p>
+                        )}
                     </div>
                 </div>
+            ) : (
+                <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-300">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 md:mb-12 gap-6">
+                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className="size-12 md:size-14 bg-amber-500/10 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-500 shrink-0">
+                                <span className="material-symbols-outlined text-2xl md:text-3xl">history</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tight leading-none mb-1">Histórico</h3>
+                                <p className="text-slate-500 text-[8px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Mensagens enviadas anteriormente</p>
+                            </div>
+                        </div>
 
-                <div className="space-y-4 md:space-y-8">
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between px-2">
-                            <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 tracking-widest italic opacity-60">Destinatários ({selectedRecipients.length})</label>
+                        <div className="flex items-center gap-3">
+                            {selectedHistoryItems.length > 0 && (
+                                <button
+                                    onClick={handleBulkDelete}
+                                    className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-5 py-3 rounded-xl border border-red-500/20 flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-lg active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-sm">delete_sweep</span>
+                                    Excluir ({selectedHistoryItems.length})
+                                </button>
+                            )}
+                            <button
+                                onClick={() => setView('create')}
+                                className="bg-[#f2b90d] hover:bg-[#d9a50c] text-black px-6 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-xl active:scale-95"
+                            >
+                                <span className="material-symbols-outlined text-sm">add_circle</span>
+                                Novo Comunicado
+                            </button>
+                        </div>
+                    </div>
 
+                    {history.length > 0 && (
+                        <div className="flex items-center justify-end mb-6 px-2">
                             <label className="flex items-center gap-2 cursor-pointer group">
-                                <span className="text-[9px] font-black uppercase text-slate-500 group-hover:text-[#f2b90d] transition-colors">Selecionar Todos</span>
+                                <span className="text-[9px] font-black uppercase text-slate-500 group-hover:text-amber-500 transition-colors">Selecionar Tudo</span>
                                 <div className="relative">
                                     <input
                                         type="checkbox"
                                         className="sr-only"
-                                        checked={isAllSelected}
-                                        onChange={(e) => handleSelectAll(e.target.checked)}
+                                        checked={history.length > 0 && selectedHistoryItems.length === history.length}
+                                        onChange={(e) => handleSelectAllHistory(e.target.checked)}
                                     />
-                                    <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${isAllSelected ? 'bg-[#f2b90d] border-[#f2b90d]' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
-                                        {isAllSelected && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
+                                    <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${selectedHistoryItems.length === history.length && history.length > 0 ? 'bg-amber-500 border-amber-500' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
+                                        {selectedHistoryItems.length === history.length && history.length > 0 && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
                                     </div>
                                 </div>
                             </label>
                         </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                            {loading ? (
-                                <div className="col-span-full py-10 flex flex-col items-center opacity-30">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-[#f2b90d] mb-2"></div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest">Carregando...</p>
-                                </div>
-                            ) : team.map(member => (
-                                <label
-                                    key={member.id}
-                                    className={`flex items-center gap-4 p-4 rounded-2xl border transition-all cursor-pointer group ${selectedRecipients.includes(member.id) ? 'bg-[#f2b90d]/10 border-[#f2b90d]/30' : 'bg-black/40 border-white/5 hover:border-white/10'}`}
-                                    onClick={() => handleToggleRecipient(member.id)}
-                                >
-                                    <div className="relative">
-                                        <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${selectedRecipients.includes(member.id) ? 'bg-[#f2b90d] border-[#f2b90d]' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
-                                            {selectedRecipients.includes(member.id) && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
-                                        </div>
-                                    </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className={`font-black uppercase italic tracking-tight text-sm truncate ${selectedRecipients.includes(member.id) ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`}>
-                                            {member.full_name}
-                                        </p>
-                                    </div>
-                                </label>
-                            ))}
-                        </div>
-                    </div>
-
-                    <div className="space-y-1.5 md:space-y-2">
-                        <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest italic opacity-60">Título do Comunicado</label>
-                        <input
-                            type="text"
-                            placeholder="Ex: AVISO DE REUNIÃO, MANUTENÇÃO..."
-                            value={messageTitle}
-                            onChange={(e) => setMessageTitle(e.target.value)}
-                            className="w-full bg-black border border-white/10 rounded-xl md:rounded-2xl py-3 md:py-4 px-4 md:px-6 text-white font-bold outline-none focus:border-[#f2b90d] text-sm md:text-base placeholder:opacity-30"
-                        />
-                    </div>
-
-                    <div className="space-y-1.5 md:space-y-2">
-                        <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest italic opacity-60">Sua Mensagem</label>
-                        <textarea
-                            rows={5}
-                            placeholder="Digite o conteúdo aqui..."
-                            value={messageText}
-                            onChange={(e) => setMessageText(e.target.value)}
-                            className="w-full bg-black border border-white/10 rounded-2xl md:rounded-3xl p-4 md:p-6 text-white font-medium outline-none focus:border-[#f2b90d] resize-none text-sm md:text-base placeholder:opacity-30"
-                        />
-                    </div>
-
-                    <button
-                        onClick={handleSendMessage}
-                        disabled={status === 'sending' || !messageText.trim() || selectedRecipients.length === 0}
-                        className="w-full bg-[#f2b90d] hover:bg-[#d9a50c] text-black font-black py-4 md:py-6 rounded-2xl md:rounded-[1.8rem] text-base md:text-lg shadow-2xl shadow-[#f2b90d]/20 transition-all flex items-center justify-center gap-3 uppercase italic active:scale-95 disabled:opacity-50"
-                    >
-                        {status === 'sending' ? 'ENVIANDO...' : 'ENVIAR AGORA'}
-                    </button>
-
-                    {selectedRecipients.length === 0 && messageText.trim().length > 0 && (
-                        <p className="text-center text-[9px] font-black uppercase text-amber-500/60 animate-pulse">Selecione ao menos um destinatário</p>
                     )}
-                </div>
-            </div>
 
-            {/* Histórico de Comunicados */}
-            <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl">
-                <div className="flex items-center justify-between mb-6 md:mb-10">
-                    <div className="flex items-center gap-3 md:gap-4">
-                        <div className="size-12 md:size-14 bg-amber-500/10 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-500 shrink-0">
-                            <span className="material-symbols-outlined text-2xl md:text-3xl">history</span>
-                        </div>
-                        <div>
-                            <h3 className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tight leading-none mb-1">Histórico</h3>
-                            <p className="text-slate-500 text-[8px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Mensagens enviadas anteriormente</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="space-y-4 max-h-[500px] overflow-y-auto custom-scrollbar pr-2">
-                    {historyLoading ? (
-                        <div className="py-20 flex flex-col items-center opacity-30">
-                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-amber-500 mb-4"></div>
-                            <p className="text-[10px] font-black uppercase tracking-widest">Carregando histórico...</p>
-                        </div>
-                    ) : history.length === 0 ? (
-                        <div className="py-20 text-center border-2 border-dashed border-white/5 rounded-[2rem] opacity-20">
-                            <span className="material-symbols-outlined text-5xl mb-4 text-slate-500">inventory_2</span>
-                            <p className="text-[10px] font-black uppercase tracking-widest">Nenhum comunicado enviado</p>
-                        </div>
-                    ) : (
-                        history.map((item) => (
-                            <div key={item.id} className="bg-black/40 border border-white/5 p-5 md:p-6 rounded-3xl group hover:border-amber-500/20 transition-all">
-                                <div className="flex justify-between items-start gap-4">
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-amber-500/80 italic">Para: {item.receiver_profile?.full_name || 'Profissional'}</span>
-                                            <span className="size-1 bg-slate-700 rounded-full" />
-                                            <span className="text-[8px] font-bold text-slate-500 uppercase">{new Date(item.created_at).toLocaleDateString()} às {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                        <h4 className="text-sm font-black text-white italic uppercase truncate mb-1">{item.title}</h4>
-                                        <p className="text-xs text-slate-400 font-medium line-clamp-2 leading-relaxed opacity-70 italic">{item.message}</p>
-                                    </div>
-                                    <button
-                                        onClick={() => handleDeleteMessage(item.id)}
-                                        className="size-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl flex items-center justify-center transition-all group-hover:scale-110 active:scale-90 shadow-lg shadow-red-500/0 hover:shadow-red-500/20"
-                                        title="Excluir Permanentemente"
-                                    >
-                                        <span className="material-symbols-outlined text-xl">delete</span>
-                                    </button>
-                                </div>
+                    <div className="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
+                        {historyLoading ? (
+                            <div className="py-24 flex flex-col items-center opacity-30">
+                                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-amber-500 mb-4"></div>
+                                <p className="text-[10px] font-black uppercase tracking-widest">Carregando histórico...</p>
                             </div>
-                        ))
-                    )}
+                        ) : history.length === 0 ? (
+                            <div className="py-24 text-center border-2 border-dashed border-white/5 rounded-[3rem] opacity-20">
+                                <span className="material-symbols-outlined text-6xl mb-4 text-slate-500">inventory_2</span>
+                                <p className="text-[12px] font-black uppercase tracking-widest">Nenhum comunicado enviado</p>
+                            </div>
+                        ) : (
+                            history.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className={`bg-black/40 border p-5 md:p-8 rounded-3xl group transition-all relative ${selectedHistoryItems.includes(item.id) ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5 hover:border-white/10'}`}
+                                >
+                                    <div className="flex gap-4 md:gap-6">
+                                        <div className="pt-1">
+                                            <div
+                                                onClick={() => toggleHistoryItemSelection(item.id)}
+                                                className={`size-6 rounded-lg border-2 flex items-center justify-center transition-all cursor-pointer ${selectedHistoryItems.includes(item.id) ? 'bg-amber-500 border-amber-500' : 'bg-white/5 border-white/10 hover:border-white/20'}`}
+                                            >
+                                                {selectedHistoryItems.includes(item.id) && <span className="material-symbols-outlined text-black text-sm font-black">check</span>}
+                                            </div>
+                                        </div>
+
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-3 mb-3">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] italic">Para: {item.receiver_profile?.full_name || 'Profissional'}</span>
+                                                <span className="size-1 bg-slate-700 rounded-full" />
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase">{new Date(item.created_at).toLocaleDateString()} às {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                            </div>
+                                            <h4 className="text-base md:text-lg font-black text-white italic uppercase truncate mb-2">{item.title}</h4>
+                                            <p className="text-sm text-slate-400 font-medium line-clamp-3 leading-relaxed opacity-70 italic whitespace-pre-wrap">{item.message}</p>
+                                        </div>
+
+                                        <div className="flex items-center">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteMessage(item.id);
+                                                }}
+                                                className="size-12 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-2xl flex items-center justify-center transition-all opacity-40 group-hover:opacity-100 shadow-xl active:scale-90"
+                                                title="Excluir permanentemente"
+                                            >
+                                                <span className="material-symbols-outlined text-2xl">delete</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }
