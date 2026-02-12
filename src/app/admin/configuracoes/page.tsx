@@ -84,24 +84,7 @@ export default function EstablishmentSettingsPage() {
                                 <input type="text" className="w-full bg-black border border-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 pl-[95px] md:pl-[125px] font-bold text-white text-sm md:text-base focus:border-[#f2b90d]/50 outline-none" value={tenant.slug} onChange={e => setTenant({ ...tenant, slug: e.target.value })} />
                             </div>
                         </div>
-                        <div className="space-y-1.5 md:space-y-2">
-                            <label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-60">Meta de Fidelidade (Qtde de Cortes para ganhar 1)</label>
-                            <div className="grid grid-cols-3 gap-3">
-                                {[5, 8, 10].map((val) => (
-                                    <button
-                                        key={val}
-                                        onClick={() => setTenant({ ...tenant, loyalty_target: val })}
-                                        className={`p-3 md:p-4 rounded-xl md:rounded-2xl border font-black uppercase tracking-widest text-xs md:text-sm transition-all flex flex-col items-center gap-1 ${tenant.loyalty_target === val
-                                            ? 'bg-[#f2b90d] border-[#f2b90d] text-black shadow-lg shadow-[#f2b90d]/20 scale-[1.02]'
-                                            : 'bg-black border-white/10 text-slate-500 hover:border-white/30 hover:text-white'
-                                            }`}
-                                    >
-                                        <span className="text-xl md:text-2xl">{val}</span>
-                                        <span className="text-[8px] opacity-80">SELOS</span>
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
+
                     </div>
                 </div>
             )}
