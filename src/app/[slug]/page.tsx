@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { getAvailableSlots } from '@/lib/scheduling';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -93,15 +94,29 @@ export default function ShopLandingPage() {
         };
     }, [tenant]);
 
-    const times = ['08:00', '09:00', '10:00', '11:00', '12:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'];
-
     const availableTimes = useMemo(() => {
+        if (!selection.date || !selection.barber || !tenant) return [];
+
+        // 1. Get Logical Slots (Store + Barber Rules)
+        const { slots } = getAvailableSlots(
+            selection.date,
+            tenant.business_hours || null,
+            selection.barber.work_hours || null
+        );
+
+        // 2. Filter Occupied Appointments (simple string match)
         const occupied = appointments.map(a => {
-            const date = new Date(a.scheduled_at);
-            return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            if (!a.scheduled_at) return '';
+            // "2023-12-12T09:00:00" -> "09:00"
+            const parts = a.scheduled_at.split('T');
+            if (parts.length > 1) return parts[1].substring(0, 5);
+            return '';
         });
-        return times.filter(t => !occupied.includes(t));
-    }, [appointments]);
+
+        // 3. Remove occupied slots strictly
+        return slots.filter(t => !occupied.includes(t));
+
+    }, [selection.date, selection.barber, tenant, appointments]);
 
     const handleConfirm = async () => {
         if (!selection.barber || !selection.service || !selection.clientName || !tenant) return;
