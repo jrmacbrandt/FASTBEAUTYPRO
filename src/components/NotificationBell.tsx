@@ -104,8 +104,8 @@ export function NotificationBell() {
 
             {/* Modal de Leitura */}
             {selectedNotification && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+                <div className="fixed inset-0 z-[200] flex items-start justify-center p-6 pt-20 md:pt-32 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300 max-h-[70vh] overflow-y-auto custom-scrollbar">
                         <div className="p-8 md:p-10">
                             <div className="size-16 bg-[#f2b90d]/10 rounded-2xl flex items-center justify-center text-[#f2b90d] mb-6">
                                 <span className="material-symbols-outlined text-3xl">mark_email_unread</span>
