@@ -191,25 +191,25 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                         <p className="text-[11px] font-black truncate" style={{ color: theme.text }}>{user?.full_name || 'Membro FastBeauty'}</p>
                     </div>
 
-                    {/* STATUS ASSINATURA */}
-                    {user?.tenant && (
-                        <div className="mb-4 px-3 py-2 rounded-lg border border-dashed border-white/10 opacity-70 hover:opacity-100 transition-opacity">
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[8px] uppercase font-bold tracking-wider" style={{ color: theme.text }}>Plano Ativo</span>
-                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded text-[7px]"
+                    {/* STATUS ASSINATURA - VISÍVEL APENAS PARA DONOS */}
+                    {user?.tenant && user?.role === 'owner' && (
+                        <div className="mb-4 px-3 py-3 rounded-xl border border-dashed border-white/20 bg-white/5 opacity-80 hover:opacity-100 transition-opacity">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-[10px] uppercase font-black tracking-wider" style={{ color: theme.text }}>Plano Ativo</span>
+                                <span className="font-black uppercase px-2 py-0.5 rounded text-[9px]"
                                     style={{ backgroundColor: user.tenant.subscription_plan === 'unlimited' ? '#10b98120' : '#f59e0b20', color: user.tenant.subscription_plan === 'unlimited' ? '#10b981' : '#f59e0b' }}>
                                     {user.tenant.subscription_plan === 'unlimited' ? 'FULL' : 'TRIAL'}
                                 </span>
                             </div>
-                            <div className="flex justify-between items-center text-[8px] mb-0.5" style={{ color: theme.text }}>
-                                <span className="opacity-60">Desde:</span>
-                                <span className="font-mono font-bold">
+                            <div className="flex justify-between items-center text-[10px] mb-1" style={{ color: theme.text }}>
+                                <span className="opacity-70">Desde:</span>
+                                <span className="font-mono font-black italic">
                                     {new Date(user.tenant.created_at).toLocaleDateString('pt-BR')}
                                 </span>
                             </div>
-                            <div className="flex justify-between items-center text-[8px]" style={{ color: theme.text }}>
-                                <span className="opacity-60">Expira:</span>
-                                <span className="font-mono font-bold">
+                            <div className="flex justify-between items-center text-[10px]" style={{ color: theme.text }}>
+                                <span className="opacity-70">Expira:</span>
+                                <span className="font-mono font-black italic">
                                     {user.tenant.subscription_plan === 'unlimited'
                                         ? 'INDETERMINADO'
                                         : user.tenant.trial_ends_at
