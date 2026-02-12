@@ -122,8 +122,8 @@ export function NotificationBell() {
                             </div>
 
                             {/* Área de Texto (Rolagem Única) */}
-                            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 mb-8 overflow-y-auto custom-scrollbar flex-1 min-h-[100px]">
-                                <p className="text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">
+                            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 mb-8 overflow-y-auto overflow-x-hidden custom-scrollbar flex-1 min-h-[100px]">
+                                <p className="text-slate-300 leading-relaxed font-medium whitespace-pre-wrap break-words">
                                     {selectedNotification.message}
                                 </p>
                             </div>
