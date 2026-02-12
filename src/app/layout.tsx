@@ -5,12 +5,18 @@ import { OriginTracker } from "@/components/OriginTracker";
 export const metadata: Metadata = {
   title: "FastBeauty Pro - Barber & Salon",
   description: "Digitalize a operação da sua barbearia ou salão.",
-  manifest: `/manifest.json?v=${Date.now()}`,
+  manifest: `/manifest.json?v=3`,
   icons: {
-    icon: `/icon.png?v=${Date.now()}`,
-    apple: `/apple-icon.png?v=${Date.now()}`,
+    icon: [
+      { url: '/favicon.ico?v=3' },
+      { url: '/icon.png?v=3', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/apple-icon.png?v=3' },
+    ],
   },
 };
+
 
 export const viewport = {
   width: "device-width",
@@ -25,7 +31,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Build Timestamp: 2026-02-06T13:06:00 (Forcing Cache Revalidation)
+  // Build Timestamp: 2026-02-12T01:15:00 (Favicon Update v3)
   return (
     <html lang="pt-br">
       <head>
