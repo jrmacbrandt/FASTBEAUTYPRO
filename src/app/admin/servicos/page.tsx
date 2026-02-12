@@ -10,6 +10,7 @@ export default function ServicesPage() {
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
     const [showForm, setShowForm] = useState(false);
+    const [editingService, setEditingService] = useState<any>(null);
 
     const [newService, setNewService] = useState({
         name: '',
@@ -51,27 +52,53 @@ export default function ServicesPage() {
         setLoading(false);
     };
 
+    const handleEdit = (service: any) => {
+        setEditingService(service);
+        setNewService({
+            name: service.name,
+            price: service.price.toString().replace('.', ','),
+            duration_minutes: service.duration_minutes.toString()
+        });
+        setShowForm(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handleCancel = () => {
+        setShowForm(false);
+        setEditingService(null);
+        setNewService({ name: '', price: '', duration_minutes: '' });
+    };
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!tenantId) return;
 
         setIsSaving(true);
-        const { error } = await supabase
-            .from('services')
-            .insert({
-                tenant_id: tenantId,
-                name: newService.name,
-                price: parseFloat(newService.price.replace(',', '.')),
-                duration_minutes: parseInt(newService.duration_minutes),
-                active: true
-            });
+        const serviceData = {
+            tenant_id: tenantId,
+            name: newService.name,
+            price: parseFloat(newService.price.replace(',', '.')),
+            duration_minutes: parseInt(newService.duration_minutes),
+            active: true
+        };
 
-        if (!error) {
-            setNewService({ name: '', price: '', duration_minutes: '' });
-            setShowForm(false);
+        let result;
+        if (editingService) {
+            result = await supabase
+                .from('services')
+                .update(serviceData)
+                .eq('id', editingService.id);
+        } else {
+            result = await supabase
+                .from('services')
+                .insert(serviceData);
+        }
+
+        if (!result.error) {
+            handleCancel();
             fetchServices(tenantId);
         } else {
-            alert('Erro ao salvar serviço: ' + error.message);
+            alert('Erro ao salvar serviço: ' + result.error.message);
         }
         setIsSaving(false);
     };
@@ -100,16 +127,20 @@ export default function ServicesPage() {
                 </div>
 
                 <button
-                    onClick={() => setShowForm(!showForm)}
+                    onClick={() => { if (showForm) handleCancel(); else setShowForm(true); }}
                     className="flex items-center gap-3 bg-[#f2b90d] text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[#f2b90d]/20"
                 >
                     <span className="material-symbols-outlined">{showForm ? 'close' : 'add'}</span>
-                    {showForm ? 'CANCELAR' : 'NOVO SERVIÇO'}
+                    {showForm ? 'FECHAR FORMULÁRIO' : 'NOVO SERVIÇO'}
                 </button>
             </div>
 
             {showForm && (
-                <div className="bg-[#121214] border border-[#f2b90d]/20 p-8 md:p-12 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-500">
+                <div className="bg-[#121214] border border-[#f2b90d]/20 p-8 md:p-12 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-500 shadow-2xl relative">
+                    <h3 className="text-white font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3">
+                        <span className="material-symbols-outlined text-[#f2b90d]">{editingService ? 'edit_note' : 'add_circle'}</span>
+                        {editingService ? `Editando: ${editingService.name}` : 'Cadastrar Novo Serviço'}
+                    </h3>
                     <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nome do Serviço</label>
@@ -117,7 +148,7 @@ export default function ServicesPage() {
                                 required
                                 type="text"
                                 placeholder="ex: Corte Degradê"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner"
                                 value={newService.name}
                                 onChange={e => setNewService({ ...newService, name: e.target.value })}
                             />
@@ -128,7 +159,7 @@ export default function ServicesPage() {
                                 required
                                 type="text"
                                 placeholder="0,00"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner"
                                 value={newService.price}
                                 onChange={e => setNewService({ ...newService, price: e.target.value })}
                             />
@@ -139,20 +170,29 @@ export default function ServicesPage() {
                                 required
                                 type="number"
                                 placeholder="30"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner"
                                 value={newService.duration_minutes}
                                 onChange={e => setNewService({ ...newService, duration_minutes: e.target.value })}
                             />
                         </div>
-                        <div className="md:col-span-3 pt-4">
+                        <div className="md:col-span-3 pt-4 flex gap-4">
                             <button
                                 type="submit"
                                 disabled={isSaving}
-                                className="w-full bg-emerald-500 text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-emerald-600 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                className={`flex-1 ${editingService ? 'bg-amber-500' : 'bg-emerald-500'} text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs hover:opacity-90 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-lg`}
                             >
-                                <span className="material-symbols-outlined">save</span>
-                                {isSaving ? 'SALVANDO...' : 'CADASTRAR SERVIÇO'}
+                                <span className="material-symbols-outlined">{editingService ? 'sync' : 'save'}</span>
+                                {isSaving ? 'SALVANDO...' : editingService ? 'ATUALIZAR SERVIÇO' : 'CADASTRAR SERVIÇO'}
                             </button>
+                            {editingService && (
+                                <button
+                                    type="button"
+                                    onClick={handleCancel}
+                                    className="px-8 bg-white/5 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all border border-white/5"
+                                >
+                                    CANCELAR
+                                </button>
+                            )}
                         </div>
                     </form>
                 </div>
@@ -166,7 +206,7 @@ export default function ServicesPage() {
                                 <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Serviço</th>
                                 <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Preço</th>
                                 <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Duração</th>
-                                <th className="text-right px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Status</th>
+                                <th className="text-right px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
@@ -198,12 +238,21 @@ export default function ServicesPage() {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <button
-                                                onClick={() => toggleStatus(service.id, service.active)}
-                                                className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${service.active ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 opacity-50'}`}
-                                            >
-                                                {service.active ? 'ATIVO' : 'PAUSADO'}
-                                            </button>
+                                            <div className="flex items-center justify-end gap-3">
+                                                <button
+                                                    onClick={() => handleEdit(service)}
+                                                    className="size-10 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-[#f2b90d] hover:border-[#f2b90d]/30 transition-all flex items-center justify-center group/btn"
+                                                    title="Editar serviço"
+                                                >
+                                                    <span className="material-symbols-outlined text-[20px] group-hover/btn:rotate-90 transition-transform duration-500">settings</span>
+                                                </button>
+                                                <button
+                                                    onClick={() => toggleStatus(service.id, service.active)}
+                                                    className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${service.active ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 opacity-50'}`}
+                                                >
+                                                    {service.active ? 'ATIVO' : 'PAUSADO'}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
