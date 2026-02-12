@@ -302,7 +302,12 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Com <br /> <span style={{ color: primaryColor }}>quem?</span></h2>
-                                <button onClick={prevStep} className="size-8 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                <button
+                                    onClick={(e) => { e.preventDefault(); prevStep(); }}
+                                    className="size-10 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10 z-[100] cursor-pointer"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                                    type="button"
+                                >
                                     <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                                 </button>
                             </div>
@@ -332,7 +337,12 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quando?</h2>
-                                <button onClick={prevStep} className="size-8 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                <button
+                                    onClick={(e) => { e.preventDefault(); prevStep(); }}
+                                    className="size-10 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10 z-[100] cursor-pointer"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                                    type="button"
+                                >
                                     <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                                 </button>
                             </div>
@@ -392,7 +402,12 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quase <br /> <span style={{ color: primaryColor }}>lá!</span></h2>
-                                <button onClick={prevStep} className="size-8 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10" style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                <button
+                                    onClick={(e) => { e.preventDefault(); prevStep(); }}
+                                    className="size-10 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10 z-[100] cursor-pointer"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                                    type="button"
+                                >
                                     <span className="material-symbols-outlined text-[18px]">arrow_back</span>
                                 </button>
                             </div>
