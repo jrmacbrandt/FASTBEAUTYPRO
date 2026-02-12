@@ -11,7 +11,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.profiles 
         WHERE profiles.id = auth.uid() 
-        AND profiles.role IN ('owner', 'master', 'admin_master') 
+        AND profiles.role IN ('owner', 'master') 
         AND profiles.tenant_id = notifications.tenant_id
     )
 );
@@ -26,7 +26,7 @@ USING (
     EXISTS (
         SELECT 1 FROM public.profiles 
         WHERE profiles.id = auth.uid() 
-        AND profiles.role IN ('owner', 'master', 'admin_master') 
+        AND profiles.role IN ('owner', 'master') 
         AND profiles.tenant_id = notifications.tenant_id
     )
 );
