@@ -23,7 +23,7 @@ export async function sendNotification(
     priority: Notification['priority'] = 'normal',
     tenantId?: string // Opcional se for Master -> Global
 ) {
-    const { data, error } = await supabase
+    const { error } = await supabase
         .from('notifications')
         .insert({
             receiver_id: receiverId,
@@ -33,16 +33,14 @@ export async function sendNotification(
             type,
             priority,
             is_read: false
-        })
-        .select()
-        .single();
+        });
 
     if (error) {
         console.error('Error sending notification:', error);
         throw error;
     }
 
-    return data;
+    return { success: true };
 }
 
 /**
