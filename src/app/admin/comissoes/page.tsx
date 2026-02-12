@@ -11,6 +11,7 @@ export default function AdminCommissionsPage() {
     const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
     const [professionals, setProfessionals] = useState<any[]>([]);
     const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
+    const [growth, setGrowth] = useState(0);
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -50,6 +51,35 @@ export default function AdminCommissionsPage() {
                     .eq('status', 'completed')
                     .gte('created_at', `${selectedPeriod}-01`)
                     .lte('created_at', `${selectedPeriod}-31`);
+
+
+                // 3. Fetch orders for the PREVIOUS period to calculate growth
+                const [year, month] = selectedPeriod.split('-').map(Number);
+                const prevDate = new Date(year, month - 2); // month is 0-indexed in Date, so current month-1 is month-2 here? No. 
+                // month - 1 is current month index. prev month index is month - 2.
+                // Actually safer to just use a library or simple string logic
+                const prevYear = month === 1 ? year - 1 : year;
+                const prevMonth = month === 1 ? 12 : month - 1;
+                const prevPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+
+                const { data: prevOrders } = await supabase
+                    .from('orders')
+                    .select('commission_amount')
+                    .eq('tenant_id', profile.tenant_id)
+                    .eq('status', 'completed')
+                    .gte('created_at', `${prevPeriod}-01`)
+                    .lte('created_at', `${prevPeriod}-31`);
+
+                const currentTotalCommission = orders?.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0) || 0;
+                const prevTotalCommission = prevOrders?.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0) || 0;
+
+                let calculatedGrowth = 0;
+                if (prevTotalCommission > 0) {
+                    calculatedGrowth = ((currentTotalCommission - prevTotalCommission) / prevTotalCommission) * 100;
+                } else if (currentTotalCommission > 0) {
+                    calculatedGrowth = 100; // 100% growth if started from zero
+                }
+                setGrowth(calculatedGrowth);
 
                 const prosWithStats = pros.map(p => {
                     const proOrders = orders?.filter(o => o.barber_id === p.id) || [];
@@ -109,9 +139,9 @@ export default function AdminCommissionsPage() {
                         <h3 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter">
                             R$ {professionals.reduce((acc, curr) => acc + curr.commission, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </h3>
-                        <div className="mt-6 flex items-center gap-2 text-emerald-500">
-                            <span className="material-symbols-outlined text-sm">trending_up</span>
-                            <span className="text-[10px] font-black uppercase tracking-widest">+8.4% vs mês anterior</span>
+                        <div className={`mt-6 flex items-center gap-2 ${growth >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            <span className="material-symbols-outlined text-sm">{growth >= 0 ? 'trending_up' : 'trending_down'}</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest">{growth > 0 ? '+' : ''}{growth.toFixed(1)}% vs mês anterior</span>
                         </div>
                     </div>
 
