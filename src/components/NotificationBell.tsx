@@ -104,29 +104,29 @@ export function NotificationBell() {
 
             {/* Modal de Leitura */}
             {selectedNotification && (
-                <div className="fixed inset-0 z-[200] flex items-start justify-center p-6 pt-20 md:pt-32 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300 max-h-[70vh] overflow-y-auto custom-scrollbar">
-                        <div className="p-8 md:p-10">
-                            <div className="size-16 bg-[#f2b90d]/10 rounded-2xl flex items-center justify-center text-[#f2b90d] mb-6">
-                                <span className="material-symbols-outlined text-3xl">mark_email_unread</span>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 md:p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2rem] md:rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[85vh]">
+                        <div className="p-6 md:p-10 flex flex-col overflow-hidden">
+                            <div className="size-12 md:size-16 bg-[#f2b90d]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#f2b90d] mb-4 md:mb-6 shrink-0">
+                                <span className="material-symbols-outlined text-2xl md:text-3xl">mark_email_unread</span>
                             </div>
 
-                            <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-2">
+                            <h3 className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tighter mb-1 md:mb-2 shrink-0">
                                 {selectedNotification.title}
                             </h3>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] mb-8 opacity-60 italic">
+                            <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-[#f2b90d] mb-6 md:mb-8 opacity-60 italic shrink-0">
                                 Recebido em {new Date(selectedNotification.created_at).toLocaleDateString()} às {new Date(selectedNotification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </p>
 
-                            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 mb-10 min-h-[150px]">
-                                <p className="text-slate-300 leading-relaxed font-medium">
+                            <div className="bg-black/40 border border-white/5 rounded-2xl md:rounded-3xl p-4 md:p-6 mb-6 md:mb-8 flex-1 overflow-y-auto custom-scrollbar min-h-[100px]">
+                                <p className="text-sm md:text-base text-slate-300 leading-relaxed font-medium whitespace-pre-wrap">
                                     {selectedNotification.message}
                                 </p>
                             </div>
 
                             <button
                                 onClick={() => setSelectedNotification(null)}
-                                className="w-full bg-white/5 hover:bg-white/10 text-white font-black py-5 rounded-2xl transition-all uppercase italic tracking-widest text-sm border border-white/5"
+                                className="w-full bg-[#f2b90d] hover:bg-[#d9a50c] text-black font-black py-4 md:py-5 rounded-xl md:rounded-2xl transition-all uppercase italic tracking-widest text-xs md:text-sm shrink-0"
                             >
                                 FECHAR COMUNICADO
                             </button>
