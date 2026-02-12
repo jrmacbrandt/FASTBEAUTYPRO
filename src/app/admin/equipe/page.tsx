@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { processImage } from '@/lib/image-processing';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,6 +13,9 @@ interface Profile {
     role: string;
     status: string;
     service_commission: number;
+    cpf?: string;
+    phone?: string;
+    avatar_url?: string;
 }
 
 export default function TeamManagementPage() {
@@ -20,26 +24,61 @@ export default function TeamManagementPage() {
     const [activeTab, setActiveTab] = useState<'team' | 'pending'>('team');
     const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
     const [editingBarber, setEditingBarber] = useState<Profile | null>(null);
+
+    // Form States
     const [formData, setFormData] = useState({
         full_name: '',
+        email: '',
+        cpf: '',
+        phone: '',
         service_commission: 50,
         status: 'active'
     });
+    const [avatarFile, setAvatarFile] = useState<File | null>(null);
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+    const [uploading, setUploading] = useState(false);
+
+    // Helpers
+    const formatCPF = (value: string) => {
+        return value
+            .replace(/\D/g, '')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d)/, '$1.$2')
+            .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+            .replace(/(-\d{2})\d+?$/, '$1');
+    };
+
+    const formatPhone = (value: string) => {
+        return value
+            .replace(/\D/g, '')
+            .replace(/^(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{5})(\d)/, '$1-$2')
+            .replace(/(-\d{4})\d+?$/, '$1');
+    };
 
     useEffect(() => {
         if (editingBarber) {
             setFormData({
-                full_name: editingBarber.full_name,
-                service_commission: editingBarber.service_commission,
-                status: editingBarber.status
+                full_name: editingBarber.full_name || '',
+                email: editingBarber.email || '',
+                cpf: formatCPF(editingBarber.cpf || ''),
+                phone: formatPhone(editingBarber.phone || ''),
+                service_commission: editingBarber.service_commission || 50,
+                status: editingBarber.status || 'active'
             });
+            setAvatarPreview(editingBarber.avatar_url || null);
         } else {
             setFormData({
                 full_name: '',
+                email: '',
+                cpf: '',
+                phone: '',
                 service_commission: 50,
                 status: 'active'
             });
+            setAvatarPreview(null);
         }
+        setAvatarFile(null);
     }, [editingBarber, isRegistrationModalOpen]);
 
     useEffect(() => {
@@ -72,10 +111,27 @@ export default function TeamManagementPage() {
 
             if (!error && data) {
                 // Filter out owners to prevent them from appearing in the team list
-                setBarbers(data.filter(p => p.role !== 'owner'));
+                setBarbers(data.filter((p: any) => p.role !== 'owner'));
             }
         }
         setLoading(false);
+    };
+
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try {
+                // Audit: Verify and process image (Resize + WebP)
+                const processedBlob = await processImage(file, 400, 400, 0.8);
+                const processedFile = new File([processedBlob], 'avatar.webp', { type: 'image/webp' });
+
+                setAvatarFile(processedFile);
+                setAvatarPreview(URL.createObjectURL(processedBlob));
+            } catch (error) {
+                console.error('Erro ao processar imagem:', error);
+                alert('Erro ao processar a imagem. Tente novamente.');
+            }
+        }
     };
 
     const handleAction = async (id: string, action: 'approve' | 'suspend' | 'delete') => {
@@ -135,29 +191,62 @@ export default function TeamManagementPage() {
 
     const handleSave = async () => {
         if (!formData.full_name) return alert('Nome é obrigatório');
+        if (!formData.email) return alert('Email é obrigatório');
 
-        if (editingBarber) {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    full_name: formData.full_name,
-                    service_commission: Number(formData.service_commission),
-                    status: formData.status
-                })
-                .eq('id', editingBarber.id);
+        setUploading(true);
 
-            if (!error) {
+        try {
+            let avatarUrl = editingBarber?.avatar_url;
+
+            // Audit: Upload to Storage (not DB)
+            if (avatarFile) {
+                const fileName = `avatar-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                const { error: uploadError } = await supabase.storage
+                    .from('avatars')
+                    .upload(fileName, avatarFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('avatars')
+                    .getPublicUrl(fileName);
+
+                avatarUrl = publicUrl;
+            }
+
+            if (editingBarber) {
+                const { error } = await supabase
+                    .from('profiles')
+                    .update({
+                        full_name: formData.full_name,
+                        email: formData.email, // Updating email generally requires auth update too, but keeping in profile for display/contact
+                        cpf: formData.cpf.replace(/\D/g, ''),
+                        phone: formData.phone.replace(/\D/g, ''),
+                        service_commission: Number(formData.service_commission),
+                        status: formData.status,
+                        avatar_url: avatarUrl
+                    })
+                    .eq('id', editingBarber.id);
+
+                if (error) throw error;
+
                 setEditingBarber(null);
+                setIsRegistrationModalOpen(false);
                 fetchTeam();
                 window.dispatchEvent(new Event('team-updated'));
             } else {
-                alert('Erro ao salvar: ' + error.message);
+                // Only allow edits or approvals here as per previous logic, but if opened for new:
+                alert('Para novos profissionais, solicite que realizem o cadastro pelo link da loja ou aguarde a aprovação.');
+                setIsRegistrationModalOpen(false);
             }
-        } else {
-            // Para novos registros via Admin, o fluxo ideal é convite, 
-            // mas aqui implementamos a criação direta se necessário ou alertamos.
-            alert('A criação de novos profissionais deve ser feita via convite ou link de cadastro para garantir a segurança da conta.');
-            setIsRegistrationModalOpen(false);
+        } catch (error: any) {
+            console.error('Erro ao salvar:', error);
+            alert('Erro ao salvar: ' + error.message);
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -165,7 +254,7 @@ export default function TeamManagementPage() {
     const filteredBarbers = barbers.filter(b => activeTab === 'team' ? b.status !== 'pending' : b.status === 'pending');
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-20">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="flex p-1.5 rounded-2xl bg-black/50 border border-white/5">
                     <button
@@ -181,12 +270,6 @@ export default function TeamManagementPage() {
                         SOLICITAÇÕES {pendingCount > 0 && <span className="bg-red-500 text-white size-5 flex items-center justify-center rounded-full text-[9px] font-bold">{pendingCount}</span>}
                     </button>
                 </div>
-                <button
-                    onClick={() => setIsRegistrationModalOpen(true)}
-                    className="bg-[#f2b90d] text-black px-8 py-4 rounded-xl font-black text-xs shadow-lg shadow-[#f2b90d]/20 uppercase italic tracking-tight active:scale-95 transition-all"
-                >
-                    CADASTRAR PROFISSIONAL
-                </button>
             </div>
 
             <div className="grid grid-cols-1 gap-4">
@@ -199,8 +282,12 @@ export default function TeamManagementPage() {
                     filteredBarbers.map(barber => (
                         <div key={barber.id} className="bg-[#121214] border border-white/5 p-4 md:p-6 rounded-3xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 group hover:border-[#f2b90d]/20 transition-all">
                             <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
-                                <div className="size-12 md:size-16 rounded-xl md:rounded-2xl bg-[#f2b90d]/10 flex items-center justify-center text-[#f2b90d] border border-[#f2b90d]/20 shadow-inner shrink-0">
-                                    <span className="material-symbols-outlined text-2xl md:text-4xl">person_pin</span>
+                                <div className="size-12 md:size-16 rounded-xl md:rounded-2xl bg-[#f2b90d]/10 flex items-center justify-center text-[#f2b90d] border border-[#f2b90d]/20 shadow-inner shrink-0 overflow-hidden relative">
+                                    {barber.avatar_url ? (
+                                        <img src={barber.avatar_url} alt={barber.full_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="material-symbols-outlined text-2xl md:text-4xl">person_pin</span>
+                                    )}
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="font-bold text-base md:text-lg text-white truncate">{barber.full_name}</h4>
@@ -255,11 +342,11 @@ export default function TeamManagementPage() {
                 )}
             </div>
 
-            {/* Modal de Cadastro/Edição */}
+            {/* Modal de Edição */}
             {(isRegistrationModalOpen || editingBarber) && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-[#121214] w-full max-w-xl rounded-[2.5rem] border border-white/5 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-white/5 flex justify-between items-center">
+                    <div className="bg-[#121214] w-full max-w-2xl rounded-[2.5rem] border border-white/5 shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-white/5 flex justify-between items-center sticky top-0 bg-[#121214] z-10">
                             <h3 className="text-xl text-white font-black italic uppercase italic tracking-tight">
                                 {editingBarber ? 'Editar Profissional' : 'Novo Profissional'}
                             </h3>
@@ -268,22 +355,75 @@ export default function TeamManagementPage() {
                             </button>
                         </div>
                         <div className="p-8 space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Nome Completo</label>
-                                <input
-                                    type="text"
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50"
-                                    value={formData.full_name}
-                                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                                    placeholder="Ex: João da Silva"
-                                />
+                            {/* Avatar Config */}
+                            <div className="flex flex-col items-center gap-4 py-4">
+                                <div className="relative group cursor-pointer">
+                                    <div className="size-24 rounded-full border-2 border-dashed border-[#f2b90d]/30 flex items-center justify-center overflow-hidden bg-[#f2b90d]/5">
+                                        {avatarPreview ? (
+                                            <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <span className="material-symbols-outlined text-[#f2b90d] text-4xl">add_a_photo</span>
+                                        )}
+                                    </div>
+                                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span className="text-[10px] font-black text-white uppercase">Alterar</span>
+                                    </div>
+                                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleImageChange} />
+                                </div>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Foto de Perfil</p>
                             </div>
-                            <div className="grid grid-cols-2 gap-6">
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Nome Completo</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
+                                        value={formData.full_name}
+                                        onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                        placeholder="Ex: João da Silva"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Email (Acesso)</label>
+                                    <input
+                                        type="email"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        placeholder="joao@exemplo.com"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">CPF</label>
+                                    <input
+                                        type="text"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
+                                        value={formatCPF(formData.cpf)}
+                                        onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                                        maxLength={14}
+                                        placeholder="000.000.000-00"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">WhatsApp</label>
+                                    <input
+                                        type="tel"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
+                                        value={formatPhone(formData.phone)}
+                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        maxLength={15}
+                                        placeholder="(00) 00000-0000"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6 pt-4 border-t border-white/5">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão (%)</label>
                                     <input
                                         type="number"
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
                                         value={formData.service_commission}
                                         onChange={(e) => setFormData({ ...formData, service_commission: Number(e.target.value) })}
                                     />
@@ -291,7 +431,7 @@ export default function TeamManagementPage() {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Status</label>
                                     <select
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
                                         value={formData.status}
                                         onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                                     >
@@ -300,11 +440,13 @@ export default function TeamManagementPage() {
                                     </select>
                                 </div>
                             </div>
+
                             <button
                                 onClick={handleSave}
-                                className="w-full bg-[#f2b90d] text-black font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl shadow-[#f2b90d]/20 active:scale-95 transition-all"
+                                disabled={uploading}
+                                className="w-full bg-[#f2b90d] text-black font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                {editingBarber ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR CADASTRO'}
+                                {uploading ? 'SALVANDO COM MÍDIA...' : (editingBarber ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR CADASTRO')}
                             </button>
                         </div>
                     </div>
