@@ -269,19 +269,25 @@ export default function CRMDashboard() {
                                 <p className="text-[9px] text-center text-slate-500 mt-4 italic font-medium">Recompensa: 1 {tenant?.business_type === 'barber' ? 'Corte' : 'Serviço'} Grátis</p>
                             </div>
 
-                            {/* Unificado: Único Botão de Salvar no final do quadro */}
-                            {hasChanges && (
-                                <div className="animate-in slide-in-from-bottom-4 duration-500">
-                                    <button
-                                        onClick={handleSaveLoyalty}
-                                        disabled={savingLoyalty}
-                                        className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black italic uppercase text-xs tracking-widest py-5 rounded-2xl shadow-2xl shadow-[#f2b90d]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                                    >
-                                        <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : 'save_as'}</span>
-                                        {savingLoyalty ? 'Sincronizando...' : 'confirmar novas configurações'}
-                                    </button>
-                                </div>
-                            )}
+                            {/* Unificado: Único Botão de Salvar no final do quadro - SEMPRE VISÍVEL conforme solicitado */}
+                            <div className="mt-8">
+                                <button
+                                    onClick={handleSaveLoyalty}
+                                    disabled={loading || savingLoyalty || !tenant}
+                                    className={`w-full font-black italic uppercase text-xs tracking-widest py-5 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-2xl active:scale-[0.98] ${hasChanges
+                                            ? 'bg-[#f2b90d] text-black shadow-[#f2b90d]/20 hover:bg-[#d9a50b] animate-pulse'
+                                            : 'bg-white/5 text-slate-500 border border-white/10 opacity-70 cursor-default'
+                                        }`}
+                                >
+                                    <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : (hasChanges ? 'save_as' : 'check_circle')}</span>
+                                    {savingLoyalty ? 'Sincronizando...' : (hasChanges ? 'SALVAR NOVAS CONFIGURAÇÕES' : 'CONFIGURAÇÕES SALVAS')}
+                                </button>
+                                {hasChanges && (
+                                    <p className="text-[7px] text-[#f2b90d] font-black uppercase tracking-[0.2em] text-center mt-3 animate-bounce">
+                                        Alterações pendentes detectadas
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
                         {/* Status Footer */}
