@@ -96,7 +96,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'Scanner (Check-in)', icon: 'qr_code_scanner', path: '/admin/scanner' },
             { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
-            { label: 'Agenda Geral', icon: 'calendar_month', path: '/profissional' },
+            { label: 'Agenda Geral', icon: 'calendar_month', path: '/admin/agenda' },
             { label: 'Comissões', icon: 'payments', path: '/admin/comissoes' },
             { label: 'Equipe', icon: 'group', path: '/admin/equipe', badge: pendingCount },
 
