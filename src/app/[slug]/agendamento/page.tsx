@@ -15,8 +15,8 @@ export default function DynamicBookingPage() {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(true);
     const [selection, setSelection] = useState({
-        service: '',
-        barber: '',
+        service: null as any,
+        barber: null as any,
         date: '',
         time: '',
         name: '',
@@ -41,18 +41,20 @@ export default function DynamicBookingPage() {
 
                 // Fetch Services
                 const { data: servicesData } = await supabase
-                    .from('products')
+                    .from('services')
                     .select('*')
                     .eq('tenant_id', tenantData.id)
-                    .eq('category', 'service');
+                    .eq('active', true);
 
                 if (servicesData) setServices(servicesData);
 
-                // Fetch Professionals (Team)
+                // Fetch Professionals (Profiles with role 'barber')
                 const { data: teamData } = await supabase
-                    .from('team')
+                    .from('profiles')
                     .select('*')
-                    .eq('tenant_id', tenantData.id);
+                    .eq('tenant_id', tenantData.id)
+                    .eq('role', 'barber')
+                    .eq('status', 'active');
 
                 if (teamData) setBarbers(teamData);
             }
@@ -72,25 +74,59 @@ export default function DynamicBookingPage() {
     const times = ['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
 
     const finishBooking = async () => {
-        // In a real scenario, we would insert into 'appointments' table
-        // For now, mimicking the legacy behavior with WhatsApp redirect
-        const message = `Olá! Gostaria de confirmar meu agendamento: ${selection.service} com ${selection.barber} às ${selection.time}. Nome: ${selection.name}`;
-        window.open(`https://wa.me/5500000000000?text=${encodeURIComponent(message)}`, '_blank');
+        if (!tenant || !selection.service || !selection.barber) return;
 
-        // Create appointment in DB (Optional/Simulated)
-        if (tenant) {
-            await supabase.from('appointments').insert([{
-                tenant_id: tenant.id,
-                client_name: selection.name,
-                client_phone: selection.phone,
-                service: selection.service,
-                professional: selection.barber,
-                status: 'pending',
-                start_time: `${new Date().toISOString().split('T')[0]}T${selection.time}:00`
-            }]);
+        setLoading(true);
+
+        try {
+            // 1. Normalize Phone
+            const cleanPhone = selection.phone.replace(/\D/g, '');
+            const phoneForWhatsApp = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
+
+            // 2. CRM Capture: Upsert Client
+            const { data: clientData, error: clientError } = await supabase
+                .from('clients')
+                .upsert({
+                    tenant_id: tenant.id,
+                    name: selection.name,
+                    phone: cleanPhone,
+                    last_visit: new Date().toISOString()
+                }, { onConflict: 'tenant_id,phone' })
+                .select()
+                .single();
+
+            if (clientError) console.error('CRM Error:', clientError);
+
+            // 3. Create Appointment in DB
+            const { error: apptError } = await supabase
+                .from('appointments')
+                .insert([{
+                    tenant_id: tenant.id,
+                    client_id: clientData?.id,
+                    customer_name: selection.name,
+                    client_phone: cleanPhone,
+                    service_id: selection.service.id,
+                    barber_id: selection.barber.id,
+                    status: 'pending',
+                    scheduled_at: `${new Date().toISOString().split('T')[0]}T${selection.time}:00`,
+                    appointment_time: selection.time
+                }]);
+
+            if (apptError) throw apptError;
+
+            // 4. WhatsApp Redirect (Using Professional's Phone if available, else Unit's)
+            const targetPhone = selection.barber.phone ? selection.barber.phone.replace(/\D/g, '') : (tenant.phone?.replace(/\D/g, '') || '5500000000000');
+            const targetPhoneFull = targetPhone.startsWith('55') ? targetPhone : `55${targetPhone}`;
+
+            const message = `Olá! Sou o ${selection.name}. Gostaria de confirmar meu agendamento: ${selection.service.name} com ${selection.barber.full_name} às ${selection.time}.`;
+            window.open(`https://wa.me/${targetPhoneFull}?text=${encodeURIComponent(message)}`, '_blank');
+
+            router.push(`/${slug}?confirmed=true`);
+        } catch (err: any) {
+            alert('Erro ao finalizar agendamento: ' + err.message);
+        } finally {
+            setLoading(false);
         }
-
-        router.push(`/${slug}?confirmed=true`);
     };
 
     if (loading) return (
@@ -138,9 +174,9 @@ export default function DynamicBookingPage() {
                                 {services.length > 0 ? services.map(s => (
                                     <button
                                         key={s.id}
-                                        onClick={() => { setSelection({ ...selection, service: s.name, price: s.price }); nextStep(); }}
+                                        onClick={() => { setSelection({ ...selection, service: s, price: s.price }); nextStep(); }}
                                         className="p-4 md:p-6 rounded-[1.8rem] md:rounded-[2.5rem] border-2 text-left flex justify-between items-center transition-all group bg-white/[0.03] backdrop-blur-md active:scale-[0.98]"
-                                        style={{ borderColor: selection.service === s.name ? primaryColor : 'rgba(255,255,255,0.05)' }}
+                                        style={{ borderColor: selection.service?.name === s.name ? primaryColor : 'rgba(255,255,255,0.05)' }}
                                     >
                                         <div className="min-w-0 pr-4">
                                             <span className="font-black text-lg md:text-xl italic uppercase tracking-tighter block truncate group-hover:text-yellow-500/80 transition-colors">{s.name}</span>
@@ -172,15 +208,15 @@ export default function DynamicBookingPage() {
                                 {barbers.map(b => (
                                     <button
                                         key={b.id}
-                                        onClick={() => { setSelection({ ...selection, barber: b.name }); nextStep(); }}
+                                        onClick={() => { setSelection({ ...selection, barber: b }); nextStep(); }}
                                         className="p-4 md:p-6 rounded-[1.8rem] md:rounded-[2.5rem] border-2 text-left flex items-center gap-4 md:gap-6 transition-all bg-white/[0.03] backdrop-blur-md active:scale-[0.98]"
-                                        style={{ borderColor: selection.barber === b.name ? primaryColor : 'rgba(255,255,255,0.05)' }}
+                                        style={{ borderColor: selection.barber?.full_name === b.full_name ? primaryColor : 'rgba(255,255,255,0.05)' }}
                                     >
                                         <div className="size-14 md:size-16 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xl md:text-2xl font-black uppercase italic shrink-0" style={{ color: primaryColor }}>
-                                            {b.name[0]}
+                                            {b.full_name[0]}
                                         </div>
                                         <div className="min-w-0">
-                                            <span className="font-black text-lg md:text-xl italic uppercase tracking-tighter block truncate leading-none mb-1">{b.name}</span>
+                                            <span className="font-black text-lg md:text-xl italic uppercase tracking-tighter block truncate leading-none mb-1">{b.full_name}</span>
                                             <span className="text-[8px] md:text-[10px] opacity-40 uppercase font-black tracking-[0.2em]">{b.role}</span>
                                         </div>
                                     </button>

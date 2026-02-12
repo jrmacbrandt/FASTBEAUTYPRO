@@ -72,7 +72,7 @@ export default function ShopLandingPage() {
 
     useEffect(() => {
         if (selection.barber && selection.date) {
-            async function loadAvailability() {
+            const loadAvailability = async () => {
                 const { data } = await supabase
                     .from('appointments')
                     .select('scheduled_at')
@@ -80,7 +80,7 @@ export default function ShopLandingPage() {
                     .gte('scheduled_at', `${selection.date}T00:00:00`)
                     .lte('scheduled_at', `${selection.date}T23:59:59`);
                 if (data) setAppointments(data);
-            }
+            };
             loadAvailability();
         }
     }, [selection.barber, selection.date]);
@@ -103,14 +103,60 @@ export default function ShopLandingPage() {
         return times.filter(t => !occupied.includes(t));
     }, [appointments]);
 
-    const handleConfirm = () => {
-        if (!selection.barber || !selection.service) return;
+    const handleConfirm = async () => {
+        if (!selection.barber || !selection.service || !selection.clientName || !tenant) return;
 
-        const phoneNumber = `55${selection.barber.phone?.replace(/\D/g, '') || ''}`;
-        const message = `Olá ${selection.barber.full_name}! Sou o ${selection.clientName}. Gostaria de confirmar meu agendamento de ${selection.service.name} no dia ${new Date(selection.date).toLocaleDateString('pt-BR')} às ${selection.time}.`;
+        setLoading(true);
 
-        const finalLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-        window.open(finalLink, '_blank');
+        try {
+            // 1. Normalize Phone (assuming clientPhone is collected or prompted)
+            const cleanPhone = selection.clientPhone.replace(/\D/g, '');
+
+            // 2. CRM Capture: Upsert Client
+            const { data: clientData, error: clientError } = await supabase
+                .from('clients')
+                .upsert({
+                    tenant_id: tenant.id,
+                    name: selection.clientName,
+                    phone: cleanPhone,
+                    last_visit: new Date().toISOString()
+                }, { onConflict: 'tenant_id,phone' })
+                .select()
+                .single();
+
+            if (clientError) console.error('CRM Error:', clientError);
+
+            // 3. Create Appointment in DB
+            const { error: apptError } = await supabase
+                .from('appointments')
+                .insert([{
+                    tenant_id: tenant.id,
+                    client_id: clientData?.id,
+                    customer_name: selection.clientName,
+                    client_phone: cleanPhone,
+                    service_id: selection.service.id,
+                    barber_id: selection.barber.id,
+                    status: 'pending',
+                    scheduled_at: `${selection.date}T${selection.time}:00`,
+                    appointment_time: selection.time
+                }]);
+
+            if (apptError) throw apptError;
+
+            // 4. WhatsApp Redirect
+            const phoneNumber = `55${selection.barber.phone?.replace(/\D/g, '') || (tenant.phone?.replace(/\D/g, '') || '')}`;
+            const message = `Olá ${selection.barber.full_name}! Sou o ${selection.clientName}. Gostaria de confirmar meu agendamento de ${selection.service.name} no dia ${new Date(selection.date).toLocaleDateString('pt-BR')} às ${selection.time}.`;
+
+            const finalLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+            window.open(finalLink, '_blank');
+
+            setStep(1); // Reset or show success
+            alert('Agendamento realizado com sucesso! Enviando para o WhatsApp...');
+        } catch (err: any) {
+            alert('Erro ao confirmar: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading) {
@@ -306,12 +352,22 @@ export default function ShopLandingPage() {
                                         value={selection.clientName}
                                         onChange={(e) => setSelection({ ...selection, clientName: e.target.value })}
                                     />
+                                    <input
+                                        type="tel"
+                                        placeholder="SEU WHATSAPP (DDD + NÚMERO)"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic focus:border-[#f2b90d] transition-all"
+                                        value={selection.clientPhone}
+                                        onChange={(e) => setSelection({ ...selection, clientPhone: e.target.value })}
+                                    />
+                                </div>
+                                <div className="pt-4">
+                                    <VerificationBadge tenantId={tenant.id} phone={selection.clientPhone} />
                                 </div>
                             </div>
 
                             <button
                                 onClick={handleConfirm}
-                                disabled={!selection.clientName}
+                                disabled={!selection.clientName || !selection.clientPhone}
                                 className="w-full bg-[#f2b90d] text-black font-black py-6 md:py-7 rounded-[2.5rem] uppercase italic tracking-widest text-sm md:text-lg shadow-[0_20px_40px_rgba(242,185,13,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-4 disabled:opacity-30"
                             >
                                 <span className="material-symbols-outlined text-2xl md:text-3xl">chat</span>
@@ -328,3 +384,53 @@ export default function ShopLandingPage() {
         </div>
     );
 }
+
+// Sub-component to handle async checks without cluttering main component
+const VerificationBadge = ({ tenantId, phone }: { tenantId: string, phone: string }) => {
+    const [status, setStatus] = useState<'loading' | 'vip' | 'loyalty' | null>(null);
+
+    useEffect(() => {
+        if (!phone || phone.length < 8) {
+            setStatus(null);
+            return;
+        }
+
+        const check = async () => {
+            const { LoyaltyService } = await import('@/lib/loyalty');
+            const cleanPhone = phone.replace(/\D/g, '');
+
+            // Check VIP first
+            const sub = await LoyaltyService.checkSubscription(tenantId, cleanPhone);
+            if (sub) {
+                setStatus('vip');
+                return;
+            }
+
+            // Check Loyalty
+            const hasReward = await LoyaltyService.checkReward(tenantId, cleanPhone);
+            if (hasReward) {
+                setStatus('loyalty');
+                return;
+            }
+            setStatus(null);
+        };
+        const timeout = setTimeout(check, 1000); // Debounce
+        return () => clearTimeout(timeout);
+    }, [tenantId, phone]);
+
+    if (status === 'vip') return (
+        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-500 border border-amber-500/30 text-[10px] font-black uppercase tracking-widest animate-in zoom-in w-full justify-center">
+            <span className="material-symbols-outlined text-sm">workspace_premium</span>
+            Cliente VIP Detectado
+        </span>
+    );
+
+    if (status === 'loyalty') return (
+        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-[10px] font-black uppercase tracking-widest animate-in zoom-in w-full justify-center">
+            <span className="material-symbols-outlined text-sm">redeem</span>
+            Recompensa Disponível (Grátis)
+        </span>
+    );
+
+    return null;
+};
