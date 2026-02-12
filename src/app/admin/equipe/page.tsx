@@ -300,9 +300,15 @@ export default function TeamManagementPage() {
                             </div>
 
                             <div className="flex flex-col md:items-end gap-1 md:gap-2 w-full md:w-auto">
-                                <div className="flex md:flex-col justify-between items-end mb-1 md:mb-2 w-full md:w-auto">
-                                    <p className="text-slate-500 text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] italic">Comissão</p>
-                                    <p className="text-[#f2b90d] text-2xl md:text-3xl font-black italic tracking-tighter">{barber.service_commission}%</p>
+                                <div className="flex md:flex-col gap-4 md:gap-2 justify-end items-end mb-2 w-full md:w-auto">
+                                    <div className="flex flex-col items-end">
+                                        <p className="text-slate-500 text-[8px] font-black uppercase tracking-[0.2em] italic mb-0.5">Serviços</p>
+                                        <p className="text-[#f2b90d] text-xl md:text-2xl font-black italic tracking-tighter leading-none">{barber.service_commission}%</p>
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <p className="text-slate-500 text-[8px] font-black uppercase tracking-[0.2em] italic mb-0.5">Produtos</p>
+                                        <p className="text-emerald-500 text-xl md:text-2xl font-black italic tracking-tighter leading-none">{barber.product_commission || 0}%</p>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2 w-full md:w-auto">
                                     {barber.status === UserStatus.PENDING ? (
