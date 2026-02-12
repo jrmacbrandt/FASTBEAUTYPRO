@@ -16,6 +16,10 @@ export default function CRMDashboard() {
     });
     const [savingLoyalty, setSavingLoyalty] = useState(false);
     const [selectedLoyaltyTarget, setSelectedLoyaltyTarget] = useState<number | null>(null);
+    const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+    const [clientsList, setClientsList] = useState<any[]>([]);
+    const [selectedClients, setSelectedClients] = useState<string[]>([]);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -135,6 +139,57 @@ export default function CRMDashboard() {
         }
     };
 
+    const handleDeleteClients = async () => {
+        if (selectedClients.length === 0) return;
+        if (!confirm(`Deseja realmente excluir ${selectedClients.length} cliente(s)? Esta ação é irreversível.`)) return;
+
+        setIsDeleting(true);
+        try {
+            const { error } = await supabase
+                .from('clients')
+                .delete()
+                .in('id', selectedClients);
+
+            if (error) throw error;
+
+            alert('Clientes excluídos com sucesso.');
+            setSelectedClients([]);
+            fetchData(); // Refresh counts
+            if (isClientModalOpen) {
+                // Refresh list if modal still open
+                const { data } = await supabase
+                    .from('clients')
+                    .select('*')
+                    .eq('tenant_id', tenant.id)
+                    .order('name');
+                setClientsList(data || []);
+            }
+        } catch (error: any) {
+            console.error('Delete clients failed:', error);
+            alert('Erro ao excluir: ' + error.message);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const openClientManager = async () => {
+        setIsClientModalOpen(true);
+        if (!tenant) return;
+
+        try {
+            const { data, error } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('tenant_id', tenant.id)
+                .order('name');
+
+            if (error) throw error;
+            setClientsList(data || []);
+        } catch (err) {
+            console.error('Load clients failed:', err);
+        }
+    };
+
     // Correcting the change detection: ensure we check the exact values
     const hasChanges = tenant && Number(selectedLoyaltyTarget) !== Number(tenant.loyalty_target);
 
@@ -184,6 +239,8 @@ export default function CRMDashboard() {
                     icon="groups"
                     color="text-amber-400"
                     desc="Clientes Reais"
+                    onAction={openClientManager}
+                    actionLabel="EDITAR"
                 />
                 <MetricCard
                     title="Risco de Evasão"
@@ -333,11 +390,98 @@ export default function CRMDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* MODAL: GESTÃO DE CLIENTES (CIRÚRGICO) */}
+            {isClientModalOpen && (
+                <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase text-white">Gestão da Base</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Excluir ou Sincronizar Clientes</p>
+                            </div>
+                            <button
+                                onClick={() => setIsClientModalOpen(false)}
+                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 transition-all"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-6 max-h-[50vh] overflow-y-auto scrollbar-hide">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 mb-4">
+                                    <label className="flex items-center gap-3 cursor-pointer group">
+                                        <input
+                                            type="checkbox"
+                                            className="size-5 rounded-lg border-white/10 bg-white/5 checked:bg-[#f2b90d] transition-all"
+                                            checked={clientsList.length > 0 && selectedClients.length === clientsList.length}
+                                            onChange={(e) => {
+                                                if (e.target.checked) setSelectedClients(clientsList.map(c => c.id));
+                                                else setSelectedClients([]);
+                                            }}
+                                        />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d]">Selecionar Todos ({clientsList.length})</span>
+                                    </label>
+                                </div>
+
+                                {clientsList.length === 0 ? (
+                                    <div className="text-center py-10">
+                                        <span className="material-symbols-outlined text-4xl text-slate-700 mb-4 block">person_search</span>
+                                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Nenhum cliente cadastrado ainda</p>
+                                    </div>
+                                ) : (
+                                    clientsList.map((client) => (
+                                        <div key={client.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all group">
+                                            <div className="flex items-center gap-4">
+                                                <input
+                                                    type="checkbox"
+                                                    className="size-5 rounded-lg border-white/10 bg-white/5 checked:bg-[#f2b90d] transition-all"
+                                                    checked={selectedClients.includes(client.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setSelectedClients(prev => [...prev, client.id]);
+                                                        else setSelectedClients(prev => prev.filter(uid => uid !== client.id));
+                                                    }}
+                                                />
+                                                <div>
+                                                    <p className="text-xs font-black uppercase italic text-white leading-none">{client.name}</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold mt-1">{client.phone}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right flex flex-col items-end">
+                                                <p className="text-[10px] font-black text-[#f2b90d]">R$ {Number(client.total_spent || 0).toFixed(2)}</p>
+                                                <p className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Gasto Total</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-white/5 flex gap-4">
+                            <button
+                                onClick={() => setIsClientModalOpen(false)}
+                                className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all"
+                            >
+                                CANCELAR
+                            </button>
+                            <button
+                                onClick={handleDeleteClients}
+                                disabled={selectedClients.length === 0 || isDeleting}
+                                className="flex-1 bg-rose-500 hover:bg-rose-600 disabled:opacity-30 disabled:grayscale text-white font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-lg">{isDeleting ? 'sync' : 'delete_forever'}</span>
+                                {isDeleting ? 'EXCLUINDO...' : `EXCLUIR SELECIONADOS (${selectedClients.length})`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-function MetricCard({ title, value, icon, color, desc, alert }: any) {
+function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel }: any) {
     return (
         <div className={`bg-[#121214] border ${alert ? 'border-rose-500/30 bg-rose-500/[0.02]' : 'border-white/5'} p-6 rounded-[2rem] transition-all duration-500 group hover:translate-y-[-4px] hover:border-white/20 shadow-xl overflow-hidden relative`}>
             {/* Decoration */}
@@ -348,10 +492,14 @@ function MetricCard({ title, value, icon, color, desc, alert }: any) {
             <div className="relative z-10 flex flex-col h-full justify-between">
                 <div className="flex items-center justify-between mb-4">
                     <span className={`material-symbols-outlined ${color} text-2xl group-hover:scale-110 transition-transform duration-500`}>{icon}</span>
-                    <div className="flex gap-1">
-                        <div className="size-1 rounded-full bg-white/10"></div>
-                        <div className="size-1 rounded-full bg-white/20"></div>
-                    </div>
+                    {onAction && (
+                        <button
+                            onClick={(e) => { e.preventDefault(); onAction(); }}
+                            className="bg-white/5 hover:bg-[#f2b90d] hover:text-black border border-white/10 text-[8px] font-black uppercase px-3 py-1.5 rounded-full transition-all"
+                        >
+                            {actionLabel}
+                        </button>
+                    )}
                 </div>
                 <div>
                     <h2 className="text-4xl font-black text-white italic tracking-tighter mb-1 transition-all group-hover:text-white/90">
