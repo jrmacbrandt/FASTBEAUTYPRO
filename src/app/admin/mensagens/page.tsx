@@ -8,6 +8,7 @@ export default function TeamMessagesPage() {
     const [team, setTeam] = useState<{ id: string, full_name: string }[]>([]);
     const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
     const [messageText, setMessageText] = useState('');
+    const [messageTitle, setMessageTitle] = useState('NOVO COMUNICADO');
     const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
     const [loading, setLoading] = useState(true);
     const [tenantId, setTenantId] = useState<string | null>(null);
@@ -73,7 +74,7 @@ export default function TeamMessagesPage() {
             await Promise.all(selectedRecipients.map(recipientId =>
                 sendNotification(
                     recipientId,
-                    'NOVO COMUNICADO',
+                    messageTitle.toUpperCase() || 'COMUNICADO',
                     messageText,
                     'team_alert',
                     'normal',
@@ -84,6 +85,7 @@ export default function TeamMessagesPage() {
             console.log('Envio concluído com sucesso');
             setStatus('success');
             setMessageText('');
+            setMessageTitle('NOVO COMUNICADO');
             setSelectedRecipients([]);
             setTimeout(() => setStatus('idle'), 3000);
         } catch (error: any) {
@@ -167,6 +169,17 @@ export default function TeamMessagesPage() {
                                 </label>
                             ))}
                         </div>
+                    </div>
+
+                    <div className="space-y-1.5 md:space-y-2">
+                        <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 ml-2 tracking-widest italic opacity-60">Título do Comunicado</label>
+                        <input
+                            type="text"
+                            placeholder="Ex: AVISO DE REUNIÃO, MANUTENÇÃO..."
+                            value={messageTitle}
+                            onChange={(e) => setMessageTitle(e.target.value)}
+                            className="w-full bg-black border border-white/10 rounded-xl md:rounded-2xl py-3 md:py-4 px-4 md:px-6 text-white font-bold outline-none focus:border-[#f2b90d] text-sm md:text-base placeholder:opacity-30"
+                        />
                     </div>
 
                     <div className="space-y-1.5 md:space-y-2">
