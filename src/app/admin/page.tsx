@@ -31,7 +31,9 @@ export default function OwnerDashboardPage() {
         },
         chartData: [] as { name: string, faturamento: number }[]
     });
+    const [tenantInfo, setTenantInfo] = React.useState<{ name: string, slug: string } | null>(null);
     const [loadingStats, setLoadingStats] = React.useState(true);
+    const [copying, setCopying] = React.useState(false);
 
     const fetchDashboardData = async () => {
         setLoadingStats(true);
@@ -40,9 +42,13 @@ export default function OwnerDashboardPage() {
 
         const { data: profile } = await supabase
             .from('profiles')
-            .select('tenant_id')
+            .select('tenant_id, tenants(name, slug)')
             .eq('id', session.user.id)
             .single();
+
+        if (profile?.tenants) {
+            setTenantInfo(profile.tenants as any);
+        }
 
         if (profile?.tenant_id) {
             // Buscamos dados de até 60 dias atrás para ter o comparador do mês passado
@@ -206,10 +212,57 @@ export default function OwnerDashboardPage() {
         { label: 'Ticket Médio (Hoje)', val: formatBRL(stats.avgTicketDay), icon: 'analytics', trend: stats.trends.avg, color: getTrendColor(stats.trends.avg) },
     ];
 
+    const handleCopyLink = () => {
+        if (!tenantInfo) return;
+        const url = `https://fastbeautypro.vercel.app/${tenantInfo.slug}`;
+        navigator.clipboard.writeText(url);
+        setCopying(true);
+        setTimeout(() => setCopying(false), 2000);
+    };
+
     return (
         <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500 pb-10">
+            {/* Header de Identidade da Loja */}
+            {tenantInfo && (
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 rounded-[2rem] border transition-all gap-4 mb-4" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                    <div className="flex items-center gap-4">
+                        <div className="size-12 md:size-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0" style={{ backgroundColor: `${colors.primary}1a`, border: `1px solid ${colors.primary}30` }}>
+                            <span className="material-symbols-outlined text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>storefront</span>
+                        </div>
+                        <div>
+                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter" style={{ color: colors.text }}>{tenantInfo.name}</h2>
+                            <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 italic" style={{ color: colors.textMuted }}>Link da Unidade:</span>
+                                <span className="text-[10px] font-mono font-black border-b border-dashed" style={{ color: colors.primary, borderColor: `${colors.primary}40` }}>/{tenantInfo.slug}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <button
+                            onClick={handleCopyLink}
+                            className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copying ? 'bg-emerald-500 text-white' : 'hover:scale-105 active:scale-95'}`}
+                            style={!copying ? { backgroundColor: `${colors.text}0d`, color: colors.text } : {}}
+                        >
+                            <span className="material-symbols-outlined text-[16px]">{copying ? 'done' : 'content_copy'}</span>
+                            {copying ? 'COPIADO!' : 'COPIAR LINK'}
+                        </button>
+
+                        <Link
+                            href={`/${tenantInfo.slug}`}
+                            target="_blank"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
+                            style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}
+                        >
+                            <span className="material-symbols-outlined text-[16px]">open_in_new</span>
+                            ABRIR LOJA
+                        </Link>
+                    </div>
+                </div>
+            )}
+
             {pendingCount > 0 && (
-                <div className="border rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-xl backdrop-blur-sm relative overflow-hidden group gap-4 relative" style={{ backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }}>
+                <div className="border rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-xl backdrop-blur-sm relative overflow-hidden group gap-4" style={{ backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }}>
                     <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: colors.primary }}></div>
                     <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
                         <div className="size-12 md:size-16 rounded-full flex items-center justify-center animate-pulse shrink-0" style={{ backgroundColor: `${colors.primary}20` }}>
