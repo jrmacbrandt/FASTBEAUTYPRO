@@ -43,7 +43,8 @@ export default function EstablishmentSettingsPage() {
                 name: tenant.name,
                 slug: tenant.slug,
                 business_hours: tenant.business_hours,
-                loyalty_target: tenant.loyalty_target
+                loyalty_target: tenant.loyalty_target,
+                payment_methods: tenant.payment_methods,
                 // other fields...
             })
             .eq('id', tenant.id);
@@ -109,14 +110,28 @@ export default function EstablishmentSettingsPage() {
                 <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in">
                     <h4 className="text-lg md:text-xl font-black italic uppercase text-white">Configurações Financeiras</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        {['PIX', 'CARTÃO', 'DINHEIRO', 'DÉBITO'].map(m => (
-                            <div key={m} className="p-6 rounded-2xl border border-white/5 bg-black/40 flex items-center justify-between">
-                                <span className="text-xs font-black uppercase tracking-widest text-white">{m}</span>
-                                <div className="w-12 h-6 bg-emerald-500/20 border border-emerald-500/30 rounded-full relative">
-                                    <div className="absolute right-1 top-1 size-4 bg-emerald-500 rounded-full shadow-lg"></div>
+                        {['PIX', 'CARTÃO', 'DINHEIRO', 'DÉBITO'].map(m => {
+                            const isActive = tenant.payment_methods?.includes(m);
+                            return (
+                                <div
+                                    key={m}
+                                    onClick={() => {
+                                        const current = tenant.payment_methods || [];
+                                        const updated = current.includes(m)
+                                            ? current.filter((i: string) => i !== m)
+                                            : [...current, m];
+                                        setTenant({ ...tenant, payment_methods: updated });
+                                    }}
+                                    className={`p-6 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isActive ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/5 bg-black/40 hover:bg-white/5'
+                                        }`}
+                                >
+                                    <span className={`text-xs font-black uppercase tracking-widest transition-colors ${isActive ? 'text-emerald-500' : 'text-slate-400 group-hover:text-white'}`}>{m}</span>
+                                    <div className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${isActive ? 'bg-emerald-500' : 'bg-slate-700'}`}>
+                                        <div className={`absolute top-1 size-3 bg-white rounded-full shadow-lg transition-all duration-300 ${isActive ? 'translate-x-6' : 'translate-x-1'}`}></div>
+                                    </div>
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
