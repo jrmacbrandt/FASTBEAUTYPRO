@@ -1,29 +1,97 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfessionalSettingsPage() {
-    const [schedule, setSchedule] = useState([
-        { day: 'Segunda-feira', active: true, start: '09:00', end: '19:00' },
-        { day: 'Terça-feira', active: true, start: '09:00', end: '19:00' },
-        { day: 'Quarta-feira', active: true, start: '09:00', end: '19:00' },
-        { day: 'Quinta-feira', active: true, start: '09:00', end: '19:00' },
-        { day: 'Sexta-feira', active: true, start: '09:00', end: '20:00' },
-        { day: 'Sábado', active: true, start: '08:00', end: '18:00' },
-        { day: 'Domingo', active: false, start: '00:00', end: '00:00' },
-    ]);
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [schedule, setSchedule] = useState<any>({});
+    const [profileId, setProfileId] = useState<string | null>(null);
 
-    const toggleDay = (idx: number) => {
-        const newSchedule = [...schedule];
-        newSchedule[idx].active = !newSchedule[idx].active;
-        setSchedule(newSchedule);
+    const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    const dayKeys = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+
+    useEffect(() => {
+        fetchProfile();
+    }, []);
+
+    const fetchProfile = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            setProfileId(session.user.id);
+
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('work_hours')
+                .eq('id', session.user.id)
+                .single();
+
+            if (error) {
+                console.error('Error fetching profile:', error);
+                return;
+            }
+
+            if (profile?.work_hours) {
+                setSchedule(profile.work_hours);
+            } else {
+                // Default schedule
+                const defaultSchedule: any = {};
+                dayKeys.forEach(key => {
+                    defaultSchedule[key] = { open: '09:00', close: '19:00', isOpen: true };
+                });
+                setSchedule(defaultSchedule);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const updateTime = (idx: number, type: 'start' | 'end', val: string) => {
-        const newSchedule = [...schedule];
-        newSchedule[idx][type] = val;
-        setSchedule(newSchedule);
+    const handleSave = async () => {
+        if (!profileId) return;
+        setSaving(true);
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ work_hours: schedule })
+                .eq('id', profileId);
+
+            if (error) throw error;
+            alert('Horários atualizados com sucesso!');
+        } catch (error: any) {
+            alert('Erro ao salvar horários: ' + error.message);
+        } finally {
+            setSaving(false);
+        }
     };
+
+    const updateDay = (dayKey: string, field: string, value: any) => {
+        setSchedule((prev: any) => {
+            const currentDay = prev[dayKey] || { open: '09:00', close: '19:00', isOpen: true };
+            return {
+                ...prev,
+                [dayKey]: { ...currentDay, [field]: value }
+            };
+        });
+    };
+
+    // Generate time options
+    const timeOptions = [];
+    for (let h = 6; h <= 23; h++) {
+        for (let m = 0; m < 60; m += 30) {
+            const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            timeOptions.push(time);
+        }
+    }
+
+    if (loading) {
+        return <div className="p-8 text-center text-slate-500">Carregando configurações...</div>;
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20 px-4 md:px-0">
@@ -33,60 +101,62 @@ export default function ProfessionalSettingsPage() {
                         <h3 className="text-xl text-white font-black italic uppercase tracking-tight leading-none mb-1">Disponibilidade</h3>
                         <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Seu horário de atendimento</p>
                     </div>
-                    <button className="w-full sm:w-auto bg-[#f2b90d] text-black px-8 py-3.5 rounded-xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/20 active:scale-95 transition-all">
-                        SALVAR ALTERAÇÕES
+                    <button
+                        onClick={handleSave}
+                        disabled={saving}
+                        className="w-full sm:w-auto bg-[#f2b90d] text-black px-8 py-3.5 rounded-xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
                     </button>
                 </div>
 
                 <div className="space-y-3">
-                    {schedule.map((item, idx) => (
-                        <div
-                            key={idx}
-                            className={`p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border transition-all flex flex-col sm:flex-row items-center justify-between gap-4 md:gap-6 ${item.active
-                                ? 'bg-white/5 border-[#f2b90d]/10'
-                                : 'bg-transparent border-white/5 opacity-40 grayscale'
-                                } shadow-md`}
-                        >
-                            <div className="flex items-center gap-3 md:gap-4 w-full sm:w-48">
-                                <button
-                                    onClick={() => toggleDay(idx)}
-                                    className={`size-10 md:size-12 rounded-xl md:rounded-2xl flex items-center justify-center transition-all shrink-0 ${item.active ? 'bg-[#f2b90d] text-black shadow-lg shadow-[#f2b90d]/10' : 'bg-white/10 text-slate-500'
-                                        }`}
-                                >
-                                    <span className="material-symbols-outlined text-xl md:text-2xl">
-                                        {item.active ? 'check_circle' : 'do_not_disturb_on'}
-                                    </span>
-                                </button>
-                                <span className="font-black text-base md:text-lg text-white italic uppercase tracking-tight truncate">{item.day}</span>
-                            </div>
+                    {daysOfWeek.map((day, index) => {
+                        const dayKey = dayKeys[index];
+                        const currentDay = schedule[dayKey] || { open: '09:00', close: '19:00', isOpen: true };
 
-                            {item.active ? (
-                                <div className="flex items-center gap-2 md:gap-3 w-full sm:w-auto">
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[8px] md:text-[9px] font-black uppercase text-slate-500 mb-1 ml-1 tracking-widest italic opacity-40">Início</p>
-                                        <input
-                                            type="time"
-                                            value={item.start}
-                                            onChange={(e) => updateTime(idx, 'start', e.target.value)}
-                                            className="w-full bg-black border border-white/10 p-2.5 md:p-3 rounded-lg md:rounded-xl font-bold text-xs md:text-sm text-white outline-none focus:border-[#f2b90d] [color-scheme:dark]"
-                                        />
+                        return (
+                            <div key={dayKey} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-2xl border ${currentDay.isOpen ? 'border-white/10 bg-black/20' : 'border-white/5 bg-white/[0.02]'} gap-4 transition-all duration-300`}>
+                                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                                    <div className="flex items-center gap-3">
+                                        <div onClick={() => updateDay(dayKey, 'isOpen', !currentDay.isOpen)} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${currentDay.isOpen ? 'bg-[#f2b90d]/20' : 'bg-slate-700/50'}`}>
+                                            <div className={`absolute top-1 size-4 rounded-full shadow-md transition-all duration-300 ${currentDay.isOpen ? 'right-1 bg-[#f2b90d]' : 'left-1 bg-slate-500'}`} />
+                                        </div>
+                                        <span className={`text-[10px] font-black uppercase tracking-widest w-20 transition-colors ${currentDay.isOpen ? 'text-white' : 'text-slate-600'}`}>{day}</span>
                                     </div>
-                                    <div className="size-1.5 md:size-2 rounded-full bg-[#f2b90d]/40 mt-5 md:mt-6 shrink-0"></div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-[8px] md:text-[9px] font-black uppercase text-slate-500 mb-1 ml-1 tracking-widest italic opacity-40">Término</p>
-                                        <input
-                                            type="time"
-                                            value={item.end}
-                                            onChange={(e) => updateTime(idx, 'end', e.target.value)}
-                                            className="w-full bg-black border border-white/10 p-2.5 md:p-3 rounded-lg md:rounded-xl font-bold text-xs md:text-sm text-white outline-none focus:border-[#f2b90d] [color-scheme:dark]"
-                                        />
+                                    <span className={`text-[9px] font-bold uppercase tracking-widest md:hidden ${currentDay.isOpen ? 'text-emerald-500' : 'text-slate-600'}`}>
+                                        {currentDay.isOpen ? 'ABERTO' : 'FECHADO'}
+                                    </span>
+                                </div>
+
+                                <div className={`flex items-center gap-2 w-full md:w-auto justify-end transition-opacity duration-300 ${currentDay.isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-30 pointer-events-none'}`}>
+                                    <div className="relative group">
+                                        <select
+                                            value={currentDay.open}
+                                            onChange={(e) => updateDay(dayKey, 'open', e.target.value)}
+                                            disabled={!currentDay.isOpen}
+                                            className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
+                                        >
+                                            {timeOptions.map(t => <option key={`open-${t}`} value={t}>{t}</option>)}
+                                        </select>
+                                        <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
+                                    </div>
+                                    <span className="text-white/20 text-[10px] font-black uppercase">ATÉ</span>
+                                    <div className="relative group">
+                                        <select
+                                            value={currentDay.close}
+                                            onChange={(e) => updateDay(dayKey, 'close', e.target.value)}
+                                            disabled={!currentDay.isOpen}
+                                            className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
+                                        >
+                                            {timeOptions.map(t => <option key={`close-${t}`} value={t}>{t}</option>)}
+                                        </select>
+                                        <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="text-slate-600 font-black text-[10px] md:text-xs uppercase tracking-[0.4em] italic opacity-40 py-2 sm:py-0">Indisponível</div>
-                            )}
-                        </div>
-                    ))}
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
