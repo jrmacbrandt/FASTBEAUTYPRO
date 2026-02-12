@@ -23,6 +23,12 @@ export default function OwnerDashboardPage() {
         totalMonth: 0,
         ticketsDay: 0,
         avgTicketDay: 0,
+        trends: {
+            day: '0%',
+            month: '0%',
+            tickets: '0%',
+            avg: '0%'
+        },
         chartData: [] as { name: string, faturamento: number }[]
     });
     const [loadingStats, setLoadingStats] = React.useState(true);
@@ -39,38 +45,70 @@ export default function OwnerDashboardPage() {
             .single();
 
         if (profile?.tenant_id) {
-            // Pegamos dados dos últimos 30 dias para garantir o faturamento mensal e o gráfico semanal
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            thirtyDaysAgo.setHours(0, 0, 0, 0);
+            // Buscamos dados de até 60 dias atrás para ter o comparador do mês passado
+            const sixtyDaysAgo = new Date();
+            sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+            sixtyDaysAgo.setHours(0, 0, 0, 0);
 
             const { data: orders, error } = await supabase
                 .from('orders')
                 .select('total_value, finalized_at, created_at')
                 .eq('tenant_id', profile.tenant_id)
                 .eq('status', 'paid')
-                .gte('finalized_at', thirtyDaysAgo.toISOString());
+                .gte('finalized_at', sixtyDaysAgo.toISOString());
 
             if (!error && orders) {
                 const now = new Date();
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
 
+                // --- DATAS ATUAIS ---
+                const today = new Date(); today.setHours(0, 0, 0, 0);
                 const currentMonth = now.getMonth();
                 const currentYear = now.getFullYear();
 
-                // Faturamento do Dia
-                const todayOrders = orders.filter(o => new Date(o.finalized_at || o.created_at) >= today);
-                const totalDay = todayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
-                const ticketsDay = todayOrders.length;
-                const avgTicketDay = ticketsDay > 0 ? totalDay / ticketsDay : 0;
+                // --- DATAS ANTERIORES (COMPARATIVO) ---
+                const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+                const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const lastMonth = lastMonthDate.getMonth();
+                const lastYear = lastMonthDate.getFullYear();
 
-                // Faturamento Mensal (Mês Atual)
+                // 1. Faturamento do Dia vs Ontem
+                const todayOrders = orders.filter(o => new Date(o.finalized_at || o.created_at) >= today);
+                const yesterdayOrders = orders.filter(o => {
+                    const d = new Date(o.finalized_at || o.created_at);
+                    return d >= yesterday && d < today;
+                });
+
+                const totalDay = todayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+                const totalYesterday = yesterdayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+
+                const dayTrend = totalYesterday > 0 ? ((totalDay - totalYesterday) / totalYesterday * 100) : 0;
+
+                // 2. Faturamento Mensal vs Mês Passado
                 const monthOrders = orders.filter(o => {
                     const d = new Date(o.finalized_at || o.created_at);
                     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
                 });
+                const lastMonthOrders = orders.filter(o => {
+                    const d = new Date(o.finalized_at || o.created_at);
+                    return d.getMonth() === lastMonth && d.getFullYear() === lastYear;
+                });
+
                 const totalMonth = monthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+                const totalLastMonth = lastMonthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+
+                const monthTrend = totalLastMonth > 0 ? ((totalMonth - totalLastMonth) / totalLastMonth * 100) : 0;
+
+                // 3. Tickets e Ticket Médio
+                const ticketsDay = todayOrders.length;
+                const ticketsYesterday = yesterdayOrders.length;
+                const ticketTrend = ticketsYesterday > 0 ? ((ticketsDay - ticketsYesterday) / ticketsYesterday * 100) : 0;
+
+                const avgDay = ticketsDay > 0 ? totalDay / ticketsDay : 0;
+                const avgYesterday = ticketsYesterday > 0 ? totalYesterday / ticketsYesterday : 0;
+                const avgTrend = avgYesterday > 0 ? ((avgDay - avgYesterday) / avgYesterday * 100) : 0;
+
+                // Formatação de Trends
+                const formatTrend = (val: number) => (val >= 0 ? '+' : '') + val.toFixed(1).replace('.', ',') + '%';
 
                 // Gráfico 7 dias
                 const daysMap = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -98,7 +136,13 @@ export default function OwnerDashboardPage() {
                     totalDay,
                     totalMonth,
                     ticketsDay,
-                    avgTicketDay,
+                    avgTicketDay: avgDay,
+                    trends: {
+                        day: formatTrend(dayTrend),
+                        month: formatTrend(monthTrend),
+                        tickets: formatTrend(ticketTrend),
+                        avg: formatTrend(avgTrend)
+                    },
                     chartData: weekData
                 });
             }
@@ -149,11 +193,17 @@ export default function OwnerDashboardPage() {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
     };
 
+    const getTrendColor = (trend: string) => {
+        if (trend.startsWith('+')) return 'text-emerald-500';
+        if (trend.startsWith('-')) return 'text-rose-500';
+        return 'text-slate-400';
+    };
+
     const kpis = [
-        { label: 'Faturamento do Dia', val: formatBRL(stats.totalDay), icon: 'today', trend: '+15,2%', color: 'text-emerald-500' },
-        { label: 'Faturamento Mensal', val: formatBRL(stats.totalMonth), icon: 'payments', trend: '+12,5%', color: 'text-emerald-500' },
-        { label: 'Tickets Realizados (Hoje)', val: stats.ticketsDay.toString(), icon: 'receipt', trend: '+4,2%', color: businessType === 'salon' ? 'text-[#7b438e]' : 'text-[#f2b90d]' },
-        { label: 'Ticket Médio (Hoje)', val: formatBRL(stats.avgTicketDay), icon: 'analytics', trend: '+5,2%', color: businessType === 'salon' ? 'text-[#7b438e]' : 'text-[#f2b90d]' },
+        { label: 'Faturamento do Dia', val: formatBRL(stats.totalDay), icon: 'today', trend: stats.trends.day, color: getTrendColor(stats.trends.day) },
+        { label: 'Faturamento Mensal', val: formatBRL(stats.totalMonth), icon: 'payments', trend: stats.trends.month, color: getTrendColor(stats.trends.month) },
+        { label: 'Tickets Realizados (Hoje)', val: stats.ticketsDay.toString(), icon: 'receipt', trend: stats.trends.tickets, color: getTrendColor(stats.trends.tickets) },
+        { label: 'Ticket Médio (Hoje)', val: formatBRL(stats.avgTicketDay), icon: 'analytics', trend: stats.trends.avg, color: getTrendColor(stats.trends.avg) },
     ];
 
     return (
@@ -235,7 +285,7 @@ export default function OwnerDashboardPage() {
                             <Tooltip
                                 contentStyle={{ backgroundColor: colors.cardBg, borderRadius: '12px', border: `1px solid ${colors.text}1a`, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold', color: colors.text }}
                                 itemStyle={{ color: colors.primary }}
-                                formatter={(value: number) => [formatBRL(value), 'Faturamento']}
+                                formatter={(value: any) => [formatBRL(Number(value) || 0), 'Faturamento']}
                             />
                             <Area type="monotone" dataKey="faturamento" stroke={colors.primary} strokeWidth={3} fillOpacity={1} fill="url(#colorFat)" />
                         </AreaChart>
