@@ -11,7 +11,7 @@ interface Profile {
     email?: string;
     role: string;
     status: string;
-    commission_rate: number;
+    service_commission: number;
 }
 
 export default function TeamManagementPage() {
@@ -22,7 +22,7 @@ export default function TeamManagementPage() {
     const [editingBarber, setEditingBarber] = useState<Profile | null>(null);
     const [formData, setFormData] = useState({
         full_name: '',
-        commission_rate: 50,
+        service_commission: 50,
         status: 'active'
     });
 
@@ -30,13 +30,13 @@ export default function TeamManagementPage() {
         if (editingBarber) {
             setFormData({
                 full_name: editingBarber.full_name,
-                commission_rate: editingBarber.commission_rate,
+                service_commission: editingBarber.service_commission,
                 status: editingBarber.status
             });
         } else {
             setFormData({
                 full_name: '',
-                commission_rate: 50,
+                service_commission: 50,
                 status: 'active'
             });
         }
@@ -141,7 +141,7 @@ export default function TeamManagementPage() {
                 .from('profiles')
                 .update({
                     full_name: formData.full_name,
-                    commission_rate: Number(formData.commission_rate),
+                    service_commission: Number(formData.service_commission),
                     status: formData.status
                 })
                 .eq('id', editingBarber.id);
@@ -221,7 +221,7 @@ export default function TeamManagementPage() {
                             <div className="flex flex-col md:items-end gap-1 md:gap-2 w-full md:w-auto">
                                 <div className="flex md:flex-col justify-between items-end mb-1 md:mb-2 w-full md:w-auto">
                                     <p className="text-slate-500 text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] italic">Comissão</p>
-                                    <p className="text-[#f2b90d] text-2xl md:text-3xl font-black italic tracking-tighter">{barber.commission_rate}%</p>
+                                    <p className="text-[#f2b90d] text-2xl md:text-3xl font-black italic tracking-tighter">{barber.service_commission}%</p>
                                 </div>
                                 <div className="flex gap-2 w-full md:w-auto">
                                     {barber.status === 'pending' ? (
@@ -284,8 +284,8 @@ export default function TeamManagementPage() {
                                     <input
                                         type="number"
                                         className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50"
-                                        value={formData.commission_rate}
-                                        onChange={(e) => setFormData({ ...formData, commission_rate: Number(e.target.value) })}
+                                        value={formData.service_commission}
+                                        onChange={(e) => setFormData({ ...formData, service_commission: Number(e.target.value) })}
                                     />
                                 </div>
                                 <div className="space-y-2">

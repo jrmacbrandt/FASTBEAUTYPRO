@@ -148,7 +148,7 @@ export default function ProfessionalApprovalsPage() {
 
                             <div className="text-xs space-y-1 p-3 rounded-lg border" style={{ backgroundColor: `${colors.bg}50`, borderColor: colors.border, color: colors.textMuted }}>
                                 <p><strong style={{ color: colors.text }}>CPF:</strong> {prof.cpf || 'N/A'}</p>
-                                <p><strong style={{ color: colors.text }}>Comissão:</strong> {prof.commission_rate}% (Padrão)</p>
+                                <p><strong style={{ color: colors.text }}>Comissão:</strong> {prof.service_commission}% (Padrão)</p>
                                 <p><strong style={{ color: colors.text }}>Solicitado:</strong> {new Date(prof.created_at).toLocaleDateString()}</p>
                             </div>
 
