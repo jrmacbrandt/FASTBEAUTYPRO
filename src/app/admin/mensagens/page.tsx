@@ -55,10 +55,21 @@ export default function TeamMessagesPage() {
     };
 
     const handleSendMessage = async () => {
-        if (!messageText.trim() || selectedRecipients.length === 0 || !tenantId) return;
+        if (!messageText.trim() || selectedRecipients.length === 0) {
+            alert('Por favor, selecione os destinatários e digite uma mensagem.');
+            return;
+        }
+
+        if (!tenantId) {
+            alert('Erro: ID da unidade não encontrado (tenantId is null).');
+            return;
+        }
+
         setStatus('sending');
 
         try {
+            console.log('Iniciando envio para:', selectedRecipients.length, 'destinatários');
+
             await Promise.all(selectedRecipients.map(recipientId =>
                 sendNotification(
                     recipientId,
@@ -70,12 +81,14 @@ export default function TeamMessagesPage() {
                 )
             ));
 
+            console.log('Envio concluído com sucesso');
             setStatus('success');
             setMessageText('');
             setSelectedRecipients([]);
             setTimeout(() => setStatus('idle'), 3000);
-        } catch (error) {
-            console.error('Error sending team messages:', error);
+        } catch (error: any) {
+            console.error('Erro detalhado ao enviar:', error);
+            alert('Erro ao enviar comunicado: ' + (error.message || 'Verifique o console'));
             setStatus('error');
             setTimeout(() => setStatus('idle'), 3000);
         }
