@@ -252,8 +252,19 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             }
 
             // 3. Generate slug for new tenant (admin only)
-            const baseSlug = shopName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '');
-            const slug = `${baseSlug}-${Math.random().toString(36).substring(2, 6)}`;
+            const normalizeSlug = (text: string) => {
+                return text
+                    .toString()
+                    .normalize('NFD') // Decompose combined characters into base characters and diacritics
+                    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+                    .toLowerCase()
+                    .trim()
+                    .replace(/\s+/g, '-') // Replace spaces with hyphens
+                    .replace(/[^\w-]+/g, '') // Remove all non-word chars
+                    .replace(/--+/g, '-'); // Replace multiple hyphens with a single one
+            };
+
+            const slug = normalizeSlug(shopName);
 
             // 4. Auth Sign Up (trigger not working, we'll create profile manually)
             const { data: authData, error: authError } = await supabase.auth.signUp({
