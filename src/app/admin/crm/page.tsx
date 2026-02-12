@@ -41,35 +41,65 @@ export default function CRMDashboard() {
                 return;
             }
 
+            // 1. Fetch Tenant Config (Loyalty)
             const { data: tenantData } = await supabase
                 .from('tenants')
                 .select('id, loyalty_target, name, business_type')
                 .eq('id', tenantId)
                 .single();
 
+            const currentTarget = tenantData?.loyalty_target || 5;
             if (tenantData) {
                 setTenant(tenantData);
-                setSelectedLoyaltyTarget(tenantData.loyalty_target);
+                setSelectedLoyaltyTarget(currentTarget);
             }
 
+            // 2. Total Clientes (Real)
             const { count: total } = await supabase
                 .from('clients')
                 .select('*', { count: 'exact', head: true })
                 .eq('tenant_id', tenantId);
 
+            // 3. Churn Risk (Real - uses last_visit)
             const churnClients = await getSegmentedClients(tenantId, { days_inactive: 45 });
+
+            // 4. VIP (Real - uses total_spent > 500)
             const vipClients = await getSegmentedClients(tenantId, { min_spent: 500 });
+
+            // 5. Aniversariantes (Real)
             const currentMonth = new Date().getMonth() + 1;
             const bdayClients = await getSegmentedClients(tenantId, { birth_month: currentMonth });
 
-            const loyaltyCount = Math.floor((total || 0) * 0.15);
+            // 6. Loyalty Intelligence (REAL DATA calculation)
+            // Get all paid appointments for this tenant to count stamps per client
+            const { data: appointments } = await supabase
+                .from('appointments')
+                .select('client_id')
+                .eq('tenant_id', tenantId)
+                .eq('status', 'paid');
+
+            let loyaltyPendingCount = 0;
+            if (appointments && appointments.length > 0) {
+                const countsMap: Record<string, number> = {};
+                appointments.forEach(ap => {
+                    if (ap.client_id) {
+                        countsMap[ap.client_id] = (countsMap[ap.client_id] || 0) + 1;
+                    }
+                });
+
+                // Target logic: if user is at 70% or more of the way to the reward
+                const threshold = Math.ceil(currentTarget * 0.7);
+                loyaltyPendingCount = Object.values(countsMap).filter(count =>
+                    count >= threshold && count < currentTarget
+                ).length;
+            }
 
             setStats({
                 totalClients: total || 0,
                 churnRisk: churnClients.length,
                 vipClients: vipClients.length,
                 birthdays: bdayClients.length,
-                loyaltyPending: loyaltyCount
+                loyaltyPending: loyaltyPendingCount
             });
 
         } catch (error) {
@@ -92,6 +122,8 @@ export default function CRMDashboard() {
             if (!error) {
                 setTenant((prev: any) => ({ ...prev, loyalty_target: selectedLoyaltyTarget }));
                 alert('Configurações de fidelidade salvas com sucesso!');
+                // Re-fetch to update the pending rewards based on new target
+                fetchData();
             } else {
                 throw error;
             }
@@ -103,7 +135,8 @@ export default function CRMDashboard() {
         }
     };
 
-    const hasChanges = tenant && selectedLoyaltyTarget !== tenant.loyalty_target;
+    // Correcting the change detection: ensure we check the exact values
+    const hasChanges = tenant && Number(selectedLoyaltyTarget) !== Number(tenant.loyalty_target);
 
     const loyaltyPreviewCircles = useMemo(() => {
         const count = selectedLoyaltyTarget || 5;
@@ -115,7 +148,7 @@ export default function CRMDashboard() {
             <div className="flex items-center justify-center min-h-[60vh]">
                 <div className="flex flex-col items-center gap-4">
                     <div className="size-12 border-4 border-[#f2b90d]/20 border-t-[#f2b90d] rounded-full animate-spin"></div>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Sincronizando CRM...</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Sincronizando CRM Real-Time...</p>
                 </div>
             </div>
         );
@@ -143,14 +176,14 @@ export default function CRMDashboard() {
                 </button>
             </header>
 
-            {/* KPI CARDS - Premium Refined */}
+            {/* KPI CARDS - Premium Refined with Real Data */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 <MetricCard
                     title="Base Ativa"
                     value={stats.totalClients}
                     icon="groups"
                     color="text-amber-400"
-                    desc="Clientes Totais"
+                    desc="Clientes Reais"
                 />
                 <MetricCard
                     title="Risco de Evasão"
@@ -165,14 +198,15 @@ export default function CRMDashboard() {
                     value={stats.vipClients}
                     icon="auto_awesome"
                     color="text-emerald-400"
-                    desc="Alto faturamento"
+                    desc="LTV > R$ 500"
                 />
                 <MetricCard
                     title="Próximos Prêmios"
                     value={stats.loyaltyPending}
                     icon="rewarded_ads"
                     color="text-cyan-400"
-                    desc="Perto da recompensa"
+                    desc="> 70% da meta"
+                    alert={stats.loyaltyPending > 0}
                 />
             </div>
 
@@ -202,8 +236,8 @@ export default function CRMDashboard() {
                                         <button
                                             key={val}
                                             disabled={loading || !tenant}
-                                            onClick={() => setSelectedLoyaltyTarget(val)}
-                                            className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${selectedLoyaltyTarget === val
+                                            onClick={() => setSelectedLoyaltyTarget(Number(val))}
+                                            className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${Number(selectedLoyaltyTarget) === Number(val)
                                                 ? 'bg-[#f2b90d] border-[#f2b90d] text-black shadow-xl shadow-[#f2b90d]/20 scale-[1.05]'
                                                 : 'bg-black/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-white'
                                                 }`}
@@ -215,7 +249,7 @@ export default function CRMDashboard() {
                                 </div>
                             </div>
 
-                            {/* Save Button */}
+                            {/* Save Button - Corrected visibility logic */}
                             {hasChanges && (
                                 <div className="mb-8 animate-in zoom-in duration-300">
                                     <button
@@ -224,7 +258,7 @@ export default function CRMDashboard() {
                                         className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black italic uppercase text-xs tracking-widest py-4 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                                     >
                                         <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : 'save'}</span>
-                                        {savingLoyalty ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                                        {savingLoyalty ? 'SALVANDO EM TEMPO REAL...' : 'SALVAR ALTERAÇÕES'}
                                     </button>
                                 </div>
                             )}
