@@ -97,8 +97,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/profissional' },
-            { label: 'Comissões', icon: 'payments', path: '/profissional/comissoes' },
+            { label: 'Comissões', icon: 'payments', path: '/admin/comissoes' },
             { label: 'Equipe', icon: 'group', path: '/admin/equipe', badge: pendingCount },
+
             { label: 'Mensagem', icon: 'chat_bubble', path: '/admin/mensagens' },
             { label: 'Serviços', icon: 'content_cut', path: '/admin/servicos' },
             { label: 'Estoque', icon: 'inventory_2', path: '/admin/estoque' },
