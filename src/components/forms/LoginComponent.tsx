@@ -24,6 +24,8 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     // Registration states
     const [fullName, setFullName] = useState('');
     const [cpf, setCpf] = useState('');
+    const [phone, setPhone] = useState(''); // Professional WhatsApp
+    const [storePhone, setStorePhone] = useState(''); // Store WhatsApp
     const [shopSlug, setShopSlug] = useState('');
     const [shopName, setShopName] = useState('');
     const [couponCode, setCouponCode] = useState('');
@@ -106,6 +108,36 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         idLabel: 'E-MAIL',
         passLabel: 'CHAVE DE SEGURANÇA',
         footer: 'FASTBEAUTY PRO'
+    };
+
+    // Helper functions for formatting
+    const formatCPFOrCNPJ = (value: string) => {
+        const numbers = value.replace(/\D/g, '');
+        if (numbers.length <= 11) {
+            // CPF Format: 000.000.000-00
+            return numbers
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d)/, '$1.$2')
+                .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+                .replace(/(-\d{2})\d+?$/, '$1');
+        } else {
+            // CNPJ Format: 00.000.000/0000-00
+            return numbers
+                .replace(/^(\d{2})(\d)/, '$1.$2')
+                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
+                .replace(/\.(\d{3})(\d)/, '.$1/$2')
+                .replace(/(\d{4})(\d)/, '$1-$2')
+                .replace(/(-\d{2})\d+?$/, '$1');
+        }
+    };
+
+    const formatPhone = (value: string) => {
+        const numbers = value.replace(/\D/g, '');
+        // Format: (00) 00000-0000
+        return numbers
+            .replace(/^(\d{2})(\d)/, '($1) $2')
+            .replace(/(\d{5})(\d)/, '$1-$2')
+            .replace(/(-\d{4})\d+?$/, '$1');
     };
 
     const handleLogin = async (e: React.FormEvent) => {
@@ -344,6 +376,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                         .insert({
                             name: shopName,
                             slug: slug,
+                            phone: storePhone.replace(/\D/g, ''), // Store Phone
                             business_type: 'barber',
                             active: true, // Legacy flag, keep true
                             has_paid: appliedStatus === 'active', // If active, assume paid/trial logic
@@ -356,7 +389,6 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                         })
                         .select('id')
                         .single();
-
                     if (tenantError) {
                         console.error('Tenant creation error:', tenantError);
                         throw new Error('Erro ao criar estabelecimento: ' + tenantError.message);
@@ -383,7 +415,8 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                     .update({
                         tenant_id: tenantId,
                         full_name: fullName,
-                        cpf: cpf,
+                        cpf: cpf.replace(/\D/g, ''),
+                        phone: phone.replace(/\D/g, ''), // Professional Phone
                         role: activeTab === 'admin' ? 'owner' : 'barber',
                         status: activeTab === 'admin' ? 'active' : 'pending',
                         avatar_url: activeTab === 'pro' ? imageUrl : null
@@ -402,7 +435,8 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                         id: userId,
                         tenant_id: tenantId,
                         full_name: fullName,
-                        cpf: cpf,
+                        cpf: cpf.replace(/\D/g, ''),
+                        phone: phone.replace(/\D/g, ''), // Professional Phone
                         email: email,
                         role: activeTab === 'admin' ? 'owner' : 'barber',
                         status: activeTab === 'admin' ? 'active' : 'pending',
@@ -570,6 +604,22 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                         </div>
 
                                         <div className="space-y-1.5">
+                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>WHATSAPP DA LOJA</label>
+                                            <div className="relative">
+                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>perm_phone_msg</span>
+                                                <input
+                                                    type="tel"
+                                                    placeholder="(00) 00000-0000"
+                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs"
+                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
+                                                    value={storePhone}
+                                                    onChange={(e) => setStorePhone(formatPhone(e.target.value))}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
                                             <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CÓDIGO DE CONVITE / CUPOM (OPCIONAL)</label>
                                             <div className="relative">
                                                 <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>confirmation_number</span>
@@ -591,9 +641,36 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'CPF / CNPJ' : 'CPF'}</label>
                                     <div className="relative">
                                         <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>fingerprint</span>
-                                        <input type="text" placeholder="000.000.000-00" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={cpf} onChange={(e) => setCpf(e.target.value)} required />
+                                        <input
+                                            type="text"
+                                            placeholder={activeTab === 'admin' ? "000.000.000-00 ou 00.000.000/0000-00" : "000.000.000-00"}
+                                            className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs"
+                                            style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
+                                            value={cpf}
+                                            onChange={(e) => setCpf(formatCPFOrCNPJ(e.target.value))}
+                                            maxLength={activeTab === 'admin' ? 18 : 14}
+                                            required
+                                        />
                                     </div>
                                 </div>
+
+                                {activeTab !== 'admin' && (
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>Nº WHATSAPP</label>
+                                        <div className="relative">
+                                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>call</span>
+                                            <input
+                                                type="tel"
+                                                placeholder="(00) 00000-0000"
+                                                className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs"
+                                                style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
+                                                value={phone}
+                                                onChange={(e) => setPhone(formatPhone(e.target.value))}
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+                                )}
 
                                 <div className="space-y-1.5">
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'LOGO DA LOJA' : 'SUA FOTO DE PERFIL'}</label>
