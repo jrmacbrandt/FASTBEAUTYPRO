@@ -89,58 +89,39 @@ export default function CRMDashboard() {
             const bdayClients = await getSegmentedClients(tenantId, { birth_month: currentMonth });
 
             // 6. Loyalty Intelligence (REAL DATA calculation)
-            // Get all paid appointments for this tenant to count stamps per client
             const { data: appointments } = await supabase
                 .from('appointments')
                 .select('client_id')
                 .eq('tenant_id', tenantId)
                 .eq('status', 'paid');
 
-            let loyaltyPendingCount = 0;
-            if (appointments && appointments.length > 0) {
-                const countsMap: Record<string, number> = {};
+            const countsMap: Record<string, number> = {};
+            if (appointments) {
                 appointments.forEach(ap => {
                     if (ap.client_id) {
                         countsMap[ap.client_id] = (countsMap[ap.client_id] || 0) + 1;
                     }
                 });
-
-                // Target logic: if user is at 70% or more of the way to the reward
-                const threshold = Math.ceil(currentTarget * 0.7);
-                loyaltyPendingCount = Object.values(countsMap).filter(count =>
-                    count >= threshold && count < currentTarget
-                ).length;
             }
 
-            // 7. Store all for engagement table
-            const allClients = await supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name');
+            // 7. Fetch All Clients to build segmented lists for engagement
+            const { data: allClients } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('tenant_id', tenantId)
+                .order('name');
 
-            // Map loyalty clients (those in countsMap >= 70% threshold)
-            const loyaltyClientsData = (allClients.data || []).filter(c => {
-                // we need to check countsMap from step 6 
-                return false; // placeholder, will refine below
+            const threshold = Math.ceil(currentTarget * 0.7);
+            const loyaltyClientsList: any[] = [];
+            (allClients || []).forEach(c => {
+                const count = countsMap[c.id] || 0;
+                if (count >= threshold && count < currentTarget) {
+                    loyaltyClientsList.push({ ...c, stamps_count: count });
+                }
             });
 
-            // Re-run step 6 loyalty check with client data
-            const loyaltyClientsList: any[] = [];
-            if (appointments && appointments.length > 0) {
-                const countsMap: Record<string, number> = {};
-                appointments.forEach(ap => {
-                    if (ap.client_id) {
-                        countsMap[ap.client_id] = (countsMap[ap.client_id] || 0) + 1;
-                    }
-                });
-                const threshold = Math.ceil(currentTarget * 0.7);
-                (allClients.data || []).forEach(c => {
-                    const count = countsMap[c.id] || 0;
-                    if (count >= threshold && count < currentTarget) {
-                        loyaltyClientsList.push({ ...c, stamps_count: count });
-                    }
-                });
-            }
-
             setEngagementData({
-                all: allClients.data || [],
+                all: allClients || [],
                 churn: churnClients,
                 vip: vipClients,
                 birthdays: bdayClients,
