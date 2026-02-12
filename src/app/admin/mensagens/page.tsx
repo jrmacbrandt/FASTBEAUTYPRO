@@ -73,7 +73,7 @@ export default function TeamMessagesPage() {
             await Promise.all(selectedRecipients.map(recipientId =>
                 sendNotification(
                     recipientId,
-                    'Novo Comunicado Administrativo',
+                    'NOVO COMUNICADO',
                     messageText,
                     'team_alert',
                     'normal',

@@ -8,20 +8,17 @@ export function NotificationBell() {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [selectedNotification, setSelectedNotification] = useState<Notification | null>(null);
 
     useEffect(() => {
         loadNotifications();
 
-        // Subscribe to real-time changes
         const channel = supabase
             .channel('notifications_bell')
             .on(
                 'postgres_changes',
                 { event: 'INSERT', schema: 'public', table: 'notifications' },
-                (payload) => {
-                    const newNotif = payload.new as Notification;
-                    // Check if it's for me (RLS handles fetch, but RT needs filter in client or specialized channel)
-                    // Simplified: just reload for MVP
+                () => {
                     loadNotifications();
                 }
             )
@@ -38,19 +35,17 @@ export function NotificationBell() {
         setUnreadCount(list.filter(n => !n.is_read).length);
     };
 
-    const handleOpen = async () => {
+    const handleOpen = () => {
         setIsOpen(!isOpen);
-        if (!isOpen && unreadCount > 0) {
-            // Mark all visible as read (could be optimized)
-            // For now, just mark the unread ones
-            const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
-            if (unreadIds.length > 0) {
-                // Parallel update
-                await Promise.all(unreadIds.map(id => markNotificationAsRead(id)));
-                setUnreadCount(0);
-                // Update local state to read
-                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-            }
+    };
+
+    const handleSelectNotification = async (n: Notification) => {
+        setSelectedNotification(n);
+        setIsOpen(false);
+        if (!n.is_read) {
+            await markNotificationAsRead(n.id);
+            setNotifications(prev => prev.map(item => item.id === n.id ? { ...item, is_read: true } : item));
+            setUnreadCount(prev => Math.max(0, prev - 1));
         }
     };
 
@@ -70,39 +65,72 @@ export function NotificationBell() {
 
             {isOpen && (
                 <div className="absolute right-0 mt-2 w-80 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                        <h3 className="font-bold text-white text-sm">Notificações</h3>
-                        {unreadCount === 0 && <span className="text-[10px] text-slate-500 uppercase">Todas lidas</span>}
+                    <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/20">
+                        <h3 className="font-bold text-white text-xs uppercase tracking-widest italic">Comunicados</h3>
+                        <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-white transition-colors">
+                            <span className="material-symbols-outlined text-lg">close</span>
+                        </button>
                     </div>
-                    <div className="max-h-[400px] overflow-y-auto">
+                    <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
                         {notifications.length === 0 ? (
-                            <div className="p-8 text-center text-slate-500 text-xs">
-                                Nenhuma notificação.
+                            <div className="p-8 text-center text-slate-500 text-[10px] font-black uppercase tracking-widest italic opacity-40">
+                                Nenhum comunicado.
                             </div>
                         ) : (
                             <div className="divide-y divide-white/5">
                                 {notifications.map(n => (
-                                    <div key={n.id} className={`p-4 hover:bg-white/5 transition-colors ${!n.is_read ? 'bg-white/[0.02]' : ''}`}>
-                                        <div className="flex gap-3">
-                                            <div className={`mt-1 size-2 rounded-full shrink-0 ${n.type === 'master_info' ? 'bg-[#f2b90d]' :
-                                                    n.priority === 'high' ? 'bg-red-500' : 'bg-slate-500'
-                                                }`} />
-                                            <div>
-                                                <h4 className={`text-sm text-white ${!n.is_read ? 'font-bold' : 'font-medium'}`}>
-                                                    {n.title}
-                                                </h4>
-                                                <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                                                    {n.message}
-                                                </p>
-                                                <span className="text-[10px] text-slate-600 mt-2 block">
-                                                    {new Date(n.created_at).toLocaleDateString()} às {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </span>
-                                            </div>
+                                    <button
+                                        key={n.id}
+                                        onClick={() => handleSelectNotification(n)}
+                                        className={`w-full p-4 hover:bg-white/5 transition-all text-left flex items-center gap-3 group ${!n.is_read ? 'bg-white/[0.02]' : ''}`}
+                                    >
+                                        <div className={`size-2 rounded-full shrink-0 ${!n.is_read ? 'bg-[#f2b90d] shadow-[0_0_8px_#f2b90d80]' : 'bg-slate-700'}`} />
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className={`text-xs truncate transition-colors ${!n.is_read ? 'text-white font-bold' : 'text-slate-500 group-hover:text-slate-300'}`}>
+                                                {n.title}
+                                            </h4>
+                                            <span className="text-[8px] text-slate-600 mt-1 block font-bold uppercase tracking-tighter">
+                                                {new Date(n.created_at).toLocaleDateString()}
+                                            </span>
                                         </div>
-                                    </div>
+                                        <span className="material-symbols-outlined text-slate-700 text-sm group-hover:translate-x-1 transition-transform">chevron_right</span>
+                                    </button>
                                 ))}
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Leitura */}
+            {selectedNotification && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+                        <div className="p-8 md:p-10">
+                            <div className="size-16 bg-[#f2b90d]/10 rounded-2xl flex items-center justify-center text-[#f2b90d] mb-6">
+                                <span className="material-symbols-outlined text-3xl">mark_email_unread</span>
+                            </div>
+
+                            <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter mb-2">
+                                {selectedNotification.title}
+                            </h3>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] mb-8 opacity-60 italic">
+                                Recebido em {new Date(selectedNotification.created_at).toLocaleDateString()} às {new Date(selectedNotification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+
+                            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 mb-10 min-h-[150px]">
+                                <p className="text-slate-300 leading-relaxed font-medium">
+                                    {selectedNotification.message}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={() => setSelectedNotification(null)}
+                                className="w-full bg-white/5 hover:bg-white/10 text-white font-black py-5 rounded-2xl transition-all uppercase italic tracking-widest text-sm border border-white/5"
+                            >
+                                FECHAR COMUNICADO
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
