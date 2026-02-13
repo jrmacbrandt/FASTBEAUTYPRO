@@ -202,15 +202,6 @@ export default function ShopLandingPage() {
             {/* Header */}
             <header className="relative z-50 px-8 py-6 flex justify-between items-start">
                 <div className="flex items-center gap-4">
-                    {step > 1 && step < 6 && (
-                        <button
-                            onClick={() => setStep(step - 1)}
-                            className="mr-2 size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group cursor-pointer"
-                            style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff' }}
-                        >
-                            <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform pointer-events-none">arrow_back</span>
-                        </button>
-                    )}
                     {tenant.logo_url && (
                         <img src={tenant.logo_url} alt={tenant.name} className="size-12 rounded-xl object-cover border border-white/10" />
                     )}
@@ -235,6 +226,15 @@ export default function ShopLandingPage() {
             </div>
 
             <main className="relative z-10 max-w-4xl mx-auto px-6 pt-12 pb-24 min-h-[calc(100vh-100px)] flex flex-col justify-center">
+                {step > 1 && step < 6 && (
+                    <button
+                        onClick={() => setStep(step - 1)}
+                        className="fixed left-6 md:left-[calc((100vw-56rem)/2)] top-[180px] md:top-[200px] size-12 md:size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer shadow-lg"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
+                    >
+                        <span className="material-symbols-outlined text-[24px] md:text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
+                    </button>
+                )}
                 <div className="mb-20">
                     {step === 1 && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
