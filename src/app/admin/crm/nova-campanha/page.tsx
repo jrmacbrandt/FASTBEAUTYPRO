@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { supabase } from '@/lib/supabase';
 import { createPayloadCampaign } from '@/lib/campaigns';
+import { getSegmentedClients } from '@/lib/crm';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 function NewCampaignContent() {
@@ -13,9 +14,16 @@ function NewCampaignContent() {
     const [loading, setLoading] = useState(false);
     const [tenant, setTenant] = useState<any>(null);
 
-    // Dispatch State (UX v5.1)
+    // Dispatch State (UX v5.2)
     const [isDispatchReady, setIsDispatchReady] = useState(false);
+    const [campaignCreated, setCampaignCreated] = useState<any>(null);
     const [count, setCount] = useState(0);
+
+    // Filter Manager Modal
+    const [isListModalOpen, setIsListModalOpen] = useState(false);
+    const [targetClients, setTargetClients] = useState<any[]>([]);
+    const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+    const [loadingList, setLoadingList] = useState(false);
 
     // Form State
     const [name, setName] = useState('');
@@ -56,18 +64,20 @@ function NewCampaignContent() {
             const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
             const currentMonth = monthNames[new Date().getMonth()];
 
+            let activeFilters = { days_inactive: 0, min_spent: 0, birth_month: 0 };
+
             if (segment === 'churn') {
                 setName(`Recuperação de Inativos - ${currentMonth}`);
                 setTemplate(`Olá {name}, sentimos sua falta aqui na ${tenantData?.name || 'loja'}! 👋 Preparamos uma condição especial para você voltar esta semana. Vamos agendar? ✂️`);
-                setFilters(prev => ({ ...prev, days_inactive: 45 }));
+                activeFilters.days_inactive = 45;
             } else if (segment === 'birthdays') {
                 setName(`Aniversariantes de ${currentMonth}`);
                 setTemplate(`Parabéns, {name}! 🎉 A equipe da ${tenantData?.name || 'loja'} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço. Vamos agendar? 🎁`);
-                setFilters(prev => ({ ...prev, birth_month: new Date().getMonth() + 1 }));
+                activeFilters.birth_month = new Date().getMonth() + 1;
             } else if (segment === 'vip') {
                 setName(`Agradecimento VIP - ${currentMonth}`);
                 setTemplate(`Olá {name}! 🌟 Passando para agradecer sua fidelidade à ${tenantData?.name || 'loja'}. Você é um cliente especial e preparamos um mimo para sua próxima visita. 💎`);
-                setFilters(prev => ({ ...prev, min_spent: 500 }));
+                activeFilters.min_spent = 500;
             } else if (segment === 'loyalty') {
                 setName(`Aviso de Fidelidade - ${currentMonth}`);
                 setTemplate(`Oi {name}! 🌟 Passando para avisar que falta muito pouco para o seu prêmio do cartão fidelidade na ${tenantData?.name || 'loja'}. Garanta seu horário! 🏆`);
@@ -75,21 +85,34 @@ function NewCampaignContent() {
                 setName(`Base Ativa - ${currentMonth}`);
                 setTemplate(`Olá {name}! 👋 Como você está? Passando para convidar você para uma nova visita à ${tenantData?.name || 'loja'}. Temos horários para esta semana! ✂️`);
             }
+
+            setFilters(activeFilters);
+
+            // Auto-load targeted list
+            loadTargetList(tenantId, activeFilters);
         };
 
         loadContext();
     }, [segment]);
+
+    const loadTargetList = async (tId: string, f: any) => {
+        setLoadingList(true);
+        try {
+            const list = await getSegmentedClients(tId, f);
+            setTargetClients(list || []);
+            setSelectedClientIds(list?.map((c: any) => c.id) || []);
+        } catch (error) {
+            console.error('Error loading target list:', error);
+        } finally {
+            setLoadingList(false);
+        }
+    };
 
     const handleCreate = async () => {
         setLoading(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) throw new Error('User not authenticated');
-
-            const activeFilters: any = {};
-            if (filters.days_inactive > 0) activeFilters.days_inactive = filters.days_inactive;
-            if (filters.min_spent > 0) activeFilters.min_spent = filters.min_spent;
-            if (filters.birth_month > 0) activeFilters.birth_month = filters.birth_month;
 
             const { data: profile } = await supabase
                 .from('profiles')
@@ -105,14 +128,53 @@ function NewCampaignContent() {
                 return;
             }
 
-            const { count: resultCount } = await createPayloadCampaign(
-                tenantId,
+            // Create payload but filters are ignored for the final items if we have a manual selection
+            // However, the campaign record still needs them for reference.
+            const campaignData = {
+                tenant_id: tenantId,
                 name,
-                activeFilters,
-                template
-            );
+                filters: filters,
+                message_template: template,
+                status: 'PROCESSED'
+            };
 
-            setCount(resultCount);
+            const { data: campaign, error: cError } = await supabase
+                .from('campaigns')
+                .insert(campaignData)
+                .select()
+                .single();
+
+            if (cError) throw cError;
+
+            // Filter the clients to only those selected in the list
+            const finalClients = targetClients.filter(c => selectedClientIds.includes(c.id));
+
+            if (finalClients.length > 0) {
+                const items = finalClients.map(client => {
+                    const firstName = client.name.split(' ')[0];
+                    const msg = template.replace('{name}', firstName);
+                    const encodedMsg = encodeURIComponent(msg);
+                    let cleanPhone = client.phone.replace(/\D/g, '');
+                    if (cleanPhone.length <= 11) cleanPhone = `55${cleanPhone}`;
+
+                    return {
+                        campaign_id: campaign.id,
+                        client_name: client.name,
+                        client_phone: client.phone,
+                        generated_url: `https://wa.me/${cleanPhone}?text=${encodedMsg}`,
+                        status: 'PENDING'
+                    };
+                });
+
+                const { error: iError } = await supabase
+                    .from('campaign_items')
+                    .insert(items);
+
+                if (iError) throw iError;
+            }
+
+            setCount(finalClients.length);
+            setCampaignCreated(campaign);
             setIsDispatchReady(true);
 
         } catch (error: any) {
@@ -133,6 +195,20 @@ function NewCampaignContent() {
         }
     };
 
+    const toggleClient = (id: string) => {
+        setSelectedClientIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const toggleAll = () => {
+        if (selectedClientIds.length === targetClients.length) {
+            setSelectedClientIds([]);
+        } else {
+            setSelectedClientIds(targetClients.map(c => c.id));
+        }
+    };
+
     return (
         <div className="p-8 max-w-4xl mx-auto space-y-8 text-slate-100 animate-in slide-in-from-bottom-5 duration-700">
             <header>
@@ -147,17 +223,17 @@ function NewCampaignContent() {
 
             <div className="bg-[#18181b] border border-white/5 rounded-2xl p-8 space-y-8 relative overflow-hidden">
 
-                {/* OVERLAY: DISPATCH READY (UX v5.1) */}
+                {/* OVERLAY: DISPATCH READY (UX v5.2) */}
                 {isDispatchReady && (
-                    <div className="absolute inset-0 z-50 bg-[#0a0a0b]/95 backdrop-blur-xl flex items-center justify-center p-8 animate-in fade-in duration-500">
+                    <div className="absolute inset-0 z-[100] bg-[#0a0a0b]/98 backdrop-blur-2xl flex items-center justify-center p-8 animate-in fade-in duration-500">
                         <div className="w-full max-w-md text-center space-y-8">
-                            <div className="size-24 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <div className="size-24 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
                                 <span className="material-symbols-outlined text-4xl text-emerald-500 animate-bounce">check_circle</span>
                             </div>
                             <div>
-                                <h2 className="text-2xl font-black italic uppercase text-white mb-2">Campanha Criada!</h2>
+                                <h2 className="text-2xl font-black italic uppercase text-white mb-2">Campanha Preparada!</h2>
                                 <p className="text-slate-400 text-sm">
-                                    Sua lista estratégica foi gerada com <span className="text-white font-bold">{count} clientes</span> encontrados.
+                                    A estratégia "{name}" foi consolidada com <span className="text-white font-bold">{count} clientes</span> na fila de disparo.
                                 </p>
                             </div>
 
@@ -165,10 +241,10 @@ function NewCampaignContent() {
                                 <button
                                     onClick={() => router.push(`/admin/crm?start_queue=true&filter=${segment}`)}
                                     disabled={count === 0}
-                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] disabled:bg-white/5 disabled:text-slate-500 text-black font-black uppercase tracking-widest px-8 py-5 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95 group"
+                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] disabled:bg-white/5 disabled:text-slate-500 text-black font-black uppercase tracking-widest px-8 py-5 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95 group shadow-[#f2b90d]/10"
                                 >
                                     <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">rocket_launch</span>
-                                    {count === 0 ? 'Nenhum Cliente na Fila' : 'Iniciar Fila de Disparo'}
+                                    {count === 0 ? 'Fila Vazia' : 'Iniciar Fila de Disparo'}
                                 </button>
 
                                 <button
@@ -181,7 +257,7 @@ function NewCampaignContent() {
 
                             {count === 0 && (
                                 <p className="text-[10px] text-rose-500 font-bold uppercase tracking-widest animate-pulse">
-                                    Dica: Tente mudar o público ou preencher os dados dos clientes.
+                                    Nota: A lista atual não contém clientes válidos para envio.
                                 </p>
                             )}
                         </div>
@@ -200,20 +276,23 @@ function NewCampaignContent() {
                     />
                 </section>
 
-                {/* STEP 2: SEGMENTAÇÃO (Remodelado) */}
+                {/* STEP 2: SEGMENTAÇÃO (EDITAR LISTA) */}
                 <section>
                     <h3 className="text-lg font-bold text-white mb-4 border-b border-white/5 pb-2">2. Segmentação (Público-Alvo)</h3>
                     <div className="bg-black/40 border border-white/5 rounded-2xl p-6 flex items-center justify-between">
                         <div>
                             <p className="text-[10px] uppercase font-black tracking-widest text-[#f2b90d] mb-1">Público Selecionado</p>
-                            <p className="text-xl font-black italic uppercase text-white">{getSegmentLabel()}</p>
+                            <div className="flex items-center gap-3">
+                                <p className="text-xl font-black italic uppercase text-white">{getSegmentLabel()}</p>
+                                <span className="bg-white/10 px-2 py-0.5 rounded text-[10px] font-bold text-white/50">{selectedClientIds.length} selecionados</span>
+                            </div>
                         </div>
                         <button
-                            onClick={() => router.push('/admin/crm')}
-                            className="bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-xl transition-all flex items-center gap-2"
+                            onClick={() => setIsListModalOpen(true)}
+                            className="bg-white/5 hover:bg-white/10 text-white text-[10px] font-black uppercase tracking-widest px-6 py-3 rounded-xl transition-all flex items-center gap-2 border border-white/5 shadow-lg shadow-black/20"
                         >
-                            <span className="material-symbols-outlined text-sm">edit</span>
-                            Alterar Público
+                            <span className="material-symbols-outlined text-sm">checklist</span>
+                            EDITAR LISTA
                         </button>
                     </div>
                 </section>
@@ -234,7 +313,7 @@ function NewCampaignContent() {
                     </div>
                 </section>
 
-                {/* VISUALIZAÇÃO PRÉVIA (TESTE) */}
+                {/* VISUALIZAÇÃO PRÉVIA */}
                 <section className="bg-black/40 p-6 rounded-2xl border border-white/5">
                     <h3 className="text-sm font-bold text-slate-400 mb-4 uppercase tracking-widest">Pré-visualização (Simulação)</h3>
 
@@ -251,15 +330,6 @@ function NewCampaignContent() {
                         <code className="block bg-black/50 p-3 rounded-lg text-[10px] text-emerald-400 font-mono break-all border border-white/5">
                             {`https://wa.me/${tenant?.phone?.replace(/\D/g, '') || '5511999999999'}?text=${encodeURIComponent(template.replace('{name}', 'Cliente'))}`}
                         </code>
-                        <a
-                            href={`https://wa.me/${tenant?.phone?.replace(/\D/g, '') || '5511999999999'}?text=${encodeURIComponent(template.replace('{name}', 'Cliente'))}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 text-xs font-bold text-[#f2b90d] mt-3 hover:underline"
-                        >
-                            <span className="material-symbols-outlined text-sm">open_in_new</span>
-                            Testar Link Real da Loja
-                        </a>
                     </div>
                 </section>
 
@@ -274,6 +344,83 @@ function NewCampaignContent() {
                 </div>
 
             </div>
+
+            {/* MODAL: EDITAR LISTA DE CLIENTES (CIRÚRGICO) */}
+            {isListModalOpen && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase text-white">Editar Lista: {getSegmentLabel()}</h3>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Selecione quem receberá o disparo desta campanha.</p>
+                            </div>
+                            <button
+                                onClick={() => setIsListModalOpen(false)}
+                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 transition-all"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="p-0 max-h-[60vh] overflow-y-auto scrollbar-hide">
+                            <div className="p-6 space-y-2">
+                                {/* Select All Button */}
+                                <div className="flex justify-between items-center px-4 py-3 bg-white/[0.02] border border-white/5 rounded-2xl mb-4">
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                        Total encontrado: {targetClients.length}
+                                    </p>
+                                    <button
+                                        onClick={toggleAll}
+                                        className="text-[#f2b90d] text-[10px] font-black uppercase tracking-widest hover:underline"
+                                    >
+                                        {selectedClientIds.length === targetClients.length ? 'DESSELECIONAR TUDO' : 'SELECIONAR TUDO'}
+                                    </button>
+                                </div>
+
+                                {loadingList ? (
+                                    <div className="py-12 text-center text-slate-600 animate-pulse">Carregando lista filtrada...</div>
+                                ) : targetClients.length === 0 ? (
+                                    <div className="py-12 text-center space-y-3 opacity-30">
+                                        <span className="material-symbols-outlined text-4xl">person_off</span>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Nenhum cliente atende a estes critérios.</p>
+                                    </div>
+                                ) : (
+                                    targetClients.map(client => (
+                                        <div
+                                            key={client.id}
+                                            onClick={() => toggleClient(client.id)}
+                                            className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${selectedClientIds.includes(client.id) ? 'bg-[#f2b90d]/5 border-[#f2b90d]/20' : 'bg-black/20 border-white/5'}`}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className={`size-5 rounded-md border flex items-center justify-center transition-all ${selectedClientIds.includes(client.id) ? 'bg-[#f2b90d] border-[#f2b90d] text-black' : 'bg-white/5 border-white/10 text-transparent'}`}>
+                                                    <span className="material-symbols-outlined text-[14px]">check</span>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black uppercase text-white leading-none">{client.name}</p>
+                                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-tighter mt-1">{client.phone}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-bold text-slate-400">R$ {client.total_spent || '0,00'}</p>
+                                                <p className="text-[8px] font-black uppercase tracking-widest text-[#f2b90d] opacity-50">LTV</p>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-white/5 flex gap-4 bg-black/20">
+                            <button
+                                onClick={() => setIsListModalOpen(false)}
+                                className="flex-1 bg-[#f2b90d] text-black font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-[#f2b90d]/10"
+                            >
+                                SALVAR SELEÇÃO ({selectedClientIds.length})
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
