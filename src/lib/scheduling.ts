@@ -129,30 +129,29 @@ function generateSlots(start: string, end: string): string[] {
 
     console.log('🔧 generateSlots called:', { start, end, startH, startM, endH, endM });
 
-    let currentH = startH;
-    let currentM = startM;
+    // Convert to total minutes since midnight
+    let startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
 
-    // Normalize starting minute to nearest 30-minute interval
-    // If start is 14:30, keep it. If it's 14:15, round to 14:30
-    if (currentM > 0 && currentM < 30) {
-        currentM = 30;
-    } else if (currentM > 30) {
-        currentH++;
-        currentM = 0;
+    console.log('🔧 Time in minutes:', { startMinutes, endMinutes });
+
+    // Round start to nearest 30-minute interval (ceiling)
+    // Examples: 14:15 -> 14:30, 14:30 -> 14:30, 14:45 -> 15:00
+    const remainder = startMinutes % 30;
+    if (remainder !== 0) {
+        startMinutes += (30 - remainder);
     }
 
-    console.log('🔧 Normalized start:', { currentH, currentM });
+    console.log('🔧 Normalized start minutes:', startMinutes);
 
-    while (currentH < endH || (currentH === endH && currentM < endM)) {
-        const timeStr = `${currentH.toString().padStart(2, '0')}:${currentM.toString().padStart(2, '0')}`;
+    // Generate slots every 30 minutes
+    let currentMinutes = startMinutes;
+    while (currentMinutes < endMinutes) {
+        const h = Math.floor(currentMinutes / 60);
+        const m = currentMinutes % 60;
+        const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
         slots.push(timeStr);
-
-        // Incremento de 30 minutos
-        currentM += 30;
-        if (currentM >= 60) {
-            currentH++;
-            currentM = 0;
-        }
+        currentMinutes += 30;
     }
 
     console.log('🔧 Generated slots:', slots);
