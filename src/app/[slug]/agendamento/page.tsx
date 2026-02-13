@@ -25,6 +25,7 @@ export default function DynamicBookingPage() {
         time: '',
         name: '',
         phone: '',
+        birthMonth: '',
         price: 0
     });
 
@@ -188,7 +189,8 @@ export default function DynamicBookingPage() {
                     tenant_id: tenant.id,
                     name: selection.name,
                     phone: cleanPhone,
-                    last_visit: new Date().toISOString()
+                    last_visit: new Date().toISOString(),
+                    metadata: { birth_month: selection.birthMonth }
                 }, { onConflict: 'tenant_id,phone' })
                 .select()
                 .single();
@@ -204,7 +206,7 @@ export default function DynamicBookingPage() {
                     customer_name: selection.name,
                     service_id: selection.service.id,
                     barber_id: selection.barber.id,
-                    status: 'pending',
+                    status: 'scheduled',
                     // Use selected DATE and TIME
                     scheduled_at: `${selection.date}T${selection.time}:00`
                 }]);
@@ -217,7 +219,15 @@ export default function DynamicBookingPage() {
 
             // Format Date for Message
             const dateFormatted = format(selectedDateObj, "dd/MM (EEEE)", { locale: ptBR });
-            const message = `Olá! Sou o ${selection.name}. Gostaria de confirmar meu agendamento: ${selection.service.name} com ${selection.barber.full_name} no dia ${dateFormatted} às ${selection.time}.`;
+            const message = `🗓️ *AGENDAMENTO CONFIRMADO*
+            
+Olá! Sou o ${selection.name}. 
+Gostaria de agendar: ${selection.service.name} 
+Com: ${selection.barber.full_name} 
+Dia: ${dateFormatted} às ${selection.time}.
+🎂 *Mês de Aniversário:* ${selection.birthMonth}
+
+Até lá! 👋`;
 
             window.open(`https://wa.me/${targetPhoneFull}?text=${encodeURIComponent(message)}`, '_blank');
 
@@ -404,10 +414,23 @@ export default function DynamicBookingPage() {
                                     <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Seu WhatsApp</label>
                                     <input type="tel" placeholder="(00) 00000-0000" className="w-full bg-black/40 border-2 border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 text-white font-black italic focus:outline-none focus:border-[#f2b90d]/30 transition-all placeholder:opacity-20 text-sm md:text-base" value={selection.phone} onChange={(e) => setSelection({ ...selection, phone: e.target.value })} />
                                 </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Mês de Aniversário</label>
+                                    <select
+                                        className="w-full bg-black/40 border-2 border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 text-white font-black italic focus:outline-none focus:border-[#f2b90d]/30 transition-all appearance-none cursor-pointer text-sm md:text-base"
+                                        value={selection.birthMonth}
+                                        onChange={(e) => setSelection({ ...selection, birthMonth: e.target.value })}
+                                    >
+                                        <option value="" disabled className="bg-zinc-900">Selecione o mês</option>
+                                        {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map(m => (
+                                            <option key={m} value={m} className="bg-zinc-900">{m.toUpperCase()}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             <div className="pt-2">
                                 <button
-                                    disabled={!selection.name || !selection.phone}
+                                    disabled={!selection.name || !selection.phone || !selection.birthMonth}
                                     onClick={finishBooking}
                                     className="w-full font-black py-5 md:py-7 rounded-[1.8rem] md:rounded-[2.5rem] text-lg md:text-2xl transition-all shadow-2xl uppercase italic tracking-tighter disabled:opacity-30 active:scale-95 flex items-center justify-center gap-3"
                                     style={{ backgroundColor: primaryColor, color: buttonTextColor, boxShadow: `0 20px 40px ${primaryColor}30` }}

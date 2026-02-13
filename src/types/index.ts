@@ -12,6 +12,9 @@ export enum UserStatus {
 }
 
 export enum OrderStatus {
+  SCHEDULED = 'scheduled',
+  PENDING_PAYMENT = 'pending_payment',
+  PAID = 'paid',
   OPEN = 'open',
   AWAITING_PAYMENT = 'awaiting_payment',
   COMPLETED = 'completed',

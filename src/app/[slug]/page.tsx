@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -21,6 +21,8 @@ export default function ShopLandingPage() {
     const [tenant, setTenant] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
+    const searchParams = useSearchParams();
+    const isConfirmed = searchParams.get('confirmed') === 'true';
 
     // Selection State
     const [selection, setSelection] = useState({
@@ -266,6 +268,27 @@ Aguardo sua confirmação! 😊`;
 
     return (
         <div className="min-h-screen relative overflow-hidden font-sans selection:bg-white/10" style={{ backgroundColor: theme.secondary }}>
+            {/* Success Modal */}
+            {isConfirmed && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center px-6">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => router.push(`/${slug}`)} />
+                    <div className="relative bg-zinc-900 border border-white/10 p-10 rounded-[3rem] max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
+                        <div className="size-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 mx-auto mb-6">
+                            <span className="material-symbols-outlined text-4xl">check_circle</span>
+                        </div>
+                        <h2 className="text-2xl font-black italic uppercase text-white mb-2">AGENDAMENTO REALIZADO!</h2>
+                        <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-8">Sua vaga está garantida. Enviamos os detalhes para o WhatsApp do profissional.</p>
+                        <button
+                            onClick={() => router.push(`/${slug}`)}
+                            className="w-full py-4 rounded-2xl font-black italic uppercase tracking-widest text-sm"
+                            style={{ backgroundColor: theme.primary, color: '#000' }}
+                        >
+                            FECHAR
+                        </button>
+                    </div>
+                </div>
+            )}
+
             {/* Background Effect */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div
