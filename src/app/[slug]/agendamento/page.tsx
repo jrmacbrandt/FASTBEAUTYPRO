@@ -257,6 +257,16 @@ export default function DynamicBookingPage() {
                 </div>
             </header>
 
+            {step > 1 && (
+                <button
+                    onClick={(e) => { e.preventDefault(); prevStep(); }}
+                    className="fixed left-4 top-20 md:left-8 md:top-24 size-12 md:size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[9999] cursor-pointer shadow-2xl"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                    <span className="material-symbols-outlined text-[24px] md:text-[20px] group-hover:-translate-x-0.5 transition-transform pointer-events-none">arrow_back</span>
+                </button>
+            )}
+
             <main className="max-w-xl mx-auto px-4 sm:px-6 py-8 md:py-12 relative z-10 min-h-[calc(100vh-80px)] flex flex-col">
                 {/* Progress Bar */}
                 <div className="flex gap-2.5 md:gap-3 mb-10 md:mb-14">
@@ -300,15 +310,6 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Com <br /> <span style={{ color: primaryColor }}>quem?</span></h2>
-                                <button
-                                    onClick={(e) => { e.preventDefault(); prevStep(); }}
-                                    className="size-12 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/20 z-[999] cursor-pointer shadow-lg border border-white/10"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-                                    type="button"
-                                    aria-label="Voltar"
-                                >
-                                    <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-                                </button>
                             </div>
                             <div className="grid gap-3 md:gap-4">
                                 {barbers.map(b => (
@@ -336,15 +337,6 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quando?</h2>
-                                <button
-                                    onClick={(e) => { e.preventDefault(); prevStep(); }}
-                                    className="size-12 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/20 z-[999] cursor-pointer shadow-lg border border-white/10"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-                                    type="button"
-                                    aria-label="Voltar"
-                                >
-                                    <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-                                </button>
                             </div>
 
                             {/* Date Selector */}
@@ -402,15 +394,6 @@ export default function DynamicBookingPage() {
                         <div className="space-y-6 md:space-y-8 animate-in fade-in slide-in-from-right-8 duration-700 ease-out">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quase <br /> <span style={{ color: primaryColor }}>lá!</span></h2>
-                                <button
-                                    onClick={(e) => { e.preventDefault(); prevStep(); }}
-                                    className="size-12 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/20 z-[999] cursor-pointer shadow-lg border border-white/10"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
-                                    type="button"
-                                    aria-label="Voltar"
-                                >
-                                    <span className="material-symbols-outlined text-[24px]">arrow_back</span>
-                                </button>
                             </div>
                             <div className="space-y-4 bg-white/[0.03] backdrop-blur-3xl p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 shadow-2xl">
                                 <div className="space-y-1.5">

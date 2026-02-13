@@ -199,6 +199,16 @@ export default function ShopLandingPage() {
                 />
             </div>
 
+            {step > 1 && step < 6 && (
+                <button
+                    onClick={() => setStep(step - 1)}
+                    className="fixed left-6 top-6 size-12 md:size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[9999] cursor-pointer shadow-2xl"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
+                >
+                    <span className="material-symbols-outlined text-[24px] md:text-[20px] group-hover:-translate-x-0.5 transition-transform pointer-events-none">arrow_back</span>
+                </button>
+            )}
+
             {/* Header */}
             <header className="relative z-50 px-8 py-6 flex justify-between items-start">
                 <div className="flex items-center gap-4">
@@ -226,7 +236,6 @@ export default function ShopLandingPage() {
             </div>
 
             <main className="relative z-10 max-w-4xl mx-auto px-6 pt-12 pb-24 min-h-[calc(100vh-100px)] flex flex-col justify-center">
-                {/* Steps Navigator */}
                 <div className="mb-20">
                     {step === 1 && (
                         <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -254,15 +263,7 @@ export default function ShopLandingPage() {
 
                     {step === 2 && (
                         <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
-                            <button
-                                onClick={(e) => { e.preventDefault(); setStep(1); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
-                                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff' }}
-                                type="button"
-                                aria-label="Voltar"
-                            >
-                                <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
-                            </button>
+
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 COM <span style={{ color: theme.primary }}>QUEM?</span>
                             </h2>
@@ -293,15 +294,7 @@ export default function ShopLandingPage() {
 
                     {step === 3 && (
                         <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
-                            <button
-                                onClick={(e) => { e.preventDefault(); setStep(2); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
-                                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff' }}
-                                type="button"
-                                aria-label="Voltar"
-                            >
-                                <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
-                            </button>
+
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 QUAL O <br /><span style={{ color: theme.primary }}>MELHOR DIA?</span>
                             </h2>
@@ -317,15 +310,7 @@ export default function ShopLandingPage() {
 
                     {step === 4 && (
                         <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
-                            <button
-                                onClick={(e) => { e.preventDefault(); setStep(3); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
-                                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff' }}
-                                type="button"
-                                aria-label="Voltar"
-                            >
-                                <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
-                            </button>
+
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 ESCOLHA O <span style={{ color: theme.primary }}>HORÁRIO</span>
                             </h2>
@@ -346,15 +331,7 @@ export default function ShopLandingPage() {
 
                     {step === 5 && (
                         <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-lg mx-auto relative">
-                            <button
-                                onClick={(e) => { e.preventDefault(); setStep(4); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
-                                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff' }}
-                                type="button"
-                                aria-label="Voltar"
-                            >
-                                <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
-                            </button>
+
                             <div className="text-center mb-12">
                                 <div className="inline-flex size-20 rounded-[2rem] bg-[#f2b90d]/10 items-center justify-center text-[#f2b90d] mb-6 border border-[#f2b90d]/20 ring-4 ring-[#f2b90d]/5">
                                     <span className="material-symbols-outlined text-4xl">check_circle</span>
