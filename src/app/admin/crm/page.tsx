@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getSegmentedClients } from '@/lib/crm';
 
-export default function CRMDashboard() {
+function CRMContent() {
     const [loading, setLoading] = useState(true);
     const [tenant, setTenant] = useState<any>(null);
     const [stats, setStats] = useState({
@@ -890,6 +890,22 @@ export default function CRMDashboard() {
         </div>
     );
 }
+
+export default function CRMDashboard() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="size-12 border-4 border-[#f2b90d]/20 border-t-[#f2b90d] rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Iniciando Motor CRM...</p>
+                </div>
+            </div>
+        }>
+            <CRMContent />
+        </Suspense>
+    );
+}
+
 
 function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel, isActive, onClick }: any) {
     return (
