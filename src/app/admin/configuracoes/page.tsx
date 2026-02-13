@@ -42,49 +42,177 @@ export default function EstablishmentSettingsPage() {
             .update({
                 name: tenant.name,
                 slug: tenant.slug,
+                phone: tenant.phone?.replace(/\D/g, ''),
+                contact_email: tenant.contact_email,
+                tax_id: tenant.tax_id?.replace(/\D/g, ''),
+                address_zip: tenant.address_zip?.replace(/\D/g, ''),
+                address_street: tenant.address_street,
+                address_number: tenant.address_number,
+                address_complement: tenant.address_complement,
+                address_neighborhood: tenant.address_neighborhood,
+                address_city: tenant.address_city,
+                address_state: tenant.address_state,
                 business_hours: tenant.business_hours,
                 loyalty_target: tenant.loyalty_target,
                 payment_methods: tenant.payment_methods,
-                // other fields...
             })
             .eq('id', tenant.id);
 
         if (!error) {
-            alert('Configurações salvas!');
+            alert('Configurações salvas com sucesso!');
         } else {
+            console.error('Error saving tenant:', error);
             alert('Erro ao salvar: ' + error.message);
         }
         setIsSaving(false);
     };
 
-    if (!tenant) return <div className="p-8 text-center text-slate-500">Carregando configurações...</div>;
+    const handleCepLookup = async (cep: string) => {
+        const cleanCep = cep.replace(/\D/g, '');
+        if (cleanCep.length === 8) {
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    setTenant({
+                        ...tenant,
+                        address_zip: cleanCep,
+                        address_street: data.logradouro,
+                        address_neighborhood: data.bairro,
+                        address_city: data.localidade,
+                        address_state: data.uf
+                    });
+                }
+            } catch (err) {
+                console.error('CEP lookup failed:', err);
+            }
+        }
+    };
+
+    if (!tenant) return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex flex-col items-center gap-4">
+                <div className="size-12 border-4 border-[#f2b90d]/20 border-t-[#f2b90d] rounded-full animate-spin"></div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Configurando seu Espaço...</p>
+            </div>
+        </div>
+    );
 
     return (
-        <div className="space-y-6 md:space-y-8 max-w-6xl mx-auto pb-20 animate-in fade-in duration-500 px-2 md:px-0">
+        <div className="space-y-6 md:space-y-8 max-w-6xl mx-auto pb-24 animate-in fade-in duration-500 px-2 md:px-0 mt-8">
+            <header className="mb-8">
+                <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">
+                    Settings <span className="text-[#f2b90d]">Control</span>
+                </h1>
+                <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2 flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-[#f2b90d] animate-pulse"></span>
+                    Customização da Unidade & Governança
+                </p>
+            </header>
+
             <div className="flex flex-wrap p-1.5 md:p-2 rounded-2xl md:rounded-[2rem] bg-[#121214] border border-white/5 gap-1.5 md:gap-2">
                 {[{ id: 'general', label: 'Estabelecimento', icon: 'storefront' }, { id: 'finance', label: 'Pagamentos', icon: 'payments' }, { id: 'hours', label: 'Horários', icon: 'schedule' }, { id: 'automation', label: 'Agendamento Direto', icon: 'bolt' }].map(tab => (
-                    <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-all italic flex-1 sm:flex-none justify-center ${activeTab === tab.id ? 'bg-[#f2b90d] text-black shadow-lg shadow-[#f2b90d]/20' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-all italic flex-1 sm:flex-none justify-center ${activeTab === tab.id ? 'bg-[#f2b90d] text-black shadow-lg shadow-[#f2b90d]/20 scale-[1.02]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
                         <span className="material-symbols-outlined text-[16px] md:text-[18px]">{tab.icon}</span>{tab.label}
                     </button>
                 ))}
             </div>
 
             {activeTab === 'general' && (
-                <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in">
-                    <h4 className="text-lg md:text-xl font-black italic uppercase text-white">Dados da Unidade</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                        <div className="space-y-1.5 md:space-y-2">
-                            <label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-60">Nome</label>
-                            <input type="text" className="w-full bg-black border border-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 font-bold text-white text-sm md:text-base focus:border-[#f2b90d]/50 outline-none" value={tenant.name} onChange={e => setTenant({ ...tenant, name: e.target.value })} />
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="bg-[#121214] p-8 md:p-10 rounded-[2.5rem] border border-white/5 space-y-10 relative overflow-hidden group shadow-2xl">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-[#f2b90d]/5 rounded-full blur-[100px] pointer-events-none"></div>
+
+                        <div>
+                            <h4 className="text-xl font-black italic uppercase text-white mb-2">Identidade da Unidade</h4>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Dados básicos e identificação fiscal</p>
                         </div>
-                        <div className="space-y-1.5 md:space-y-2">
-                            <label className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1 opacity-60">Link</label>
-                            <div className="relative">
-                                <span className="absolute left-4 top-3.5 md:top-4 text-[#f2b90d] font-black opacity-40 text-[10px] md:text-xs">fastbeauty.pro/</span>
-                                <input type="text" className="w-full bg-black border border-white/5 rounded-xl md:rounded-2xl p-3 md:p-4 pl-[95px] md:pl-[125px] font-bold text-white text-sm md:text-base focus:border-[#f2b90d]/50 outline-none" value={tenant.slug} onChange={e => setTenant({ ...tenant, slug: e.target.value })} />
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nome Fantasia</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.name} onChange={e => setTenant({ ...tenant, name: e.target.value })} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Link (Slug)</label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-4 text-[#f2b90d] font-black opacity-30 text-xs">fastbeauty.pro/</span>
+                                    <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 pl-[90px] md:pl-[115px] font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.slug} onChange={e => setTenant({ ...tenant, slug: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">CPF / CNPJ</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.tax_id} onChange={e => setTenant({ ...tenant, tax_id: e.target.value })} placeholder="00.000.000/0001-00" />
                             </div>
                         </div>
 
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">WhatsApp Comercial</label>
+                                <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-4 top-4 text-emerald-500/50 text-xl">call</span>
+                                    <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 pl-12 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.phone} onChange={e => setTenant({ ...tenant, phone: e.target.value })} placeholder="(00) 00000-0000" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">E-mail de Contato</label>
+                                <div className="relative">
+                                    <span className="material-symbols-outlined absolute left-4 top-4 text-emerald-500/50 text-xl">mail</span>
+                                    <input type="email" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 pl-12 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.contact_email} onChange={e => setTenant({ ...tenant, contact_email: e.target.value })} placeholder="vendas@unidade.com" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#121214] p-8 md:p-10 rounded-[2.5rem] border border-white/5 space-y-10 shadow-2xl">
+                        <div>
+                            <h4 className="text-xl font-black italic uppercase text-white mb-2">Localização</h4>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Endereço para exibição no mapa e busca</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">CEP</label>
+                                <input
+                                    type="text"
+                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all"
+                                    value={tenant.address_zip}
+                                    onChange={e => {
+                                        const val = e.target.value;
+                                        setTenant({ ...tenant, address_zip: val });
+                                        if (val.replace(/\D/g, '').length === 8) handleCepLookup(val);
+                                    }}
+                                    placeholder="00000-000"
+                                />
+                            </div>
+                            <div className="md:col-span-2 space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Endereço / Logradouro</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner" value={tenant.address_street} onChange={e => setTenant({ ...tenant, address_street: e.target.value })} placeholder="Av. Paulista" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Número</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.address_number} onChange={e => setTenant({ ...tenant, address_number: e.target.value })} placeholder="123" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Complemento</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.address_complement} onChange={e => setTenant({ ...tenant, address_complement: e.target.value })} placeholder="Apto 10 / Sala 2" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Bairro</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.address_neighborhood} onChange={e => setTenant({ ...tenant, address_neighborhood: e.target.value })} placeholder="Centro" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Cidade</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.address_city} onChange={e => setTenant({ ...tenant, address_city: e.target.value })} placeholder="São Paulo" />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">UF</label>
+                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm uppercase focus:border-[#f2b90d]/50 outline-none transition-all" maxLength={2} value={tenant.address_state} onChange={e => setTenant({ ...tenant, address_state: e.target.value })} placeholder="SP" />
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
