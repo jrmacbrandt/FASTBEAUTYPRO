@@ -558,15 +558,7 @@ function CRMContent() {
                                 </button>
                             </div>
                             <div className="flex gap-4">
-                                {(engagementData[activeFilter] || []).length > 0 && (
-                                    <button
-                                        onClick={startQueue}
-                                        className="bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[9px] tracking-widest px-4 py-2 rounded-xl transition-all shadow-lg flex items-center gap-2"
-                                    >
-                                        <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                                        Iniciar Fila de Disparo
-                                    </button>
-                                )}
+
                                 <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
                                     <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                     Filtros Dinâmicos OK
