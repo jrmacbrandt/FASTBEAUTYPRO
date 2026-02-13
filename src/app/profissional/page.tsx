@@ -34,8 +34,8 @@ export default function ProfessionalAgendaPage() {
             .from('appointments')
             .select('*, profiles(full_name), services(name, price)')
             .eq('barber_id', session.user.id)
-            .gte('appointment_time', new Date().toISOString().split('T')[0])
-            .order('appointment_time', { ascending: true });
+            .gte('scheduled_at', new Date().toISOString().split('T')[0] + 'T00:00:00')
+            .order('scheduled_at', { ascending: true });
 
         if (!error && data) {
             setDailyAgenda(data);
@@ -181,7 +181,7 @@ export default function ProfessionalAgendaPage() {
                         <div key={item.id} className="border shadow-lg p-4 md:p-6 rounded-3xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between transition-all gap-4 group" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                             <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
                                 <div className="size-10 md:size-14 rounded-xl md:rounded-2xl flex items-center justify-center font-black shrink-0 border text-xs md:text-base" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                                    {item.appointment_time.split('T')[1].substring(0, 5)}
+                                    {item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="font-bold text-sm md:text-lg truncate" style={{ color: colors.text }}>{item.customer_name}</h4>

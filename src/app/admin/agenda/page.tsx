@@ -15,7 +15,7 @@ interface Professional {
 interface Appointment {
     id: string;
     customer_name: string;
-    appointment_time: string;
+    scheduled_at: string;
     status: string;
     barber_id: string;
     services: {
@@ -86,8 +86,8 @@ export default function AdminAgendaPage() {
                 .from('appointments')
                 .select('*, services(name, price), profiles!appointments_barber_id_fkey(full_name)')
                 .eq('tenant_id', profile.tenant_id)
-                .gte('appointment_time', new Date().toISOString().split('T')[0])
-                .order('appointment_time', { ascending: true });
+                .gte('scheduled_at', new Date().toISOString().split('T')[0] + 'T00:00:00')
+                .order('scheduled_at', { ascending: true });
 
             if (selectedProfessionalId !== 'all') {
                 query = query.eq('barber_id', selectedProfessionalId);
@@ -146,7 +146,7 @@ export default function AdminAgendaPage() {
                         <div key={item.id} className="group border p-5 md:p-6 rounded-[2rem] transition-all hover:border-white/20 flex flex-col md:flex-row items-center justify-between gap-4" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                             <div className="flex items-center gap-5 w-full md:w-auto">
                                 <div className="size-12 md:size-16 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                                    <span className="text-xs md:text-sm">{item.appointment_time.split('T')[1].substring(0, 5)}</span>
+                                    <span className="text-xs md:text-sm">{item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}</span>
                                     <span className="text-[8px] opacity-60 uppercase">Hoje</span>
                                 </div>
                                 <div className="min-w-0">

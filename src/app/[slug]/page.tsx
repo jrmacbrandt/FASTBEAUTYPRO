@@ -157,8 +157,7 @@ export default function ShopLandingPage() {
                     service_id: selection.service.id,
                     barber_id: selection.barber.id,
                     status: 'pending',
-                    scheduled_at: `${selection.date}T${selection.time}:00`,
-                    appointment_time: selection.time
+                    scheduled_at: `${selection.date}T${selection.time}:00`
                 }]);
 
             if (apptError) throw apptError;

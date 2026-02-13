@@ -25,7 +25,7 @@ export default function ProfessionalHistoryPage() {
             .select('*, profiles(full_name), services(name)')
             .eq('barber_id', session.user.id)
             .eq('status', 'completed')
-            .order('appointment_time', { ascending: false });
+            .order('scheduled_at', { ascending: false });
 
         if (!error && data) {
             setHistory(data);
@@ -37,7 +37,7 @@ export default function ProfessionalHistoryPage() {
         // Basic simulation for filtered items if joined data isn't perfect
         const customerName = item.customer_name || 'Cliente';
         const matchesName = customerName.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesDate = dateFilter ? item.appointment_time.startsWith(dateFilter) : true;
+        const matchesDate = dateFilter ? item.scheduled_at?.startsWith(dateFilter) : true;
         return matchesName && matchesDate;
     });
 
@@ -97,8 +97,12 @@ export default function ProfessionalHistoryPage() {
                         <div key={item.id} className="bg-[#121214] border border-white/5 p-4 md:p-6 rounded-2xl md:rounded-[2rem] flex flex-col sm:flex-row items-center justify-between gap-4 md:gap-6 group hover:border-[#f2b90d]/20 transition-all shadow-md">
                             <div className="flex items-center gap-3 md:gap-4 w-full">
                                 <div className="size-12 md:size-14 bg-[#f2b90d]/10 rounded-xl md:rounded-2xl flex flex-col items-center justify-center text-[#f2b90d] font-black leading-none shrink-0 border border-[#f2b90d]/10">
-                                    <span className="text-[8px] md:text-[9px] uppercase opacity-60 mb-1">{item.appointment_time.split('T')[0].split('-')[2]}/{item.appointment_time.split('T')[0].split('-')[1]}</span>
-                                    <span className="text-base md:text-lg italic">{item.appointment_time.split('T')[1].substring(0, 5)}</span>
+                                    <span className="text-[8px] md:text-[9px] uppercase opacity-60 mb-1">
+                                        {item.scheduled_at?.split('T')[0]?.split('-')[2]}/{item.scheduled_at?.split('T')[0]?.split('-')[1]}
+                                    </span>
+                                    <span className="text-base md:text-lg italic">
+                                        {item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}
+                                    </span>
                                 </div>
                                 <div className="min-w-0">
                                     <h4 className="font-bold text-base md:text-lg text-white leading-tight truncate">{item.customer_name}</h4>

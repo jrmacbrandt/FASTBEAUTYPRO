@@ -214,7 +214,8 @@ export default function OwnerDashboardPage() {
 
     const handleCopyLink = () => {
         if (!tenantInfo) return;
-        const url = `https://fastbeautypro.vercel.app/${tenantInfo.slug}`;
+        const origin = window.location.origin;
+        const url = `${origin}/${tenantInfo.slug}`;
         navigator.clipboard.writeText(url);
         setCopying(true);
         setTimeout(() => setCopying(false), 2000);

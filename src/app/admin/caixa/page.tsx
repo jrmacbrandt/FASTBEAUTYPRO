@@ -78,8 +78,8 @@ export default function CashierCheckoutPage() {
                     finalized_at,
                     appointments!appointment_id (
                         id, 
-                        customer_name, 
-                        appointment_time, 
+                        customer_name,
+                        scheduled_at, 
                         client_id,
                         profiles(full_name),
                         services(name)
@@ -97,7 +97,7 @@ export default function CashierCheckoutPage() {
                     customer_name: o.appointments?.customer_name,
                     barber_name: o.appointments?.profiles?.full_name,
                     service_name: o.appointments?.services?.name,
-                    time: o.appointments?.appointment_time,
+                    time: o.appointments?.scheduled_at,
                     total_price: o.total_value,
                     commission: o.commission_amount,
                     client_id: o.appointments?.client_id, // Expose client_id for voucher check
