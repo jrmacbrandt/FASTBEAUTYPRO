@@ -217,12 +217,57 @@ export default function ShopLandingPage() {
                 </div>
             </header>
 
-            {/* Progress Bar */}
-            <div className="fixed top-0 left-0 w-full h-1 bg-white/5 z-[60]">
-                <div
-                    className="h-full transition-all duration-700 ease-in-out shadow-[0_0_10px_rgba(242,185,13,0.5)]"
-                    style={{ width: `${progress}%`, backgroundColor: theme.primary }}
-                />
+            {/* Progress Stepper */}
+            <div className="fixed top-0 left-0 w-full bg-black/40 backdrop-blur-md z-[60] py-4 border-b border-white/5">
+                <div className="max-w-4xl mx-auto px-6">
+                    <div className="flex items-center justify-between relative">
+                        {/* Connection Line */}
+                        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-white/10 -translate-y-1/2 -z-10" />
+                        <div
+                            className="absolute top-1/2 left-0 h-[2px] -translate-y-1/2 -z-10 transition-all duration-700 ease-in-out"
+                            style={{
+                                width: `${((step - 1) / 4) * 100}%`,
+                                backgroundColor: theme.primary,
+                                boxShadow: `0 0 10px ${theme.primary}`
+                            }}
+                        />
+
+                        {/* Steps */}
+                        {[
+                            { num: 1, label: 'Serviço' },
+                            { num: 2, label: 'Profissional' },
+                            { num: 3, label: 'Data' },
+                            { num: 4, label: 'Horário' },
+                            { num: 5, label: 'Confirmar' }
+                        ].map((s) => (
+                            <div key={s.num} className="flex flex-col items-center gap-2 relative">
+                                <div
+                                    className={`size-10 md:size-12 rounded-full flex items-center justify-center font-black text-sm md:text-base transition-all duration-500 ${step >= s.num
+                                            ? 'scale-110 shadow-lg'
+                                            : 'scale-100'
+                                        }`}
+                                    style={{
+                                        backgroundColor: step >= s.num ? theme.primary : 'rgba(255,255,255,0.05)',
+                                        color: step >= s.num ? '#000' : 'rgba(255,255,255,0.3)',
+                                        border: step === s.num ? `2px solid ${theme.primary}` : '2px solid transparent'
+                                    }}
+                                >
+                                    {step > s.num ? (
+                                        <span className="material-symbols-outlined text-lg">check</span>
+                                    ) : (
+                                        s.num
+                                    )}
+                                </div>
+                                <span
+                                    className="text-[9px] md:text-[10px] font-black uppercase tracking-wider hidden md:block transition-all duration-300"
+                                    style={{ color: step >= s.num ? theme.primary : 'rgba(255,255,255,0.3)' }}
+                                >
+                                    {s.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             <main className="relative z-10 max-w-4xl mx-auto px-6 pt-12 pb-24 min-h-[calc(100vh-100px)] flex flex-col justify-center">
@@ -571,10 +616,10 @@ const DateSelector = ({ onSelect, theme }: { onSelect: (date: string) => void, t
                             onClick={() => !isPast && handleDateClick(day)}
                             disabled={isPast}
                             className={`aspect-square rounded-xl flex items-center justify-center font-black italic text-lg transition-all ${isPast
-                                    ? 'text-white/10 cursor-not-allowed'
-                                    : isSelected
-                                        ? 'bg-[#f2b90d] text-black scale-110 shadow-lg'
-                                        : 'text-white hover:bg-white/10 hover:scale-105 active:scale-95'
+                                ? 'text-white/10 cursor-not-allowed'
+                                : isSelected
+                                    ? 'bg-[#f2b90d] text-black scale-110 shadow-lg'
+                                    : 'text-white hover:bg-white/10 hover:scale-105 active:scale-95'
                                 }`}
                             style={isSelected ? { backgroundColor: theme.primary } : {}}
                         >
