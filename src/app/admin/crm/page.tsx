@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getSegmentedClients } from '@/lib/crm';
 
@@ -42,9 +43,33 @@ export default function CRMDashboard() {
     const [queueFinished, setQueueFinished] = useState(false);
     const [isNextLoading, setIsNextLoading] = useState(false);
 
+    const searchParams = useSearchParams();
+
+    // CRM v5.1: Efeito para disparo automático vindo da criação de campanha
     useEffect(() => {
         fetchData();
     }, []);
+
+    useEffect(() => {
+        const startNow = searchParams.get('start_queue');
+        const filterParam = searchParams.get('filter') as any;
+
+        if (startNow === 'true' && !loading && Object.keys(engagementData).length > 0) {
+            const targetFilter = filterParam || activeFilter;
+            const list = engagementData[targetFilter] || [];
+
+            if (list.length > 0) {
+                setActiveFilter(targetFilter);
+                setQueue(list);
+                setCurrentQueueIndex(0);
+                setIsQueueActive(true);
+                setQueueFinished(false);
+
+                // Limpar parâmetros da URL sem recarregar (opcional, mas bom UX)
+                window.history.replaceState({}, '', '/admin/crm');
+            }
+        }
+    }, [searchParams, loading, engagementData]);
 
     const fetchData = async () => {
         setLoading(true);

@@ -13,6 +13,10 @@ function NewCampaignContent() {
     const [loading, setLoading] = useState(false);
     const [tenant, setTenant] = useState<any>(null);
 
+    // Dispatch State (UX v5.1)
+    const [isDispatchReady, setIsDispatchReady] = useState(false);
+    const [count, setCount] = useState(0);
+
     // Form State
     const [name, setName] = useState('');
     const [filters, setFilters] = useState({
@@ -101,15 +105,15 @@ function NewCampaignContent() {
                 return;
             }
 
-            const { count } = await createPayloadCampaign(
+            const { count: resultCount } = await createPayloadCampaign(
                 tenantId,
                 name,
                 activeFilters,
                 template
             );
 
-            alert(`Campanha criada com sucesso! ${count} clientes na lista.`);
-            router.push('/admin/crm');
+            setCount(resultCount);
+            setIsDispatchReady(true);
 
         } catch (error: any) {
             console.error('Error creating campaign:', error);
@@ -132,7 +136,7 @@ function NewCampaignContent() {
     return (
         <div className="p-8 max-w-4xl mx-auto space-y-8 text-slate-100 animate-in slide-in-from-bottom-5 duration-700">
             <header>
-                <button onClick={() => router.back()} className="text-sm text-slate-400 hover:text-white mb-4 flex items-center gap-2">
+                <button onClick={() => router.push('/admin/crm')} className="text-sm text-slate-400 hover:text-white mb-4 flex items-center gap-2">
                     ← Voltar
                 </button>
                 <h1 className="text-3xl font-black italic tracking-tighter text-white">
@@ -141,7 +145,48 @@ function NewCampaignContent() {
                 <p className="text-sm text-slate-400">Personalize o disparo para o público selecionado.</p>
             </header>
 
-            <div className="bg-[#18181b] border border-white/5 rounded-2xl p-8 space-y-8">
+            <div className="bg-[#18181b] border border-white/5 rounded-2xl p-8 space-y-8 relative overflow-hidden">
+
+                {/* OVERLAY: DISPATCH READY (UX v5.1) */}
+                {isDispatchReady && (
+                    <div className="absolute inset-0 z-50 bg-[#0a0a0b]/95 backdrop-blur-xl flex items-center justify-center p-8 animate-in fade-in duration-500">
+                        <div className="w-full max-w-md text-center space-y-8">
+                            <div className="size-24 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <span className="material-symbols-outlined text-4xl text-emerald-500 animate-bounce">check_circle</span>
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black italic uppercase text-white mb-2">Campanha Criada!</h2>
+                                <p className="text-slate-400 text-sm">
+                                    Sua lista estratégica foi gerada com <span className="text-white font-bold">{count} clientes</span> encontrados.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <button
+                                    onClick={() => router.push(`/admin/crm?start_queue=true&filter=${segment}`)}
+                                    disabled={count === 0}
+                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] disabled:bg-white/5 disabled:text-slate-500 text-black font-black uppercase tracking-widest px-8 py-5 rounded-2xl transition-all shadow-lg flex items-center justify-center gap-3 active:scale-95 group"
+                                >
+                                    <span className="material-symbols-outlined group-hover:rotate-12 transition-transform">rocket_launch</span>
+                                    {count === 0 ? 'Nenhum Cliente na Fila' : 'Iniciar Fila de Disparo'}
+                                </button>
+
+                                <button
+                                    onClick={() => setIsDispatchReady(false)}
+                                    className="w-full bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest px-8 py-4 rounded-2xl transition-all border border-white/5"
+                                >
+                                    Cancelar e Voltar
+                                </button>
+                            </div>
+
+                            {count === 0 && (
+                                <p className="text-[10px] text-rose-500 font-bold uppercase tracking-widest animate-pulse">
+                                    Dica: Tente mudar o público ou preencher os dados dos clientes.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* STEP 1: DADOS BÁSICOS */}
                 <section>
