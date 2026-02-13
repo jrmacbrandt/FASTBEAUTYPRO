@@ -27,7 +27,19 @@ function NewCampaignContent() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const tenantId = user.user_metadata.tenant_id;
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('tenant_id')
+                .eq('id', user.id)
+                .single();
+
+            const tenantId = profile?.tenant_id || user.user_metadata.tenant_id;
+
+            if (!tenantId) {
+                console.error('No tenant_id found');
+                return;
+            }
+
             const { data: tenantData } = await supabase
                 .from('tenants')
                 .select('name, phone, loyalty_target')
@@ -75,8 +87,22 @@ function NewCampaignContent() {
             if (filters.min_spent > 0) activeFilters.min_spent = filters.min_spent;
             if (filters.birth_month > 0) activeFilters.birth_month = filters.birth_month;
 
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('tenant_id')
+                .eq('id', user.id)
+                .single();
+
+            const tenantId = profile?.tenant_id || user.user_metadata.tenant_id;
+
+            if (!tenantId) {
+                alert('Erro: Seu perfil não possui uma unidade vinculada.');
+                setLoading(false);
+                return;
+            }
+
             const { count } = await createPayloadCampaign(
-                user.user_metadata.tenant_id,
+                tenantId,
                 name,
                 activeFilters,
                 template
