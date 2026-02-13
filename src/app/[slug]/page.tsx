@@ -29,7 +29,8 @@ export default function ShopLandingPage() {
         date: '',
         time: '',
         clientName: '',
-        clientPhone: ''
+        clientPhone: '',
+        birthMonth: ''
     });
 
     // Data State
@@ -119,7 +120,10 @@ export default function ShopLandingPage() {
     }, [selection.date, selection.barber, tenant, appointments]);
 
     const handleConfirm = async () => {
-        if (!selection.barber || !selection.service || !selection.clientName || !tenant) return;
+        if (!selection.barber || !selection.service || !selection.clientName || !selection.clientPhone || !selection.birthMonth || !tenant) {
+            alert('Por favor, preencha nome, whatsapp e mês de aniversário.');
+            return;
+        }
 
         setLoading(true);
 
@@ -134,7 +138,8 @@ export default function ShopLandingPage() {
                     tenant_id: tenant.id,
                     name: selection.clientName,
                     phone: cleanPhone,
-                    last_visit: new Date().toISOString()
+                    last_visit: new Date().toISOString(),
+                    metadata: { birth_month: selection.birthMonth }
                 }, { onConflict: 'tenant_id,phone' })
                 .select()
                 .single();
@@ -397,6 +402,16 @@ export default function ShopLandingPage() {
                                         value={selection.clientPhone}
                                         onChange={(e) => setSelection({ ...selection, clientPhone: e.target.value })}
                                     />
+                                    <select
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic focus:border-[#f2b90d] transition-all appearance-none cursor-pointer"
+                                        value={selection.birthMonth}
+                                        onChange={(e) => setSelection({ ...selection, birthMonth: e.target.value })}
+                                    >
+                                        <option value="" disabled className="bg-zinc-900">MÊS DE ANIVERSÁRIO (OBRIGATÓRIO)</option>
+                                        {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map(m => (
+                                            <option key={m} value={m} className="bg-zinc-900">{m.toUpperCase()}</option>
+                                        ))}
+                                    </select>
                                 </div>
                                 <div className="pt-4">
                                     <VerificationBadge tenantId={tenant.id} phone={selection.clientPhone} />
@@ -405,7 +420,7 @@ export default function ShopLandingPage() {
 
                             <button
                                 onClick={handleConfirm}
-                                disabled={!selection.clientName || !selection.clientPhone}
+                                disabled={!selection.clientName || !selection.clientPhone || !selection.birthMonth}
                                 className="w-full bg-[#f2b90d] text-black font-black py-6 md:py-7 rounded-[2.5rem] uppercase italic tracking-widest text-sm md:text-lg shadow-[0_20px_40px_rgba(242,185,13,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-4 disabled:opacity-30"
                             >
                                 <span className="material-symbols-outlined text-2xl md:text-3xl">chat</span>
