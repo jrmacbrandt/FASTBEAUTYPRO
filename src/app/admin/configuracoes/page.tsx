@@ -9,6 +9,11 @@ export default function EstablishmentSettingsPage() {
     const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'hours' | 'automation'>('general');
     const [isSaving, setIsSaving] = useState(false);
     const [tenant, setTenant] = useState<any>(null);
+    const [origin, setOrigin] = useState('');
+
+    useEffect(() => {
+        setOrigin(window.location.host + '/');
+    }, []);
 
     useEffect(() => {
         fetchTenant();
@@ -135,9 +140,9 @@ export default function EstablishmentSettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Link (Slug)</label>
-                                <div className="relative">
-                                    <span className="absolute left-4 top-4 text-[#f2b90d] font-black opacity-30 text-xs">fastbeauty.pro/</span>
-                                    <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 pl-[90px] md:pl-[115px] font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.slug} onChange={e => setTenant({ ...tenant, slug: e.target.value })} />
+                                <div className="flex items-center bg-black/40 border border-white/5 rounded-2xl p-4 gap-1 focus-within:border-[#f2b90d]/50 transition-all">
+                                    <span className="text-[#f2b90d] font-black opacity-30 text-xs whitespace-nowrap">{origin}</span>
+                                    <input type="text" className="flex-1 bg-transparent border-none p-0 font-bold text-white text-sm outline-none" value={tenant.slug} onChange={e => setTenant({ ...tenant, slug: e.target.value })} />
                                 </div>
                             </div>
                             <div className="space-y-2">
