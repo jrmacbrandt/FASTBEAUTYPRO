@@ -294,17 +294,15 @@ export default function ShopLandingPage() {
 
                     {step === 3 && (
                         <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
-
-
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 QUAL O <br /><span style={{ color: theme.primary }}>MELHOR DIA?</span>
                             </h2>
-                            <input
-                                type="date"
-                                className="w-full bg-white/[0.03] border-2 border-white/5 rounded-[2.5rem] p-6 md:p-8 text-white text-xl md:text-3xl font-black italic focus:outline-none focus:border-[#f2b90d]/30 text-center uppercase"
-                                style={{ colorScheme: 'dark' }}
-                                min={new Date().toISOString().split('T')[0]}
-                                onChange={(e) => { setSelection({ ...selection, date: e.target.value }); setStep(4); }}
+                            <DateSelector
+                                onSelect={(date) => {
+                                    setSelection({ ...selection, date });
+                                    setStep(4);
+                                }}
+                                theme={theme}
                             />
                         </div>
                     )}
@@ -468,4 +466,123 @@ const VerificationBadge = ({ tenantId, phone }: { tenantId: string, phone: strin
     );
 
     return null;
+};
+
+// Custom Date Selector Component
+const DateSelector = ({ onSelect, theme }: { onSelect: (date: string) => void, theme: any }) => {
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
+    const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    const dayNames = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+
+    const getDaysInMonth = (date: Date) => {
+        const year = date.getFullYear();
+        const month = date.getMonth();
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        const startingDayOfWeek = firstDay.getDay();
+
+        const days: (number | null)[] = [];
+
+        // Add empty slots for days before the first day of the month
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            days.push(null);
+        }
+
+        // Add all days of the month
+        for (let i = 1; i <= daysInMonth; i++) {
+            days.push(i);
+        }
+
+        return days;
+    };
+
+    const handleDateClick = (day: number) => {
+        const year = currentMonth.getFullYear();
+        const month = currentMonth.getMonth();
+        const selected = new Date(year, month, day);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selected >= today) {
+            setSelectedDate(selected);
+            const formattedDate = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            onSelect(formattedDate);
+        }
+    };
+
+    const changeMonth = (delta: number) => {
+        setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + delta, 1));
+    };
+
+    const days = getDaysInMonth(currentMonth);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return (
+        <div className="w-full max-w-md mx-auto bg-white/[0.03] border-2 border-white/5 rounded-[2.5rem] p-6 md:p-8">
+            {/* Header with month/year navigation */}
+            <div className="flex items-center justify-between mb-6">
+                <button
+                    onClick={() => changeMonth(-1)}
+                    className="size-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-all group"
+                >
+                    <span className="material-symbols-outlined text-white group-hover:text-[#f2b90d]">chevron_left</span>
+                </button>
+                <h3 className="text-white text-xl md:text-2xl font-black italic uppercase">
+                    {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                </h3>
+                <button
+                    onClick={() => changeMonth(1)}
+                    className="size-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-all group"
+                >
+                    <span className="material-symbols-outlined text-white group-hover:text-[#f2b90d]">chevron_right</span>
+                </button>
+            </div>
+
+            {/* Day names */}
+            <div className="grid grid-cols-7 gap-2 mb-4">
+                {dayNames.map((day, i) => (
+                    <div key={i} className="text-center text-white/40 text-xs font-black uppercase">
+                        {day}
+                    </div>
+                ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div className="grid grid-cols-7 gap-2">
+                {days.map((day, index) => {
+                    if (day === null) {
+                        return <div key={`empty-${index}`} className="aspect-square" />;
+                    }
+
+                    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const isPast = date < today;
+                    const isSelected = selectedDate &&
+                        date.getDate() === selectedDate.getDate() &&
+                        date.getMonth() === selectedDate.getMonth() &&
+                        date.getFullYear() === selectedDate.getFullYear();
+
+                    return (
+                        <button
+                            key={day}
+                            onClick={() => !isPast && handleDateClick(day)}
+                            disabled={isPast}
+                            className={`aspect-square rounded-xl flex items-center justify-center font-black italic text-lg transition-all ${isPast
+                                    ? 'text-white/10 cursor-not-allowed'
+                                    : isSelected
+                                        ? 'bg-[#f2b90d] text-black scale-110 shadow-lg'
+                                        : 'text-white hover:bg-white/10 hover:scale-105 active:scale-95'
+                                }`}
+                            style={isSelected ? { backgroundColor: theme.primary } : {}}
+                        >
+                            {day}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
 };
