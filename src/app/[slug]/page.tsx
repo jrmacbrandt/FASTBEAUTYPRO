@@ -155,7 +155,46 @@ export default function ShopLandingPage() {
         setLoading(true);
 
         try {
-            // Formatar data em português
+            // 1. Normalize Phone
+            const cleanPhone = selection.clientPhone.replace(/\D/g, '');
+
+            // 2. CRM Capture: Upsert Client
+            const { data: clientData, error: clientError } = await supabase
+                .from('clients')
+                .upsert({
+                    tenant_id: tenant.id,
+                    name: selection.clientName,
+                    phone: cleanPhone,
+                    last_visit: new Date().toISOString(),
+                    metadata: { birth_month: selection.birthMonth }
+                }, { onConflict: 'tenant_id,phone' })
+                .select()
+                .single();
+
+            if (clientError) {
+                console.error('CRM Error:', clientError);
+                // Continue mesmo com erro no CRM
+            }
+
+            // 3. Create Appointment in DB (CRÍTICO para gestão, comissões, etc)
+            const { error: apptError } = await supabase
+                .from('appointments')
+                .insert([{
+                    tenant_id: tenant.id,
+                    client_id: clientData?.id,
+                    customer_name: selection.clientName,
+                    service_id: selection.service.id,
+                    barber_id: selection.barber.id,
+                    status: 'scheduled', // Usando 'scheduled' ao invés de 'pending'
+                    scheduled_at: `${selection.date}T${selection.time}:00`
+                }]);
+
+            if (apptError) {
+                console.error('Appointment Error:', apptError);
+                throw new Error('Erro ao salvar agendamento: ' + apptError.message);
+            }
+
+            // 4. Formatar data em português para WhatsApp
             const [year, month, day] = selection.date.split('-');
             const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
             const formattedDate = dateObj.toLocaleDateString('pt-BR', {
@@ -165,7 +204,7 @@ export default function ShopLandingPage() {
                 day: 'numeric'
             });
 
-            // Montar mensagem formatada
+            // 5. Montar mensagem formatada para WhatsApp
             const message = `🗓️ *SOLICITAÇÃO DE AGENDAMENTO*
 
 Olá, ${selection.barber.full_name}! 👋
@@ -182,18 +221,16 @@ Gostaria de agendar o seguinte serviço:
 
 Aguardo sua confirmação! 😊`;
 
-            // Pegar telefone do profissional
+            // 6. Abrir WhatsApp do profissional
             const cleanBarberPhone = selection.barber.phone?.replace(/\D/g, '') || '';
             const phoneNumber = cleanBarberPhone.startsWith('55') ? cleanBarberPhone : `55${cleanBarberPhone}`;
-
-            // Abrir WhatsApp
             const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
 
-            console.log('📱 Opening WhatsApp:', { phoneNumber, message });
+            console.log('✅ Agendamento salvo! Abrindo WhatsApp:', { phoneNumber });
 
             window.open(whatsappLink, '_blank');
 
-            // Resetar formulário após 2 segundos
+            // 7. Resetar formulário após 2 segundos
             setTimeout(() => {
                 setStep(1);
                 setSelection({
@@ -208,8 +245,8 @@ Aguardo sua confirmação! 😊`;
             }, 2000);
 
         } catch (err: any) {
-            console.error('Erro ao abrir WhatsApp:', err);
-            alert('Erro ao abrir WhatsApp: ' + err.message);
+            console.error('Erro ao confirmar agendamento:', err);
+            alert('Erro ao confirmar agendamento: ' + err.message);
         } finally {
             setLoading(false);
         }
