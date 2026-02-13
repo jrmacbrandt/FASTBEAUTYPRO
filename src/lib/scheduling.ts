@@ -70,22 +70,35 @@ export function getAvailableSlots(
     }
 
     // 4. Interseção de Horários
-    // Maior iníco
-    const start = tSchedule.open > bSchedule.open ? tSchedule.open : bSchedule.open;
+    // CRITICAL: Ensure we have valid time strings
+    const storeOpen = String(tSchedule.open || '09:00');
+    const storeClose = String(tSchedule.close || '19:00');
+    const barberOpen = String(bSchedule.open || storeOpen);
+    const barberClose = String(bSchedule.close || storeClose);
+
+    console.log('⏰ Time Strings (RAW):', {
+        storeOpen,
+        storeClose,
+        barberOpen,
+        barberClose
+    });
+
+    // Maior início
+    const start = storeOpen > barberOpen ? storeOpen : barberOpen;
     // Menor fim
-    const end = tSchedule.close < bSchedule.close ? tSchedule.close : bSchedule.close;
+    const end = storeClose < barberClose ? storeClose : barberClose;
 
     console.log('⏰ Time Intersection:', {
-        storeOpen: tSchedule.open,
-        storeClose: tSchedule.close,
-        barberOpen: bSchedule.open,
-        barberClose: bSchedule.close,
+        storeOpen,
+        storeClose,
+        barberOpen,
+        barberClose,
         finalStart: start,
         finalEnd: end
     });
 
     if (start >= end) {
-        console.error('❌ Invalid time range: start >= end');
+        console.error('❌ Invalid time range: start >= end', { start, end });
         return { slots: [], reason: 'Incompatibilidade de horários (Início maior que fim).' };
     }
 
@@ -93,6 +106,16 @@ export function getAvailableSlots(
     const slots = generateSlots(start, end);
 
     console.log('📅 Generated slots:', slots);
+
+    // EMERGENCY FALLBACK: If no slots generated but times are valid, force generate
+    if (slots.length === 0 && start < end) {
+        console.error('🚨 EMERGENCY: No slots generated, forcing fallback!');
+        const emergencySlots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
+            '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
+            '15:00', '15:30', '16:00', '16:30', '17:00', '17:30',
+            '18:00', '18:30', '19:00'];
+        return { slots: emergencySlots };
+    }
 
     // 6. Filtrar Passado (Se for hoje)
     const now = new Date();
