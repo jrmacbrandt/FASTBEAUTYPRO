@@ -96,14 +96,35 @@ export default function ShopLandingPage() {
     }, [tenant]);
 
     const availableTimes = useMemo(() => {
-        if (!selection.date || !selection.barber || !tenant) return [];
+        console.log('🎯 [AVAILABLE TIMES] Computing...', {
+            hasDate: !!selection.date,
+            hasBarber: !!selection.barber,
+            hasTenant: !!tenant,
+            date: selection.date,
+            barberName: selection.barber?.full_name,
+            tenantName: tenant?.name
+        });
+
+        if (!selection.date || !selection.barber || !tenant) {
+            console.warn('⚠️ Missing required data for slot calculation');
+            return [];
+        }
+
+        console.log('📋 Input data:', {
+            date: selection.date,
+            tenantBusinessHours: tenant.business_hours,
+            barberWorkHours: selection.barber.work_hours,
+            appointmentsCount: appointments.length
+        });
 
         // 1. Get Logical Slots (Store + Barber Rules)
-        const { slots } = getAvailableSlots(
+        const { slots, reason } = getAvailableSlots(
             selection.date,
             tenant.business_hours || null,
             selection.barber.work_hours || null
         );
+
+        console.log('🎰 Slots from getAvailableSlots:', { slots, reason });
 
         // 2. Filter Occupied Appointments (simple string match)
         const occupied = appointments.map(a => {
@@ -114,8 +135,14 @@ export default function ShopLandingPage() {
             return '';
         });
 
+        console.log('🚫 Occupied slots:', occupied);
+
         // 3. Remove occupied slots strictly
-        return slots.filter(t => !occupied.includes(t));
+        const finalSlots = slots.filter(t => !occupied.includes(t));
+
+        console.log('✅ Final available slots:', finalSlots);
+
+        return finalSlots;
 
     }, [selection.date, selection.barber, tenant, appointments]);
 
@@ -243,8 +270,8 @@ export default function ShopLandingPage() {
                             <div key={s.num} className="flex flex-col items-center gap-2 relative">
                                 <div
                                     className={`size-10 md:size-12 rounded-full flex items-center justify-center font-black text-sm md:text-base transition-all duration-500 ${step >= s.num
-                                            ? 'scale-110 shadow-lg'
-                                            : 'scale-100'
+                                        ? 'scale-110 shadow-lg'
+                                        : 'scale-100'
                                         }`}
                                     style={{
                                         backgroundColor: step >= s.num ? theme.primary : 'rgba(255,255,255,0.05)',
