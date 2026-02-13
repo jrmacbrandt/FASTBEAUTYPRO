@@ -204,6 +204,7 @@ export default function DynamicBookingPage() {
                     tenant_id: tenant.id,
                     client_id: clientData?.id,
                     customer_name: selection.name,
+                    customer_whatsapp: cleanPhone,
                     service_id: selection.service.id,
                     barber_id: selection.barber.id,
                     status: 'scheduled',
