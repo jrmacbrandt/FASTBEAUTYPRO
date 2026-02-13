@@ -155,50 +155,61 @@ export default function ShopLandingPage() {
         setLoading(true);
 
         try {
-            // 1. Normalize Phone (assuming clientPhone is collected or prompted)
-            const cleanPhone = selection.clientPhone.replace(/\D/g, '');
+            // Formatar data em português
+            const [year, month, day] = selection.date.split('-');
+            const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+            const formattedDate = dateObj.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
 
-            // 2. CRM Capture: Upsert Client
-            const { data: clientData, error: clientError } = await supabase
-                .from('clients')
-                .upsert({
-                    tenant_id: tenant.id,
-                    name: selection.clientName,
-                    phone: cleanPhone,
-                    last_visit: new Date().toISOString(),
-                    metadata: { birth_month: selection.birthMonth }
-                }, { onConflict: 'tenant_id,phone' })
-                .select()
-                .single();
+            // Montar mensagem formatada
+            const message = `🗓️ *SOLICITAÇÃO DE AGENDAMENTO*
 
-            if (clientError) console.error('CRM Error:', clientError);
+Olá, ${selection.barber.full_name}! 👋
 
-            // 3. Create Appointment in DB
-            const { error: apptError } = await supabase
-                .from('appointments')
-                .insert([{
-                    tenant_id: tenant.id,
-                    client_id: clientData?.id,
-                    customer_name: selection.clientName,
-                    service_id: selection.service.id,
-                    barber_id: selection.barber.id,
-                    status: 'pending',
-                    scheduled_at: `${selection.date}T${selection.time}:00`
-                }]);
+Gostaria de agendar o seguinte serviço:
 
-            if (apptError) throw apptError;
+📋 *Serviço:* ${selection.service.name}
+📅 *Data:* ${formattedDate}
+🕐 *Horário:* ${selection.time}
 
-            // 4. WhatsApp Redirect
-            const phoneNumber = `55${selection.barber.phone?.replace(/\D/g, '') || (tenant.phone?.replace(/\D/g, '') || '')}`;
-            const message = `Olá ${selection.barber.full_name}! Sou o ${selection.clientName}. Gostaria de confirmar meu agendamento de ${selection.service.name} no dia ${new Date(selection.date).toLocaleDateString('pt-BR')} às ${selection.time}.`;
+👤 *Meu nome:* ${selection.clientName}
+📱 *WhatsApp:* ${selection.clientPhone}
+🎂 *Mês de aniversário:* ${selection.birthMonth}
 
-            const finalLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-            window.open(finalLink, '_blank');
+Aguardo sua confirmação! 😊`;
 
-            setStep(1); // Reset or show success
-            alert('Agendamento realizado com sucesso! Enviando para o WhatsApp...');
+            // Pegar telefone do profissional
+            const cleanBarberPhone = selection.barber.phone?.replace(/\D/g, '') || '';
+            const phoneNumber = cleanBarberPhone.startsWith('55') ? cleanBarberPhone : `55${cleanBarberPhone}`;
+
+            // Abrir WhatsApp
+            const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+
+            console.log('📱 Opening WhatsApp:', { phoneNumber, message });
+
+            window.open(whatsappLink, '_blank');
+
+            // Resetar formulário após 2 segundos
+            setTimeout(() => {
+                setStep(1);
+                setSelection({
+                    service: null,
+                    barber: null,
+                    date: '',
+                    time: '',
+                    clientName: '',
+                    clientPhone: '',
+                    birthMonth: ''
+                });
+            }, 2000);
+
         } catch (err: any) {
-            alert('Erro ao confirmar: ' + err.message);
+            console.error('Erro ao abrir WhatsApp:', err);
+            alert('Erro ao abrir WhatsApp: ' + err.message);
         } finally {
             setLoading(false);
         }
