@@ -17,19 +17,34 @@ export function getAvailableSlots(
     barberHours: BusinessHours | null
 ): { slots: string[], reason?: string } {
 
-    const date = new Date(dateStr + 'T00:00:00');
+    // Fix timezone issue - parse date correctly
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
     const dayKey = DAY_MAP[date.getDay()];
+
+    console.log('🔍 [SCHEDULING DEBUG]', {
+        dateStr,
+        parsedDate: date.toISOString(),
+        dayOfWeek: date.getDay(),
+        dayKey,
+        tenantHours,
+        barberHours
+    });
 
     // 1. Validação de Estrutura
     if (!tenantHours || !tenantHours[dayKey]) {
+        console.warn('⚠️ Tenant hours not configured, using fallback 09:00-18:00');
         // Fallback se não houver configuração: 09:00 as 18:00
         return { slots: generateSlots('09:00', '18:00') };
     }
 
     const tSchedule = tenantHours[dayKey];
 
+    console.log('🏪 Tenant Schedule:', { dayKey, tSchedule });
+
     // 2. Regra da Loja (Prioridade Máxima)
     if (!tSchedule.isOpen) {
+        console.log('❌ Store is CLOSED on', dayKey);
         return { slots: [], reason: 'A loja está fechada neste dia.' };
     }
 
@@ -42,11 +57,15 @@ export function getAvailableSlots(
     // Se o profissional não configurou, assumimos que ele segue a loja? Ou que não trabalha?
     // Geralmente, se não configurou, segue a loja. Se configurou, respeita a interseção.
     if (!bSchedule) {
+        console.log('👤 Barber has no specific hours, using store hours');
         // Assume horário da loja se não tiver override
         bSchedule = tSchedule;
     }
 
+    console.log('👤 Barber Schedule:', { dayKey, bSchedule });
+
     if (!bSchedule.isOpen) {
+        console.log('❌ Barber is NOT WORKING on', dayKey);
         return { slots: [], reason: 'O profissional não atende neste dia.' };
     }
 
@@ -56,12 +75,24 @@ export function getAvailableSlots(
     // Menor fim
     const end = tSchedule.close < bSchedule.close ? tSchedule.close : bSchedule.close;
 
+    console.log('⏰ Time Intersection:', {
+        storeOpen: tSchedule.open,
+        storeClose: tSchedule.close,
+        barberOpen: bSchedule.open,
+        barberClose: bSchedule.close,
+        finalStart: start,
+        finalEnd: end
+    });
+
     if (start >= end) {
+        console.error('❌ Invalid time range: start >= end');
         return { slots: [], reason: 'Incompatibilidade de horários (Início maior que fim).' };
     }
 
     // 5. Gerar Slots
     const slots = generateSlots(start, end);
+
+    console.log('📅 Generated slots:', slots);
 
     // 6. Filtrar Passado (Se for hoje)
     const now = new Date();
@@ -72,15 +103,21 @@ export function getAvailableSlots(
         const currentMin = now.getMinutes();
         const currentTimeVal = currentHour * 60 + currentMin;
 
-        return {
-            slots: slots.filter(time => {
-                const [h, m] = time.split(':').map(Number);
-                const timeVal = h * 60 + m;
-                // Margem de segurança de 30min? Ou imediato?
-                // Vamos dar 15 minutos de antecedência mínima
-                return timeVal > currentTimeVal + 15;
-            })
-        };
+        const filteredSlots = slots.filter(time => {
+            const [h, m] = time.split(':').map(Number);
+            const timeVal = h * 60 + m;
+            // Margem de segurança de 30min? Ou imediato?
+            // Vamos dar 15 minutos de antecedência mínima
+            return timeVal > currentTimeVal + 15;
+        });
+
+        console.log('🕐 Today - filtered past slots:', {
+            currentTime: `${currentHour}:${currentMin}`,
+            totalSlots: slots.length,
+            availableSlots: filteredSlots.length
+        });
+
+        return { slots: filteredSlots };
     }
 
     return { slots };
