@@ -202,7 +202,6 @@ export default function DynamicBookingPage() {
                     tenant_id: tenant.id,
                     client_id: clientData?.id,
                     customer_name: selection.name,
-                    client_phone: cleanPhone,
                     service_id: selection.service.id,
                     barber_id: selection.barber.id,
                     status: 'pending',
@@ -303,11 +302,12 @@ export default function DynamicBookingPage() {
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Com <br /> <span style={{ color: primaryColor }}>quem?</span></h2>
                                 <button
                                     onClick={(e) => { e.preventDefault(); prevStep(); }}
-                                    className="size-10 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10 z-[100] cursor-pointer"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                                    className="size-12 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/20 z-[999] cursor-pointer shadow-lg border border-white/10"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
                                     type="button"
+                                    aria-label="Voltar"
                                 >
-                                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                                    <span className="material-symbols-outlined text-[24px]">arrow_back</span>
                                 </button>
                             </div>
                             <div className="grid gap-3 md:gap-4">
@@ -338,11 +338,12 @@ export default function DynamicBookingPage() {
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quando?</h2>
                                 <button
                                     onClick={(e) => { e.preventDefault(); prevStep(); }}
-                                    className="size-10 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10 z-[100] cursor-pointer"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                                    className="size-12 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/20 z-[999] cursor-pointer shadow-lg border border-white/10"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
                                     type="button"
+                                    aria-label="Voltar"
                                 >
-                                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                                    <span className="material-symbols-outlined text-[24px]">arrow_back</span>
                                 </button>
                             </div>
 
@@ -403,11 +404,12 @@ export default function DynamicBookingPage() {
                                 <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black italic uppercase tracking-tight leading-[0.9]">Quase <br /> <span style={{ color: primaryColor }}>lá!</span></h2>
                                 <button
                                     onClick={(e) => { e.preventDefault(); prevStep(); }}
-                                    className="size-10 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/10 z-[100] cursor-pointer"
-                                    style={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
+                                    className="size-12 rounded-full flex items-center justify-center transition-all active:scale-95 group hover:bg-white/20 z-[999] cursor-pointer shadow-lg border border-white/10"
+                                    style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
                                     type="button"
+                                    aria-label="Voltar"
                                 >
-                                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
+                                    <span className="material-symbols-outlined text-[24px]">arrow_back</span>
                                 </button>
                             </div>
                             <div className="space-y-4 bg-white/[0.03] backdrop-blur-3xl p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 shadow-2xl">

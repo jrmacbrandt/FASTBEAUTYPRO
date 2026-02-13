@@ -153,7 +153,6 @@ export default function ShopLandingPage() {
                     tenant_id: tenant.id,
                     client_id: clientData?.id,
                     customer_name: selection.clientName,
-                    client_phone: cleanPhone,
                     service_id: selection.service.id,
                     barber_id: selection.barber.id,
                     status: 'pending',
@@ -257,12 +256,12 @@ export default function ShopLandingPage() {
                         <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
                             <button
                                 onClick={(e) => { e.preventDefault(); setStep(1); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-12 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[100] cursor-pointer shadow-xl border border-white/10 active:scale-90"
+                                className="absolute -left-2 -top-16 md:-top-24 size-14 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[999] cursor-pointer shadow-2xl border border-white/20 active:scale-90"
                                 style={{ color: '#ffffff' }}
                                 type="button"
                                 aria-label="Voltar"
                             >
-                                <span className="material-symbols-outlined text-[24px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
+                                <span className="material-symbols-outlined text-[28px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
                             </button>
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 COM <span style={{ color: theme.primary }}>QUEM?</span>
@@ -296,12 +295,12 @@ export default function ShopLandingPage() {
                         <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
                             <button
                                 onClick={(e) => { e.preventDefault(); setStep(2); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-12 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[100] cursor-pointer shadow-xl border border-white/10 active:scale-90"
+                                className="absolute -left-2 -top-16 md:-top-24 size-14 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[999] cursor-pointer shadow-2xl border border-white/20 active:scale-90"
                                 style={{ color: '#ffffff' }}
                                 type="button"
                                 aria-label="Voltar"
                             >
-                                <span className="material-symbols-outlined text-[24px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
+                                <span className="material-symbols-outlined text-[28px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
                             </button>
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 QUAL O <br /><span style={{ color: theme.primary }}>MELHOR DIA?</span>
@@ -320,12 +319,12 @@ export default function ShopLandingPage() {
                         <div className="animate-in fade-in slide-in-from-right-8 duration-700 relative">
                             <button
                                 onClick={(e) => { e.preventDefault(); setStep(3); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-12 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[100] cursor-pointer shadow-xl border border-white/10 active:scale-90"
+                                className="absolute -left-2 -top-16 md:-top-24 size-14 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[999] cursor-pointer shadow-2xl border border-white/20 active:scale-90"
                                 style={{ color: '#ffffff' }}
                                 type="button"
                                 aria-label="Voltar"
                             >
-                                <span className="material-symbols-outlined text-[24px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
+                                <span className="material-symbols-outlined text-[28px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
                             </button>
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 ESCOLHA O <span style={{ color: theme.primary }}>HORÁRIO</span>
@@ -349,12 +348,12 @@ export default function ShopLandingPage() {
                         <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 max-w-lg mx-auto relative">
                             <button
                                 onClick={(e) => { e.preventDefault(); setStep(4); }}
-                                className="absolute left-0 -top-16 md:-top-24 size-12 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[100] cursor-pointer shadow-xl border border-white/10 active:scale-90"
+                                className="absolute -left-2 -top-16 md:-top-24 size-14 flex items-center justify-center rounded-full hover:bg-white/20 transition-all group bg-white/10 backdrop-blur-xl z-[999] cursor-pointer shadow-2xl border border-white/20 active:scale-90"
                                 style={{ color: '#ffffff' }}
                                 type="button"
                                 aria-label="Voltar"
                             >
-                                <span className="material-symbols-outlined text-[24px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
+                                <span className="material-symbols-outlined text-[28px] group-hover:-translate-x-1 transition-transform pointer-events-none">arrow_back</span>
                             </button>
                             <div className="text-center mb-12">
                                 <div className="inline-flex size-20 rounded-[2rem] bg-[#f2b90d]/10 items-center justify-center text-[#f2b90d] mb-6 border border-[#f2b90d]/20 ring-4 ring-[#f2b90d]/5">
