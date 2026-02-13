@@ -106,8 +106,7 @@ export function getAvailableSlots(
         const filteredSlots = slots.filter(time => {
             const [h, m] = time.split(':').map(Number);
             const timeVal = h * 60 + m;
-            // Margem de segurança de 30min? Ou imediato?
-            // Vamos dar 15 minutos de antecedência mínima
+            // Margem de segurança de 15 minutos
             return timeVal > currentTimeVal + 15;
         });
 
@@ -128,26 +127,35 @@ function generateSlots(start: string, end: string): string[] {
     const [startH, startM] = start.split(':').map(Number);
     const [endH, endM] = end.split(':').map(Number);
 
+    console.log('🔧 generateSlots called:', { start, end, startH, startM, endH, endM });
+
     let currentH = startH;
     let currentM = startM;
+
+    // Normalize starting minute to nearest 30-minute interval
+    // If start is 14:30, keep it. If it's 14:15, round to 14:30
+    if (currentM > 0 && currentM < 30) {
+        currentM = 30;
+    } else if (currentM > 30) {
+        currentH++;
+        currentM = 0;
+    }
+
+    console.log('🔧 Normalized start:', { currentH, currentM });
 
     while (currentH < endH || (currentH === endH && currentM < endM)) {
         const timeStr = `${currentH.toString().padStart(2, '0')}:${currentM.toString().padStart(2, '0')}`;
         slots.push(timeStr);
 
-        // Incremento de 30 minutos (Regra de Negócio padrão para salões)
-        // O usuário pediu "10:00, 11:00" no código original, mas o admin config mostra 30min steps.
-        // Vou usar 30 min para maior flexibilidade, ou 1h se preferir.
-        // O código original tinha steps de 1h. Vou manter 1h p/ ser conservador ou 30min?
-        // Admin config usa 30min. Vou usar 1h para não poluir demais a tela mobile, ou 30min se couber.
-        // Melhor: 1h por enquanto para manter o visual limpo, mas a lógica suporta 30.
-        // Update: O usuário quer "ASSERTIVIDADE". 30min é mais assertivo.
+        // Incremento de 30 minutos
         currentM += 30;
         if (currentM >= 60) {
             currentH++;
             currentM = 0;
         }
     }
+
+    console.log('🔧 Generated slots:', slots);
 
     return slots;
 }
