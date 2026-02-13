@@ -83,22 +83,39 @@ export function getAvailableSlots(
         barberClose
     });
 
-    // Maior início
-    const start = storeOpen > barberOpen ? storeOpen : barberOpen;
-    // Menor fim
-    const end = storeClose < barberClose ? storeClose : barberClose;
+    // Convert to minutes for proper numeric comparison
+    const toMinutes = (time: string) => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+    };
+
+    const storeOpenMin = toMinutes(storeOpen);
+    const storeCloseMin = toMinutes(storeClose);
+    const barberOpenMin = toMinutes(barberOpen);
+    const barberCloseMin = toMinutes(barberClose);
+
+    // Maior início (numeric comparison)
+    const startMin = Math.max(storeOpenMin, barberOpenMin);
+    // Menor fim (numeric comparison)
+    const endMin = Math.min(storeCloseMin, barberCloseMin);
+
+    // Convert back to time strings
+    const start = `${Math.floor(startMin / 60).toString().padStart(2, '0')}:${(startMin % 60).toString().padStart(2, '0')}`;
+    const end = `${Math.floor(endMin / 60).toString().padStart(2, '0')}:${(endMin % 60).toString().padStart(2, '0')}`;
 
     console.log('⏰ Time Intersection:', {
         storeOpen,
         storeClose,
         barberOpen,
         barberClose,
+        startMin,
+        endMin,
         finalStart: start,
         finalEnd: end
     });
 
-    if (start >= end) {
-        console.error('❌ Invalid time range: start >= end', { start, end });
+    if (startMin >= endMin) {
+        console.error('❌ Invalid time range: start >= end', { start, end, startMin, endMin });
         return { slots: [], reason: 'Incompatibilidade de horários (Início maior que fim).' };
     }
 
