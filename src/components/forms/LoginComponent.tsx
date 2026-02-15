@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { processImage } from '@/lib/image-processing';
 import { maskCPF, maskPhone } from '@/lib/masks';
@@ -47,10 +46,10 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     const terms = {
         title: view === 'register'
             ? 'NOVO ESTABELECIMENTO'
-            : (type === 'master' ? 'ACESSO MASTER' : 'PLATAFORMA INTEGRADA'),
+            : (type === 'master' ? 'ACESSO MASTER v4.0' : 'LOGIN INTEGRADO'),
         subtitle: view === 'register'
             ? 'Crie sua conta e gerencie seu negócio'
-            : (type === 'master' ? 'Acesso restrito para administração global' : 'Identificação automática de perfil'),
+            : (type === 'master' ? 'Acesso restrito para administração global' : 'Identificação automática (Administrador / Profissional)'),
         idLabel: 'E-MAIL',
         passLabel: 'SENHA',
         footer: 'FASTBEAUTY PRO'
@@ -302,7 +301,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                         <span className="material-symbols-outlined text-2xl font-bold">{view === 'register' ? 'store' : (type === 'master' ? 'security' : 'lock_person')}</span>
                     </div>
                     <h1 className="text-xl md:text-2xl font-black mb-1 italic tracking-tight uppercase text-center leading-none" style={{ color: colors.text }}>{terms.title}</h1>
-                    <p className="opacity-60 text-[10px] text-center" style={{ color: colors.textMuted }}>{terms.subtitle}</p>
+                    <p className="opacity-80 text-sm font-bold text-center" style={{ color: colors.textMuted }}>{terms.subtitle}</p>
                 </div>
 
                 {registerSuccess ? (
@@ -402,15 +401,6 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                             </button>
                         )}
                     </form>
-                )}
-
-                { /* Link adicional oculto para Master no rodapé, apenas para manter a acesso existente caso necessário */}
-                {type !== 'master' && (
-                    <div className="mt-8 text-center border-t pt-4" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                        <Link href="/login-master" className="text-[9px] font-black uppercase tracking-[0.2em] opacity-30 hover:opacity-100 transition-opacity italic" style={{ color: colors.textMuted }}>
-                            Acessar Painel Master
-                        </Link>
-                    </div>
                 )}
             </div>
         </div>
