@@ -71,16 +71,11 @@ export function useProfile() {
             let finalProfile = { ...data };
 
             // 🛡️ Master Impersonation Logic (V12.0)
-            // IMPORTANTE: Só ativar modo suporte se estivermos em rotas de admin (não admin-master)
             if (data.role === 'master' || data.role === 'admin_master' || data.email === 'jrmacbrandt@gmail.com') {
                 const cookies = document.cookie.split('; ');
                 const supportId = cookies.find(row => row.trim().startsWith('support_tenant_id='))?.split('=')[1];
 
-                // Só aplicar impersonation se NÃO estivermos no painel Master
-                const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
-                const isInMasterPanel = currentPath.includes('/admin-master');
-
-                if (supportId && !isInMasterPanel) {
+                if (supportId) {
                     console.log('🛡️ [useProfile] MODO SUPORTE ATIVO - Tenant:', supportId);
                     const { data: impTenant, error: impError } = await supabase
                         .from('tenants')
@@ -97,8 +92,6 @@ export function useProfile() {
                         finalProfile.full_name = `MODO SUPORTE: ${impTenant.name || 'Unidade'}`;
                         finalProfile.role = 'owner';
                     }
-                } else if (isInMasterPanel && supportId) {
-                    console.log('🔓 [useProfile] No painel Master - ignorando cookie de suporte');
                 }
             }
 
