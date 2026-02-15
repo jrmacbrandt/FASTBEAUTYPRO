@@ -186,7 +186,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                         <p className="text-[11px] font-black truncate" style={{ color: theme.text }}>{user?.full_name || 'Membro FastBeauty'}</p>
                     </div>
 
-                    {/* STATUS ASSINATURA - VISÍVEL APENAS PARA DONOS */}
+                    {/* STATUS ASSINATURA - VISÍVEL APENAS PARA DONOS (NÃO MASTERS) */}
                     {user?.tenant && user?.role === 'owner' && (
                         <div className="mb-4 px-3 py-3 rounded-xl border border-dashed border-white/20 bg-white/5 opacity-80 hover:opacity-100 transition-opacity">
                             <div className="flex justify-between items-center mb-2">
