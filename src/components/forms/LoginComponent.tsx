@@ -119,17 +119,22 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 if (profile.tenant_id) {
                     const { data: tenantData } = await supabase
                         .from('tenants')
-                        .select('has_paid')
+                        .select('has_paid, status')
                         .eq('id', profile.tenant_id)
                         .maybeSingle();
 
-                    if (tenantData?.has_paid === false) {
+                    // AUDIT CHECK: Requires Active/Trialing status AND Payment confirmed
+                    const isActiveStatus = tenantData?.status === 'active' || tenantData?.status === 'trialing';
+                    const isPaid = tenantData?.has_paid !== false;
+
+                    if (!isPaid || !isActiveStatus) {
+                        console.warn(`[Login] Access Blocked for Owner. Status: ${tenantData?.status}, Paid: ${isPaid}`);
                         router.push('/pagamento-pendente');
                     } else {
                         router.push('/admin');
                     }
                 } else {
-                    router.push('/admin'); // Should not happen usually
+                    router.push('/admin'); // Fallback
                 }
                 return;
             }
