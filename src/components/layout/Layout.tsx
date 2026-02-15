@@ -45,9 +45,25 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     React.useEffect(() => {
         if (profile) {
             setUser(profile);
-            setIsMaintenance(profile.tenant?.maintenance_mode === true);
+            const maintenanceActive = profile.tenant?.maintenance_mode === true;
+            setIsMaintenance(maintenanceActive);
+
+            // 🛡️ CLIENT-SIDE GUARD (Segurança Redundante)
+            // Se o middleware falhar por cache, o cliente garante a expulsão.
+            if (maintenanceActive) {
+                // Verificar se é Master ou se estamos em impersonation (Master com cookie)
+                const isMasterUser = profile.email === 'jrmacbrandt@gmail.com' || profile.role === 'master';
+                const hasSupportCookie = document.cookie.includes('support_tenant_id=');
+
+                // Se NÃO for Master real e NÃO tiver cookie de suporte, expulsa.
+                // O dono real (Simone) não tem o cookie support_tenant_id e não é master.
+                if (!isMasterUser && !hasSupportCookie && !pathname.includes('/manutencao')) {
+                    console.warn('⛔ BLOCK: Manutenção detectada pelo cliente. Redirecionando...');
+                    window.location.href = '/manutencao';
+                }
+            }
         }
-    }, [profile]);
+    }, [profile, pathname]);
 
     const handleStopSupport = async () => {
         // Obter ID do suporte atual
