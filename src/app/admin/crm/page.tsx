@@ -47,6 +47,8 @@ function CRMContent() {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [campaignDetailsItems, setCampaignDetailsItems] = useState<any[]>([]);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [isDeletingCampaign, setIsDeletingCampaign] = useState<string | null>(null);
+    const [isClearingHistory, setIsClearingHistory] = useState(false);
 
     const searchParams = useSearchParams();
 
@@ -303,6 +305,59 @@ function CRMContent() {
             console.error('Error fetching campaign items:', error);
         } finally {
             setLoadingDetails(false);
+        }
+    };
+
+    const handleDeleteCampaign = async (id: string, name: string) => {
+        if (!confirm(`Deseja realmente excluir a campanha "${name}"? Esta ação removerá permanentemente todos os registros de envios associados.`)) return;
+
+        setIsDeletingCampaign(id);
+        try {
+            // Primeiro removemos os itens (garante limpeza mesmo sem cascade configurado no banco)
+            await supabase.from('campaign_items').delete().eq('campaign_id', id);
+
+            // Depois removemos a campanha
+            const { error } = await supabase.from('campaigns').delete().eq('id', id);
+
+            if (error) throw error;
+
+            setCampaigns(prev => prev.filter(c => c.id !== id));
+        } catch (err: any) {
+            console.error('Delete campaign failed:', err);
+            alert('Erro ao excluir: ' + err.message);
+        } finally {
+            setIsDeletingCampaign(null);
+        }
+    };
+
+    const handleClearHistory = async () => {
+        if (!tenant) return;
+        if (!confirm('🚨 ATENÇÃO: Deseja realmente LIMPAR TODO O HISTÓRICO? Esta ação é irreversível e excluirá todos os registros de campanhas e envios manuais de sua unidade.')) return;
+
+        setIsClearingHistory(true);
+        try {
+            // Buscamos os IDs das campanhas do tenant para limpar os itens
+            const { data: campaignIds } = await supabase
+                .from('campaigns')
+                .select('id')
+                .eq('tenant_id', tenant.id);
+
+            if (campaignIds && campaignIds.length > 0) {
+                const ids = campaignIds.map(c => c.id);
+                // Limpa itens órfãos se não houver cascade
+                await supabase.from('campaign_items').delete().in('campaign_id', ids);
+                // Limpa as campanhas
+                const { error } = await supabase.from('campaigns').delete().eq('tenant_id', tenant.id);
+                if (error) throw error;
+            }
+
+            setCampaigns([]);
+            alert('Histórico esvaziado com sucesso.');
+        } catch (err: any) {
+            console.error('Clear history failed:', err);
+            alert('Erro ao limpar histórico: ' + err.message);
+        } finally {
+            setIsClearingHistory(false);
         }
     };
 
@@ -739,6 +794,16 @@ function CRMContent() {
                         <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Acompanhamento de disparos e engajamento</p>
                     </div>
                     <div className="flex items-center gap-4">
+                        {campaigns.length > 0 && (
+                            <button
+                                onClick={handleClearHistory}
+                                disabled={isClearingHistory}
+                                className="bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white text-[8px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all border border-rose-500/20 flex items-center gap-2 group"
+                            >
+                                <span className="material-symbols-outlined text-[14px] group-hover:rotate-12 transition-transform">{isClearingHistory ? 'sync' : 'delete_sweep'}</span>
+                                {isClearingHistory ? 'LIMPANDO...' : 'LIMPAR TUDO'}
+                            </button>
+                        )}
                         <span className="material-symbols-outlined text-slate-500">history</span>
                     </div>
                 </div>
@@ -791,12 +856,24 @@ function CRMContent() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 rounded-r-2xl border-y border-r border-white/5 text-right">
-                                            <button
-                                                onClick={() => openCampaignDetails(campaign)}
-                                                className="bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all border border-white/5"
-                                            >
-                                                Ver Detalhes
-                                            </button>
+                                            <div className="flex items-center justify-end gap-2">
+                                                <button
+                                                    onClick={() => openCampaignDetails(campaign)}
+                                                    className="bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all border border-white/5 whitespace-nowrap"
+                                                >
+                                                    Ver Detalhes
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteCampaign(campaign.id, campaign.name)}
+                                                    disabled={isDeletingCampaign === campaign.id}
+                                                    className="size-8 rounded-xl bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white transition-all flex items-center justify-center shrink-0 border border-rose-500/20 active:scale-90"
+                                                    title="Excluir Campanha"
+                                                >
+                                                    <span className="material-symbols-outlined text-[16px]">
+                                                        {isDeletingCampaign === campaign.id ? 'sync' : 'delete'}
+                                                    </span>
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
