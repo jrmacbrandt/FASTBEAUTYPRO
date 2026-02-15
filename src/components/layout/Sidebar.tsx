@@ -46,26 +46,6 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
         sessionStorage.setItem('elite_sidebar_scroll', String(e.currentTarget.scrollTop));
     };
 
-    const [pendingCount, setPendingCount] = React.useState(0);
-
-    const fetchPending = async () => {
-        if (!user?.tenant_id) return;
-
-        const { count } = await supabase
-            .from('profiles')
-            .select('*', { count: 'exact', head: true })
-            .eq('tenant_id', user.tenant_id)
-            .eq('status', 'pending');
-
-        setPendingCount(count || 0);
-    };
-
-    React.useEffect(() => {
-        if (user?.tenant_id) {
-            fetchPending();
-        }
-    }, [user?.tenant_id]);
-
     const handleLogout = async () => {
         await supabase.auth.signOut();
         localStorage.removeItem('elite_user');
@@ -93,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/admin/agenda' },
             { label: 'Comissões', icon: 'payments', path: '/admin/comissoes' },
-            { label: 'Equipe', icon: 'group', path: '/admin/equipe', badge: pendingCount },
+            { label: 'Equipe', icon: 'group', path: '/admin/equipe' }, // Badge removed
 
             { label: 'Mensagem', icon: 'chat_bubble', path: '/admin/mensagens' },
             { label: 'Serviços', icon: 'content_cut', path: '/admin/servicos' },
@@ -109,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'Histórico', icon: 'history', path: '/profissional/historico' },
             { label: 'Configuração', icon: 'settings', path: '/profissional/configuracao' },
         ];
-    }, [pathname, pendingCount]);
+    }, [pathname]);
 
     const isSalon = businessType === 'salon';
 
