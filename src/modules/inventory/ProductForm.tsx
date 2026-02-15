@@ -187,22 +187,27 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Unidade</label>
-                                <select
-                                    value={formData.unit_type}
-                                    onChange={e => setFormData({ ...formData, unit_type: e.target.value })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer"
-                                >
-                                    <option value="un">Unid. (un)</option>
-                                    <option value="ml">Milit. (ml)</option>
-                                    <option value="g">Gram. (g)</option>
-                                    <option value="l">Litr. (l)</option>
-                                    <option value="kg">Quilo (kg)</option>
-                                    <option value="kit">Kit</option>
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        value={formData.unit_type}
+                                        onChange={e => setFormData({ ...formData, unit_type: e.target.value })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer pr-10"
+                                    >
+                                        <option value="un">Unid. (un)</option>
+                                        <option value="ml">Milit. (ml)</option>
+                                        <option value="g">Gram. (g)</option>
+                                        <option value="l">Litr. (l)</option>
+                                        <option value="kg">Quilo (kg)</option>
+                                        <option value="kit">Kit</option>
+                                    </select>
+                                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none text-xl">
+                                        expand_more
+                                    </span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className={`p-6 rounded-[2rem] border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10 shadow-[0_0_30px_rgba(242,185,13,0.05)]' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
+                        <div className={`p-6 rounded-[2rem] border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
                             <label className={`text-[11px] font-black uppercase ml-1 mb-4 block tracking-tighter ${productToEdit ? 'text-amber-500' : 'text-emerald-500'}`}>
                                 {productToEdit ? '🛡️ CONTROLE & ACERTO DE ESTOQUE' : '📦 ESTOQUE INICIAL & ALERTA'}
                             </label>
@@ -239,11 +244,11 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                             )}
                         </div>
 
-                        <div className="flex justify-end pt-2">
+                        <div className="flex justify-center pt-2">
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="w-full md:w-auto bg-[#f2b90d] text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-xl shadow-[#f2b90d]/20 text-xs"
+                                className="w-full bg-[#f2b90d] text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest transition-all disabled:opacity-50 text-sm"
                             >
                                 {saving ? 'SALVANDO...' : 'SALVAR PRODUTO'}
                             </button>
