@@ -136,7 +136,9 @@ export function getAvailableSlots(
 
     // 6. Filtrar Passado (Se for hoje)
     const now = new Date();
-    const isToday = dateStr === now.toISOString().split('T')[0];
+    // Use local date string to avoid UTC offset issues (e.g., 23:00 BRT is already next day in UTC)
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const isToday = dateStr === todayStr;
 
     if (isToday) {
         const currentHour = now.getHours();
