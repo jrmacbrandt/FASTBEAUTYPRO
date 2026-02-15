@@ -15,6 +15,7 @@ export default function ProfessionalSettingsPage() {
     const [currentLoginEmail, setCurrentLoginEmail] = useState('');
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showCurrentPassword, setShowCurrentPassword] = useState(false);
 
     const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
     const dayKeys = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
@@ -89,13 +90,33 @@ export default function ProfessionalSettingsPage() {
             }
 
             const updates: any = {};
-            if (userEmail) updates.email = userEmail;
+            // Auditoria: Apenas enviar e-mail se ele realmente foi alterado
+            if (userEmail && userEmail !== currentLoginEmail) {
+                updates.email = userEmail;
+            }
             if (newPassword) updates.password = newPassword;
 
-            const { error } = await supabase.auth.updateUser(updates);
-            if (error) throw error;
+            if (Object.keys(updates).length === 0) {
+                throw new Error('Nenhuma alteração detectada.');
+            }
 
-            alert('Dados de acesso atualizados com sucesso! Se você alterou o e-mail, verifique sua caixa de entrada para confirmar.');
+            const { error: authError } = await supabase.auth.updateUser(updates);
+            if (authError) throw authError;
+
+            // Auditoria: Sincronizar e-mail na tabela profiles se alterado
+            if (updates.email) {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    await supabase
+                        .from('profiles')
+                        .update({ email: updates.email })
+                        .eq('id', user.id);
+                }
+                alert('E-mail alterado! Verifique sua caixa de entrada para confirmar a alteração.');
+            } else {
+                alert('Senha atualizada com sucesso!');
+            }
+
             setNewPassword('');
             setConfirmPassword('');
         } catch (error: any) {
@@ -208,9 +229,28 @@ export default function ProfessionalSettingsPage() {
                                 <p className="text-[8px] font-black uppercase text-slate-500 mb-1 group-hover/info:text-[#f2b90d] transition-colors">Login Atual</p>
                                 <p className="text-[10px] font-bold text-[#f2b90d]">{currentLoginEmail}</p>
                             </div>
-                            <div className="bg-white/5 border border-white/10 px-5 py-3 rounded-2xl min-w-[120px] group/info">
+                            <div className="bg-white/5 border border-white/10 px-5 py-3 rounded-2xl min-w-[120px] group/info relative overflow-hidden">
                                 <p className="text-[8px] font-black uppercase text-slate-500 mb-1 group-hover/info:text-[#f2b90d] transition-colors">Senha Atual</p>
-                                <p className="text-[11px] font-bold text-[#f2b90d] tracking-[0.2em]">••••••••</p>
+                                <p className={`text-[11px] font-bold text-[#f2b90d] transition-all ${showCurrentPassword ? 'tracking-normal' : 'tracking-[0.2em]'}`}>
+                                    {showCurrentPassword ? 'FBP-PROTEGIDA' : '••••••••'}
+                                </p>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                    className="absolute right-2 top-2 text-white/20 hover:text-[#f2b90d] transition-colors"
+                                    title={showCurrentPassword ? "Ocultar" : "Visualizar (Apenas indicador)"}
+                                >
+                                    <span className="material-symbols-outlined text-[12px]">
+                                        {showCurrentPassword ? 'visibility_off' : 'visibility'}
+                                    </span>
+                                </button>
+                                {showCurrentPassword && (
+                                    <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 text-center">
+                                        <p className="text-[6px] font-black uppercase text-white leading-tight">
+                                            Criptografia <br />Ativa
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
