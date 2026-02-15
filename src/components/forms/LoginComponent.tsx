@@ -297,7 +297,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     return (
         <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
             <div className="w-full max-w-[400px] rounded-[2rem] p-6 md:p-8 relative border bg-opacity-95" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                <button onClick={() => view === 'register' ? setView('login') : router.push('/')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.inputBg, color: colors.text }}>
+                <button onClick={() => view === 'register' && setView('login')} className={`absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10 ${view === 'login' ? 'hidden' : ''}`} style={{ backgroundColor: colors.inputBg, color: colors.text }}>
                     <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                 </button>
 
@@ -327,6 +327,24 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
                         {view === 'register' && (
                             <div className="space-y-4">
+                                {/* Business Type Selector - Added to replace Gateway Page */}
+                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setBusinessType('barber')}
+                                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${businessType === 'barber' ? 'bg-[#f2b90d] text-black border-[#f2b90d]' : 'bg-transparent text-slate-500 border-white/10 hover:border-white/30'}`}
+                                    >
+                                        Barbearia
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBusinessType('salon')}
+                                        className={`py-3 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${businessType === 'salon' ? 'bg-[#7b438e] text-white border-[#7b438e]' : 'bg-transparent text-slate-500 border-white/10 hover:border-white/30'}`}
+                                    >
+                                        Salão & Spa
+                                    </button>
+                                </div>
+
                                 <div className="space-y-1.5">
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME COMPLETO</label>
                                     <div className="relative">
