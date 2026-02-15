@@ -21,24 +21,44 @@ export function useProfile() {
 
             console.log('✅ [useProfile] Sessão ativa:', session.user.email);
 
-            const { data, error } = await supabase
+            // Buscar perfil primeiro
+            const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
-                .select('*, tenant(*)')
+                .select('*')
                 .eq('id', session.user.id)
                 .single();
 
-            if (error) {
-                console.error('❌ [useProfile] Erro ao buscar perfil:', error.message);
-                console.error('❌ [useProfile] Detalhes do erro:', error);
+            if (profileError) {
+                console.error('❌ [useProfile] Erro ao buscar perfil:', profileError.message);
+                console.error('❌ [useProfile] Detalhes do erro:', profileError);
                 setLoading(false);
                 return;
             }
 
-            if (!data) {
+            if (!profileData) {
                 console.warn('⚠️ [useProfile] Perfil não encontrado para user_id:', session.user.id);
                 setLoading(false);
                 return;
             }
+
+            // Agora buscar o tenant separadamente se tenant_id existir
+            let tenantData = null;
+            if (profileData.tenant_id) {
+                const { data: tenant, error: tenantError } = await supabase
+                    .from('tenants')
+                    .select('*')
+                    .eq('id', profileData.tenant_id)
+                    .single();
+
+                if (tenantError) {
+                    console.error('❌ [useProfile] Erro ao buscar tenant:', tenantError.message);
+                } else {
+                    tenantData = tenant;
+                }
+            }
+
+            // Combinar os dados
+            const data = { ...profileData, tenant: tenantData };
 
             console.log('✅ [useProfile] Perfil carregado:', {
                 id: data.id,
