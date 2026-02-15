@@ -42,6 +42,11 @@ function CRMContent() {
     const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
     const [queueFinished, setQueueFinished] = useState(false);
     const [isNextLoading, setIsNextLoading] = useState(false);
+    const [campaigns, setCampaigns] = useState<any[]>([]);
+    const [selectedCampaign, setSelectedCampaign] = useState<any>(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [campaignDetailsItems, setCampaignDetailsItems] = useState<any[]>([]);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
     const searchParams = useSearchParams();
 
@@ -168,6 +173,18 @@ function CRMContent() {
                 loyaltyPending: loyaltyClientsList.length
             });
 
+            // 7. Fetch Campaign History
+            const { data: campaignData } = await supabase
+                .from('campaigns')
+                .select(`
+                    *,
+                    campaign_items!campaign_id (count)
+                `)
+                .eq('tenant_id', tenantId)
+                .order('created_at', { ascending: false });
+
+            setCampaigns(campaignData || []);
+
         } catch (error) {
             console.error('Error fetching CRM stats:', error);
         } finally {
@@ -271,6 +288,78 @@ function CRMContent() {
         setIsCampaignModalOpen(true);
     };
 
+    const openCampaignDetails = async (campaign: any) => {
+        setSelectedCampaign(campaign);
+        setIsDetailsModalOpen(true);
+        setLoadingDetails(true);
+        try {
+            const { data } = await supabase
+                .from('campaign_items')
+                .select('*')
+                .eq('campaign_id', campaign.id)
+                .order('client_name');
+            setCampaignDetailsItems(data || []);
+        } catch (error) {
+            console.error('Error fetching campaign items:', error);
+        } finally {
+            setLoadingDetails(false);
+        }
+    };
+
+    const logManualSend = async (client: any, message: string) => {
+        if (!tenant) return;
+        const today = new Date().toISOString().split('T')[0];
+        const campaignName = `Envios Manuais - ${today}`;
+
+        try {
+            // 1. Tentar encontrar a campanha de hoje
+            let { data: campaign } = await supabase
+                .from('campaigns')
+                .select('id')
+                .eq('tenant_id', tenant.id)
+                .eq('name', campaignName)
+                .maybeSingle();
+
+            if (!campaign) {
+                const { data: newCampaign, error: cError } = await supabase
+                    .from('campaigns')
+                    .insert({
+                        tenant_id: tenant.id,
+                        name: campaignName,
+                        status: 'COMPLETED',
+                        filters: {},
+                        message_template: 'Manual'
+                    })
+                    .select()
+                    .single();
+                if (cError) throw cError;
+                campaign = newCampaign;
+            }
+
+            // 2. Registrar o item
+            await supabase
+                .from('campaign_items')
+                .insert({
+                    campaign_id: campaign.id,
+                    client_name: client.name,
+                    client_phone: client.phone,
+                    status: 'SENT',
+                    generated_url: 'whatsapp://manual'
+                });
+
+            // Recarregar histórico discretamente
+            const { data: refreshedCampaigns } = await supabase
+                .from('campaigns')
+                .select('*, campaign_items!campaign_id (count)')
+                .eq('tenant_id', tenant.id)
+                .order('created_at', { ascending: false });
+            setCampaigns(refreshedCampaigns || []);
+
+        } catch (err) {
+            console.error('Error logging manual send:', err);
+        }
+    };
+
     const handleWhatsAppSend = async () => {
         if (!campaignClient) return;
 
@@ -288,6 +377,10 @@ function CRMContent() {
 
             window.open(url, '_blank');
             setIsCampaignModalOpen(false);
+
+            // Log the communication
+            await logManualSend(campaignClient, campaignMessage);
+
             fetchData(); // Refresh to update "Último Contato" status
         } catch (error) {
             console.error('Update contact failed:', error);
@@ -339,6 +432,9 @@ function CRMContent() {
             const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
             window.open(url, '_blank');
+
+            // Log the communication
+            await logManualSend(client, msg);
 
             // Wait 2 seconds before allowing next (anti-spam visual delay)
             setTimeout(() => {
@@ -635,6 +731,81 @@ function CRMContent() {
                 </div>
             </div>
 
+            {/* CAMPAIGN HISTORY - v6.0 New Feature */}
+            <div className="bg-[#121214] border border-white/5 rounded-[2.5rem] p-8 md:p-10 shadow-2xl space-y-8">
+                <div className="flex items-center justify-between border-b border-white/5 pb-6">
+                    <div>
+                        <h3 className="text-xl font-black italic uppercase text-white mb-1">Histórico de Campanhas</h3>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Acompanhamento de disparos e engajamento</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <span className="material-symbols-outlined text-slate-500">history</span>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-separate border-spacing-y-2">
+                        <thead>
+                            <tr className="text-[8px] font-black uppercase tracking-widest text-slate-500">
+                                <th className="px-6 py-2">Data / Campanha</th>
+                                <th className="px-6 py-2 text-center">Tipo</th>
+                                <th className="px-6 py-2 text-center">Volume</th>
+                                <th className="px-6 py-2 text-center">Status</th>
+                                <th className="px-6 py-2 text-right">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {campaigns.length === 0 ? (
+                                <tr>
+                                    <td colSpan={5} className="py-12 text-center opacity-30">
+                                        <span className="material-symbols-outlined text-4xl mb-2 block">campaign</span>
+                                        <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma campanha registrada</p>
+                                    </td>
+                                </tr>
+                            ) : (
+                                campaigns.map((campaign) => (
+                                    <tr key={campaign.id} className="group bg-white/[0.02] hover:bg-white/[0.05] transition-all border border-white/5">
+                                        <td className="px-6 py-4 rounded-l-2xl border-y border-l border-white/5">
+                                            <div>
+                                                <p className="text-[11px] font-black uppercase italic text-white leading-none mb-1">{campaign.name}</p>
+                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter">
+                                                    Criada em: {new Date(campaign.created_at).toLocaleDateString()} às {new Date(campaign.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </p>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 border-y border-white/5 text-center">
+                                            <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-md border ${campaign.name.includes('Envios Manuais') ? 'border-amber-500/20 text-amber-500 bg-amber-500/5' : 'border-indigo-500/20 text-indigo-500 bg-indigo-500/5'}`}>
+                                                {campaign.name.includes('Envios Manuais') ? 'Manual' : 'Segmentada'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 border-y border-white/5 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-[10px] font-black text-white">{campaign.campaign_items?.[0]?.count || 0}</span>
+                                                <span className="text-[7px] text-slate-500 uppercase font-black">Impactos</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 border-y border-white/5 text-center">
+                                            <div className="flex items-center justify-center gap-1.5">
+                                                <span className="size-1.5 rounded-full bg-emerald-500"></span>
+                                                <span className="text-[8px] font-black uppercase text-emerald-500">Concluída</span>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-4 rounded-r-2xl border-y border-r border-white/5 text-right">
+                                            <button
+                                                onClick={() => openCampaignDetails(campaign)}
+                                                className="bg-white/5 hover:bg-white/10 text-white text-[9px] font-black uppercase tracking-widest px-4 py-2 rounded-xl transition-all border border-white/5"
+                                            >
+                                                Ver Detalhes
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
             {/* MODAL: GESTÃO DE CLIENTES (CIRÚRGICO) */}
             {isClientModalOpen && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
@@ -789,6 +960,83 @@ function CRMContent() {
                             >
                                 <span className="material-symbols-outlined text-lg">send</span>
                                 DISPARAR AGORA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL: DETALHES DA CAMPANHA */}
+            {isDetailsModalOpen && selectedCampaign && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-[#121214] border border-white/10 w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
+                        <div className="p-8 border-b border-white/5 flex items-center justify-between shrink-0">
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase text-white leading-none mb-1">Detalhes da Campanha</h3>
+                                <p className="text-[10px] text-[#f2b90d] font-bold uppercase tracking-widest">{selectedCampaign.name}</p>
+                            </div>
+                            <button
+                                onClick={() => setIsDetailsModalOpen(false)}
+                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-500"
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="flex-1 p-8 overflow-y-auto scrollbar-hide space-y-8">
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                                    <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Total Cliques/Envios</p>
+                                    <p className="text-xl font-black text-white">{campaignDetailsItems.length}</p>
+                                </div>
+                                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
+                                    <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Data</p>
+                                    <p className="text-xs font-black text-white">{new Date(selectedCampaign.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl col-span-2">
+                                    <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Mensagem Base</p>
+                                    <p className="text-[10px] font-bold text-slate-300 italic truncate" title={selectedCampaign.message_template}>
+                                        {selectedCampaign.message_template}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Público Impactado</h4>
+                                <div className="space-y-2">
+                                    {loadingDetails ? (
+                                        <div className="py-12 text-center text-slate-600 animate-pulse">Carregando impactos...</div>
+                                    ) : campaignDetailsItems.length === 0 ? (
+                                        <p className="text-center py-6 text-[10px] font-black uppercase text-slate-700">Nenhum registro individual encontrado</p>
+                                    ) : (
+                                        campaignDetailsItems.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="size-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black text-[#f2b90d]">
+                                                        {item.client_name?.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-black uppercase text-white leading-none">{item.client_name}</p>
+                                                        <p className="text-[8px] text-slate-600 font-bold mt-1">{item.client_phone}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="px-3 py-1 rounded-full bg-emerald-500/5 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase">
+                                                    Enviado
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 border-t border-white/5 bg-black/20 shrink-0">
+                            <button
+                                onClick={() => setIsDetailsModalOpen(false)}
+                                className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-[#f2b90d]/10"
+                            >
+                                FECHAR DETALHES
                             </button>
                         </div>
                     </div>
