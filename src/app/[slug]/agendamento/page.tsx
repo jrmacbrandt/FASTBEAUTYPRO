@@ -101,19 +101,25 @@ export default function DynamicBookingPage() {
 
     // Recalculate Slots Logic
     useEffect(() => {
-        if (!tenant || !selection.barber) return;
+        if (!tenant || !selection.barber || !selection.service) return;
 
         const dayKey = getDayKey(selectedDateObj);
 
         // 1. Tenant Hours
-        const tHours = tenant.business_hours?.[dayKey] as Schedule;
-        // Fallback default if not set
-        const tenantSchedule = tHours || { open: '09:00', close: '18:00', isOpen: true };
+        const tHours = tenant.business_hours?.[dayKey];
+        const tenantSchedule = {
+            open: tHours?.open || '09:00',
+            close: tHours?.close || '18:00',
+            isOpen: tHours?.isOpen !== undefined ? tHours.isOpen : true
+        };
 
         // 2. Barber Hours
-        const bHours = selection.barber.work_hours?.[dayKey] as Schedule;
-        // Fallback: assume barber follows shop hours if not set
-        const barberSchedule = bHours || tenantSchedule;
+        const bHours = selection.barber.work_hours?.[dayKey];
+        const barberSchedule = bHours ? {
+            open: bHours.open || tenantSchedule.open,
+            close: bHours.close || tenantSchedule.close,
+            isOpen: bHours.isOpen !== undefined ? bHours.isOpen : true
+        } : tenantSchedule;
 
         // 3. Validation Logic (Shop Closed?)
         if (!tenantSchedule.isOpen) {
@@ -129,8 +135,12 @@ export default function DynamicBookingPage() {
 
         // 5. Intersection (Max Start, Min End)
         const toMin = (t: string) => {
-            if (!t) return 0;
-            const [h, m] = t.split(':').map(Number);
+            if (!t || typeof t !== 'string') return 0;
+            const parts = t.split(':');
+            if (parts.length < 2) return 0;
+            const h = parseInt(parts[0], 10);
+            const m = parseInt(parts[1], 10);
+            if (isNaN(h) || isNaN(m)) return 0;
             return h * 60 + m;
         };
 
@@ -139,8 +149,8 @@ export default function DynamicBookingPage() {
         const bStart = toMin(barberSchedule.open);
         const bEnd = toMin(barberSchedule.close);
 
-        let startMin = Math.max(tStart, bStart);
-        let endMin = Math.min(tEnd, bEnd);
+        const startMin = Math.max(tStart, bStart);
+        const endMin = Math.min(tEnd, bEnd);
 
         if (startMin >= endMin) {
             setAvailableTimes([]);
@@ -153,9 +163,17 @@ export default function DynamicBookingPage() {
         const isToday = selectedDateObj.toDateString() === now.toDateString();
         const currentMinOfDay = now.getHours() * 60 + now.getMinutes();
 
+        // Service Duration Influence
+        const duration = selection.service.duration_minutes || 30;
+
         for (let time = startMin; time < endMin; time += 30) {
-            // Filter past times if isToday (30min buffer)
-            if (isToday && time < (currentMinOfDay + 30)) {
+            // Filter past times if isToday (15min buffer instead of 30)
+            if (isToday && time < (currentMinOfDay + 15)) {
+                continue;
+            }
+
+            // Ensure service fits within the working window
+            if (time + duration > endMin) {
                 continue;
             }
 
@@ -170,7 +188,7 @@ export default function DynamicBookingPage() {
         // Update selection date string for DB
         setSelection(prev => ({ ...prev, date: format(selectedDateObj, 'yyyy-MM-dd') }));
 
-    }, [selectedDateObj, selection.barber, tenant]);
+    }, [selectedDateObj, selection.barber, selection.service, tenant]);
 
     // --- SCHEDULING LOGIC END ---
 
