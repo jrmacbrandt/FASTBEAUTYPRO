@@ -135,39 +135,66 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
         if (data.session) {
             console.log('[Login] Fetching profile for ID:', data.session.user.id);
-            const { data: profile, error: profileError } = await supabase
+
+            // Try to fetch profile
+            const { data: profileData, error: profileError } = await supabase
                 .from('profiles')
-                .select('role, status, tenants(has_paid)')
+                .select('role, status, tenant_id')
                 .eq('id', data.session.user.id)
-                .single();
+                .maybeSingle();
+
+            let profile = profileData;
+
+            // MASTER BYPASS: Se for Master Admin por e-mail, forçamos o role
+            const isMasterEmail = data.session.user.email === 'jrmacbrandt@gmail.com';
+            if (isMasterEmail) {
+                console.log('[Login] 🛡️ Master Email detected. Overriding role to master.');
+                profile = {
+                    ...profileData,
+                    role: 'master',
+                    status: 'active'
+                } as any;
+            }
 
             console.log('========== LOGIN DIAGNOSTIC ==========');
-            console.log('[Login] Profile response:', { profile, error: profileError });
+            console.log('[Login] Profile data:', profile);
+            console.log('[Login] Auth Error:', profileError);
             console.log('[Login] User Email:', data.session.user.email);
             console.log('[Login] Profile Role:', profile?.role);
-            console.log('[Login] Profile Status:', profile?.status);
             console.log('[Login] Expected Type:', type);
             console.log('=====================================');
 
+            // Se ainda não tiver role e não for master, aí sim damos o erro
+            if (!profile?.role) {
+                console.log('[Login] No role found for user:', data.session.user.id);
+                setLoading(false);
+                alert("Olá! Parece que você ainda não tem um perfil administrativo vinculado a este email.\n\nPara gerenciar seu negócio, clique em 'NÃO TEM UMA CONTA? CADASTRE-SE' logo abaixo do botão de acesso.");
+                return;
+            }
 
-
-            if (profile?.role === 'owner' && (profile as any).tenants?.has_paid === false) {
-                // Redirect to a payment/setup page or show a specific modal
-                // For now, let's proceed but we'll need a blocker in the admin layout
+            // Se for Master, ele não tem tenant_id obrigatoriamente
+            let hasPaid = true;
+            if (profile.role === 'owner' && profile.tenant_id) {
+                const { data: tenantData } = await supabase
+                    .from('tenants')
+                    .select('has_paid')
+                    .eq('id', profile.tenant_id)
+                    .maybeSingle();
+                hasPaid = tenantData?.has_paid !== false;
             }
 
             if (profile?.role === 'master') {
                 console.log('[Login] ✅ Redirecting Master to /admin-master');
                 router.push('/admin-master');
             } else if (profile?.role === 'owner') {
-                if ((profile as any).tenants?.has_paid === false) {
+                if (hasPaid === false) {
                     console.log('[Login] Redirecting Owner to payment page');
                     router.push('/pagamento-pendente');
                 } else {
                     console.log('[Login] Redirecting Owner to /admin');
                     router.push('/admin');
                 }
-            } else if (profile?.role === 'barber') {
+            } else if (profile?.role === 'barber' || profile?.role === 'profissional') {
                 if (profile?.status === 'pending') {
                     console.log('[Login] Redirecting Barber to awaiting approval');
                     router.push('/aguardando-aprovacao');
