@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { format, addDays } from 'date-fns';
 import { maskPhone } from '@/lib/masks';
+import { getAvailableSlots } from '@/lib/scheduling';
 import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
@@ -32,6 +33,7 @@ export default function DynamicBookingPage() {
 
     const [services, setServices] = useState<any[]>([]);
     const [barbers, setBarbers] = useState<any[]>([]);
+    const [appointments, setAppointments] = useState<any[]>([]);
 
     // New States for Advanced Scheduling
     const [availableTimes, setAvailableTimes] = useState<string[]>([]);
@@ -73,6 +75,21 @@ export default function DynamicBookingPage() {
         init();
     }, [slug]);
 
+    useEffect(() => {
+        if (selection.barber && selection.date) {
+            const loadAvailability = async () => {
+                const { data } = await supabase
+                    .from('appointments')
+                    .select('scheduled_at')
+                    .eq('barber_id', selection.barber.id)
+                    .gte('scheduled_at', `${selection.date}T00:00:00`)
+                    .lte('scheduled_at', `${selection.date}T23:59:59`);
+                if (data) setAppointments(data);
+            };
+            loadAvailability();
+        }
+    }, [selection.barber, selection.date]);
+
     const theme = useMemo(() => {
         if (tenant?.config?.theme) return tenant.config.theme;
         return { primary: '#f2b90d', secondary: '#09090b' };
@@ -101,94 +118,31 @@ export default function DynamicBookingPage() {
 
     // Recalculate Slots Logic
     useEffect(() => {
-        if (!tenant || !selection.barber || !selection.service) return;
+        const formattedDate = format(selectedDateObj, 'yyyy-MM-dd');
+        setSelection(prev => ({ ...prev, date: formattedDate }));
+    }, [selectedDateObj]);
 
-        const dayKey = getDayKey(selectedDateObj);
+    useEffect(() => {
+        if (!tenant || !selection.barber || !selection.service || !selection.date) return;
 
-        // 1. Tenant Hours
-        const tHours = tenant.business_hours?.[dayKey];
-        const tenantSchedule = {
-            open: tHours?.open || '09:00',
-            close: tHours?.close || '18:00',
-            isOpen: tHours?.isOpen !== undefined ? tHours.isOpen : true
-        };
+        const { slots } = getAvailableSlots(
+            selection.date,
+            tenant.business_hours || null,
+            selection.barber.work_hours || null,
+            { serviceDuration: selection.service.duration_minutes }
+        );
 
-        // 2. Barber Hours
-        const bHours = selection.barber.work_hours?.[dayKey];
-        const barberSchedule = bHours ? {
-            open: bHours.open || tenantSchedule.open,
-            close: bHours.close || tenantSchedule.close,
-            isOpen: bHours.isOpen !== undefined ? bHours.isOpen : true
-        } : tenantSchedule;
+        // Filter Occupied
+        const occupied = appointments.map(a => {
+            if (!a.scheduled_at) return '';
+            const parts = a.scheduled_at.split('T');
+            return parts.length > 1 ? parts[1].substring(0, 5) : '';
+        });
 
-        // 3. Validation Logic (Shop Closed?)
-        if (!tenantSchedule.isOpen) {
-            setAvailableTimes([]);
-            return;
-        }
+        const finalSlots = slots.filter(t => !occupied.includes(t));
+        setAvailableTimes(finalSlots);
 
-        // 4. Validation Logic (Barber Not Working?)
-        if (!barberSchedule.isOpen) {
-            setAvailableTimes([]);
-            return;
-        }
-
-        // 5. Intersection (Max Start, Min End)
-        const toMin = (t: string) => {
-            if (!t || typeof t !== 'string') return 0;
-            const parts = t.split(':');
-            if (parts.length < 2) return 0;
-            const h = parseInt(parts[0], 10);
-            const m = parseInt(parts[1], 10);
-            if (isNaN(h) || isNaN(m)) return 0;
-            return h * 60 + m;
-        };
-
-        const tStart = toMin(tenantSchedule.open);
-        const tEnd = toMin(tenantSchedule.close);
-        const bStart = toMin(barberSchedule.open);
-        const bEnd = toMin(barberSchedule.close);
-
-        const startMin = Math.max(tStart, bStart);
-        const endMin = Math.min(tEnd, bEnd);
-
-        if (startMin >= endMin) {
-            setAvailableTimes([]);
-            return;
-        }
-
-        // 6. Generate Slots (30 min intervals)
-        const slots = [];
-        const now = new Date();
-        const isToday = selectedDateObj.toDateString() === now.toDateString();
-        const currentMinOfDay = now.getHours() * 60 + now.getMinutes();
-
-        // Service Duration Influence
-        const duration = selection.service.duration_minutes || 30;
-
-        for (let time = startMin; time < endMin; time += 30) {
-            // Filter past times if isToday (15min buffer instead of 30)
-            if (isToday && time < (currentMinOfDay + 15)) {
-                continue;
-            }
-
-            // Ensure service fits within the working window
-            if (time + duration > endMin) {
-                continue;
-            }
-
-            const h = Math.floor(time / 60);
-            const m = time % 60;
-            const timeStr = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
-            slots.push(timeStr);
-        }
-
-        setAvailableTimes(slots);
-
-        // Update selection date string for DB
-        setSelection(prev => ({ ...prev, date: format(selectedDateObj, 'yyyy-MM-dd') }));
-
-    }, [selectedDateObj, selection.barber, selection.service, tenant]);
+    }, [selection.date, selection.barber, selection.service, tenant, appointments]);
 
     // --- SCHEDULING LOGIC END ---
 

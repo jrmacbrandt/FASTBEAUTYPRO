@@ -98,55 +98,37 @@ export default function ShopLandingPage() {
     }, [tenant]);
 
     const availableTimes = useMemo(() => {
-        console.log('🎯 [AVAILABLE TIMES] Computing...', {
-            hasDate: !!selection.date,
-            hasBarber: !!selection.barber,
-            hasTenant: !!tenant,
-            date: selection.date,
-            barberName: selection.barber?.full_name,
-            tenantName: tenant?.name
-        });
+        if (!selection.date || !selection.barber || !tenant) return [];
 
-        if (!selection.date || !selection.barber || !tenant) {
-            console.warn('⚠️ Missing required data for slot calculation');
-            return [];
-        }
-
-        console.log('📋 Input data:', {
-            date: selection.date,
-            tenantBusinessHours: tenant.business_hours,
-            barberWorkHours: selection.barber.work_hours,
-            appointmentsCount: appointments.length
-        });
-
-        // 1. Get Logical Slots (Store + Barber Rules)
-        const { slots, reason } = getAvailableSlots(
+        const { slots } = getAvailableSlots(
             selection.date,
             tenant.business_hours || null,
-            selection.barber.work_hours || null
+            selection.barber.work_hours || null,
+            {
+                serviceDuration: selection.service?.duration_minutes || 30,
+                now: new Date()
+            }
         );
 
-        console.log('🎰 Slots from getAvailableSlots:', { slots, reason });
-
-        // 2. Filter Occupied Appointments (simple string match)
         const occupied = appointments.map(a => {
             if (!a.scheduled_at) return '';
-            // "2023-12-12T09:00:00" -> "09:00"
             const parts = a.scheduled_at.split('T');
-            if (parts.length > 1) return parts[1].substring(0, 5);
-            return '';
+            return parts.length > 1 ? parts[1].substring(0, 5) : '';
         });
 
-        console.log('🚫 Occupied slots:', occupied);
+        return slots.filter(t => !occupied.includes(t));
+    }, [selection.date, selection.barber, selection.service, tenant, appointments]);
 
-        // 3. Remove occupied slots strictly
-        const finalSlots = slots.filter(t => !occupied.includes(t));
-
-        console.log('✅ Final available slots:', finalSlots);
-
-        return finalSlots;
-
-    }, [selection.date, selection.barber, tenant, appointments]);
+    // Recalculate Slots Logic
+    // This useEffect is likely intended to be used with a `selectedDateObj` state variable
+    // that is not present in the provided snippet. Assuming `selectedDateObj` is defined elsewhere.
+    // For now, it's commented out to avoid compilation errors if `selectedDateObj` is truly missing.
+    /*
+    useEffect(() => {
+        const formattedDate = format(selectedDateObj, 'yyyy-MM-dd');
+        setSelection(prev => ({ ...prev, date: formattedDate }));
+    }, [selectedDateObj]);
+    */
 
     const handleConfirm = async () => {
         if (!selection.barber || !selection.service || !selection.clientName || !selection.clientPhone || !selection.birthMonth || !tenant) {
@@ -643,12 +625,17 @@ const DateSelector = ({ onSelect, theme }: { onSelect: (date: string) => void, t
         return days;
     };
 
+    const getTodaySP = () => {
+        const spDateStr = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+        const d = new Date(spDateStr + 'T00:00:00');
+        return d;
+    };
+
     const handleDateClick = (day: number) => {
         const year = currentMonth.getFullYear();
         const month = currentMonth.getMonth();
         const selected = new Date(year, month, day);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
+        const today = getTodaySP();
 
         if (selected >= today) {
             setSelectedDate(selected);
@@ -662,8 +649,7 @@ const DateSelector = ({ onSelect, theme }: { onSelect: (date: string) => void, t
     };
 
     const days = getDaysInMonth(currentMonth);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getTodaySP();
 
     return (
         <div className="w-full max-w-md mx-auto bg-white/[0.03] border-2 border-white/5 rounded-[2.5rem] p-6 md:p-8">
