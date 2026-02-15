@@ -120,7 +120,7 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
 
     return (
         <div className="fixed inset-0 z-[100] flex justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto pt-10 md:pt-20">
-            <div className="bg-[#18181b] border border-white/10 w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl animate-in zoom-in-95 duration-200 mb-20">
+            <div className="bg-[#18181b] border border-white/10 w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl animate-in zoom-in-95 duration-200 mb-20 h-fit">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-2xl font-black italic uppercase text-white">
                         {productToEdit ? 'Editar Produto' : 'Novo Produto'}
@@ -200,7 +200,7 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                         </div>
                     </div>
 
-                    <div className={`p-5 rounded-2xl border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
+                    <div className={`p-5 rounded-2xl border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10 shadow-[0_0_20px_rgba(242,185,13,0.05)]' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
                         <label className={`text-[10px] font-black uppercase ml-1 mb-3 block ${productToEdit ? 'text-amber-500' : 'text-emerald-500'}`}>
                             {productToEdit ? 'Controle & Acerto de Estoque' : 'Estoque Inicial & Alerta'}
                         </label>
@@ -227,7 +227,7 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                             </div>
                         </div>
                         {productToEdit && (
-                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mt-4 text-center opacity-90 italic">
+                            <p className="text-[10px] font-black text-white uppercase tracking-widest mt-4 text-center opacity-70 italic bg-white/5 py-2 rounded-lg border border-white/5">
                                 * Edições manuais geram uma movimentação automática de acerto
                             </p>
                         )}
@@ -237,7 +237,7 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                         <button
                             type="submit"
                             disabled={saving}
-                            className="bg-[#f2b90d] text-black font-black py-4 px-8 rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+                            className="bg-[#f2b90d] text-black font-black py-4 px-12 rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-lg shadow-[#f2b90d]/20"
                         >
                             {saving ? 'Salvando...' : 'Salvar Produto'}
                         </button>
