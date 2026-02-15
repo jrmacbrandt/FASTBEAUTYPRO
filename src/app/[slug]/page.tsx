@@ -523,29 +523,35 @@ Aguardo sua confirmação! 😊`;
                                     Caso precise alterar algo ou queira confirmar agora mesmo, entre em contato direto:
                                 </p>
 
-                                <div className="space-y-3">
-                                    <a
-                                        href={`tel:${tenant.phone}`}
-                                        className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
-                                    >
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Ligar para a Loja</p>
-                                            <p className="text-white font-black italic uppercase">{tenant.name}</p>
-                                        </div>
-                                        <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">call</span>
-                                    </a>
+                                {(tenant.phone || selection.barber?.phone) && (
+                                    <div className="space-y-3">
+                                        {tenant.phone && (
+                                            <a
+                                                href={`tel:${tenant.phone}`}
+                                                className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
+                                            >
+                                                <div>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Ligar para a Loja</p>
+                                                    <p className="text-white font-black italic uppercase">{tenant.name}</p>
+                                                </div>
+                                                <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">call</span>
+                                            </a>
+                                        )}
 
-                                    <a
-                                        href={`tel:${selection.barber?.phone}`}
-                                        className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
-                                    >
-                                        <div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Falar com o Profissional</p>
-                                            <p className="text-white font-black italic uppercase">{selection.barber?.full_name}</p>
-                                        </div>
-                                        <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">call</span>
-                                    </a>
-                                </div>
+                                        {selection.barber?.phone && (
+                                            <a
+                                                href={`tel:${selection.barber?.phone}`}
+                                                className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
+                                            >
+                                                <div>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Falar com o Profissional</p>
+                                                    <p className="text-white font-black italic uppercase">{selection.barber?.full_name}</p>
+                                                </div>
+                                                <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">call</span>
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <button
