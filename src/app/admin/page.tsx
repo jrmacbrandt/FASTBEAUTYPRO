@@ -226,25 +226,6 @@ export default function OwnerDashboardPage() {
                 </div>
             )}
 
-            {pendingCount > 0 && (
-                <div className="border rounded-[2rem] p-6 flex flex-col md:flex-row items-center justify-between shadow-xl backdrop-blur-sm relative overflow-hidden group gap-4" style={{ backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }}>
-                    <div className="absolute top-0 left-0 w-1 h-full" style={{ backgroundColor: colors.primary }}></div>
-                    <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
-                        <div className="size-12 md:size-16 rounded-full flex items-center justify-center animate-pulse shrink-0" style={{ backgroundColor: `${colors.primary}20` }}>
-                            <span className="material-symbols-outlined text-2xl md:text-3xl" style={{ color: colors.primary }}>priority_high</span>
-                        </div>
-                        <div>
-                            <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tight" style={{ color: colors.text }}>Atenção Necessária</h3>
-                            <p className="font-bold text-xs md:text-sm mt-1" style={{ color: colors.primary }}>Existem {pendingCount} profissionais aguardando aprovação.</p>
-                        </div>
-                    </div>
-                    <Link href="/admin/equipe?tab=pending" className="w-full md:w-auto px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}>
-                        Ver Solicitações
-                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </Link>
-                </div>
-            )}
-
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {kpis.map((kpi, idx) => (
                     <div key={idx} className="border p-4 md:p-6 rounded-3xl md:rounded-[2rem] group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>

@@ -87,10 +87,10 @@ export default function AdminAgendaPage() {
         <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-10">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter text-white uppercase">
+                    <h1 className="text-2xl md:text-3xl font-black italic tracking-tighter uppercase" style={{ color: colors.text }}>
                         AGENDA <span style={{ color: colors.primary }}>GERAL</span>
                     </h1>
-                    <p className="text-xs md:text-sm text-slate-500 font-bold uppercase tracking-widest mt-1">Visualize e gerencie todos os agendamentos da unidade.</p>
+                    <p className="text-xs md:text-sm font-bold uppercase tracking-widest mt-1" style={{ color: colors.textMuted }}>Visualize e gerencie todos os agendamentos da unidade.</p>
                 </div>
 
                 <div className="relative w-full md:w-64">
@@ -98,7 +98,7 @@ export default function AdminAgendaPage() {
                     <select
                         value={selectedProfessionalId}
                         onChange={(e) => setSelectedProfessionalId(e.target.value)}
-                        className="w-full appearance-none pl-12 pr-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic border outline-none cursor-pointer hover:bg-white/5"
+                        className="w-full appearance-none pl-12 pr-10 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic border outline-none cursor-pointer hover:opacity-80"
                         style={{
                             backgroundColor: colors.cardBg,
                             color: colors.text,
@@ -118,13 +118,13 @@ export default function AdminAgendaPage() {
 
             <div className="grid gap-4">
                 {loading ? (
-                    <div className="py-20 text-center opacity-40">
+                    <div className="py-20 text-center opacity-40" style={{ color: colors.text }}>
                         <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: colors.primary }}></div>
                         <p className="text-[10px] font-black uppercase tracking-widest">Sincronizando Agenda...</p>
                     </div>
                 ) : appointments.length > 0 ? (
                     appointments.map(item => (
-                        <div key={item.id} className="group border p-5 md:p-6 rounded-[2rem] transition-all hover:border-white/20 flex flex-col md:flex-row items-center justify-between gap-4" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                        <div key={item.id} className="group border p-5 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                             <div className="flex items-center gap-5 w-full md:w-auto">
                                 <div className="size-12 md:size-16 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
                                     <span className="text-xs md:text-sm">{item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}</span>
@@ -134,7 +134,7 @@ export default function AdminAgendaPage() {
                                     <h4 className="font-bold text-base md:text-xl truncate" style={{ color: colors.text }}>{item.customer_name}</h4>
                                     <div className="flex items-center gap-2 mt-1">
                                         <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>{item.services?.name || 'Serviço'}</span>
-                                        <span className="size-1 rounded-full bg-white/10"></span>
+                                        <span className="size-1 rounded-full" style={{ backgroundColor: `${colors.text}20` }}></span>
                                         <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest" style={{ color: colors.primary }}>{item.profiles?.full_name || 'Profissional'}</span>
                                     </div>
                                 </div>
@@ -142,7 +142,7 @@ export default function AdminAgendaPage() {
 
                             <div className="flex items-center gap-4 w-full md:w-auto">
                                 <div className="flex flex-col items-end mr-4 hidden md:flex">
-                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40 italic">Valor</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40 italic" style={{ color: colors.textMuted }}>Valor</span>
                                     <span className="text-lg font-black italic tracking-tighter" style={{ color: colors.text }}>R$ {Number(item.services?.price || 0).toFixed(2)}</span>
                                 </div>
                                 <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border text-center w-full md:w-32 ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
@@ -155,17 +155,17 @@ export default function AdminAgendaPage() {
                                             item.status === 'paid' ? 'PAGO' :
                                                 'AGENDADO'}
                                 </div>
-                                <Link href="/admin/caixa" className="size-10 md:size-12 rounded-xl flex items-center justify-center bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-all shrink-0">
+                                <Link href="/admin/caixa" className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all shrink-0 hover:bg-black/5" style={{ backgroundColor: `${colors.text}0d`, color: `${colors.text}60` }}>
                                     <span className="material-symbols-outlined text-[20px]">more_vert</span>
                                 </Link>
                             </div>
                         </div>
                     ))
                 ) : (
-                    <div className="text-center py-24 bg-black/20 rounded-[3rem] border border-dashed border-white/5">
+                    <div className="text-center py-24 rounded-[3rem] border border-dashed" style={{ backgroundColor: `${colors.cardBg}80`, borderColor: `${colors.text}10` }}>
                         <span className="material-symbols-outlined text-6xl opacity-10 mb-4" style={{ color: colors.text }}>calendar_today</span>
-                        <h3 className="text-xl font-black italic uppercase opacity-40">Nenhum compromisso</h3>
-                        <p className="text-xs font-bold opacity-20 uppercase tracking-widest mt-2">Nenhum agendamento encontrado para os filtros selecionados.</p>
+                        <h3 className="text-xl font-black italic uppercase opacity-40" style={{ color: colors.textMuted }}>Nenhum compromisso</h3>
+                        <p className="text-xs font-bold opacity-20 uppercase tracking-widest mt-2" style={{ color: colors.textMuted }}>Nenhum agendamento encontrado para os filtros selecionados.</p>
                     </div>
                 )}
             </div>

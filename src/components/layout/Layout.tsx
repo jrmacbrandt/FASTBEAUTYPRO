@@ -45,6 +45,14 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     React.useEffect(() => {
         if (profile) {
             setUser(profile);
+
+            // THEME SYNC (Fix V13.0)
+            const bType = profile.tenant?.business_type || 'barber';
+            setBusinessType(bType);
+
+            // Apply global CSS variables class
+            document.body.className = bType === 'salon' ? 'theme-salon' : 'theme-barber';
+
             const maintenanceActive = profile.tenant?.maintenance_mode === true;
             setIsMaintenance(maintenanceActive);
 
