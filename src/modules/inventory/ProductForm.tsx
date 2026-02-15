@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { maskCurrency, maskNumber } from '@/lib/masks';
 
 interface ProductFormProps {
     onClose: () => void;
@@ -13,10 +14,10 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
         name: '',
         description: '',
         barcode: '',
-        cost_price: 0,
-        sale_price: 0,
-        current_stock: 0, // Only editable on create
-        min_threshold: 5,
+        cost_price: '',
+        sale_price: '',
+        current_stock: '',
+        min_threshold: '',
         unit_type: 'un'
     });
     const [saving, setSaving] = useState(false);
@@ -27,10 +28,10 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                 name: productToEdit.name,
                 description: productToEdit.description || '',
                 barcode: productToEdit.barcode || '',
-                cost_price: productToEdit.cost_price,
-                sale_price: productToEdit.sale_price,
-                current_stock: productToEdit.current_stock,
-                min_threshold: productToEdit.min_threshold,
+                cost_price: productToEdit.cost_price?.toFixed(2).replace('.', ',') || '',
+                sale_price: productToEdit.sale_price?.toFixed(2).replace('.', ',') || '',
+                current_stock: productToEdit.current_stock?.toString() || '',
+                min_threshold: productToEdit.min_threshold?.toString() || '',
                 unit_type: productToEdit.unit_type
             });
         }
@@ -52,12 +53,12 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                 name: formData.name,
                 description: formData.description,
                 barcode: formData.barcode,
-                cost_price: formData.cost_price,
-                sale_price: formData.sale_price,
-                min_threshold: formData.min_threshold,
+                cost_price: parseFloat(formData.cost_price.replace(',', '.')),
+                sale_price: parseFloat(formData.sale_price.replace(',', '.')),
+                min_threshold: parseInt(formData.min_threshold || '0'),
                 unit_type: formData.unit_type,
                 // Only set current_stock if creating new. If editing, stock is managed via transactions.
-                ...(productToEdit ? {} : { current_stock: formData.current_stock })
+                ...(productToEdit ? {} : { current_stock: parseInt(formData.current_stock || '0') })
             };
 
             let error;
@@ -80,12 +81,12 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                 productId = newProd?.id;
 
                 // Initial Stock Transaction for Audit
-                if (!error && formData.current_stock > 0 && productId) {
+                if (!error && parseInt(formData.current_stock || '0') > 0 && productId) {
                     await supabase.from('stock_transactions').insert({
                         tenant_id: profile.tenant_id,
                         product_id: productId,
                         type: 'IN',
-                        quantity: formData.current_stock,
+                        quantity: parseInt(formData.current_stock || '0'),
                         reason: 'Estoque Inicial',
                         created_by: user.id
                     });
@@ -149,21 +150,21 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                         <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Custo (R$)</label>
                             <input
-                                type="number"
-                                step="0.01"
+                                type="text"
+                                placeholder="0,00"
                                 value={formData.cost_price}
-                                onChange={e => setFormData({ ...formData, cost_price: parseFloat(e.target.value) })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors"
+                                onChange={e => setFormData({ ...formData, cost_price: maskCurrency(e.target.value) })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20"
                             />
                         </div>
                         <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Venda (R$)</label>
                             <input
-                                type="number"
-                                step="0.01"
+                                type="text"
+                                placeholder="0,00"
                                 value={formData.sale_price}
-                                onChange={e => setFormData({ ...formData, sale_price: parseFloat(e.target.value) })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors"
+                                onChange={e => setFormData({ ...formData, sale_price: maskCurrency(e.target.value) })}
+                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20"
                             />
                         </div>
                         <div className="space-y-1">
@@ -188,18 +189,20 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                             <label className="text-[10px] font-black uppercase text-emerald-500 ml-1 mb-2 block">Estoque Inicial</label>
                             <div className="flex gap-4">
                                 <input
-                                    type="number"
+                                    type="text"
+                                    placeholder="0"
                                     value={formData.current_stock}
-                                    onChange={e => setFormData({ ...formData, current_stock: parseInt(e.target.value) })}
-                                    className="w-1/2 bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-emerald-500 focus:outline-none transition-colors"
+                                    onChange={e => setFormData({ ...formData, current_stock: maskNumber(e.target.value) })}
+                                    className="w-1/2 bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-white/20"
                                 />
                                 <div className="space-y-1 w-1/2">
                                     <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Alerta Mínimo</label>
                                     <input
-                                        type="number"
+                                        type="text"
+                                        placeholder="0"
                                         value={formData.min_threshold}
-                                        onChange={e => setFormData({ ...formData, min_threshold: parseInt(e.target.value) })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors"
+                                        onChange={e => setFormData({ ...formData, min_threshold: maskNumber(e.target.value) })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20"
                                     />
                                 </div>
                             </div>

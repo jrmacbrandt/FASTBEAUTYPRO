@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { maskPhone, maskCPF, maskCEP } from '@/lib/masks';
 
 export const dynamic = 'force-dynamic';
 
@@ -147,7 +147,13 @@ export default function EstablishmentSettingsPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">CPF / CNPJ</label>
-                                <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.tax_id} onChange={e => setTenant({ ...tenant, tax_id: e.target.value })} placeholder="00.000.000/0001-00" />
+                                <input
+                                    type="text"
+                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all placeholder:text-white/20"
+                                    value={tenant.tax_id || ''}
+                                    onChange={e => setTenant({ ...tenant, tax_id: maskCPF(e.target.value) })}
+                                    placeholder="000.000.000-00"
+                                />
                             </div>
                         </div>
 
@@ -156,7 +162,13 @@ export default function EstablishmentSettingsPage() {
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">WhatsApp Comercial</label>
                                 <div className="relative">
                                     <span className="material-symbols-outlined absolute left-4 top-4 text-emerald-500/50 text-xl">call</span>
-                                    <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 pl-12 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.phone} onChange={e => setTenant({ ...tenant, phone: e.target.value })} placeholder="(00) 00000-0000" />
+                                    <input
+                                        type="tel"
+                                        className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 pl-12 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all placeholder:text-white/20"
+                                        value={tenant.phone || ''}
+                                        onChange={e => setTenant({ ...tenant, phone: maskPhone(e.target.value) })}
+                                        placeholder="(00) 00000-0000"
+                                    />
                                 </div>
                             </div>
                             <div className="space-y-2">
@@ -180,10 +192,10 @@ export default function EstablishmentSettingsPage() {
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">CEP</label>
                                 <input
                                     type="text"
-                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all"
-                                    value={tenant.address_zip}
+                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all placeholder:text-white/20"
+                                    value={tenant.address_zip || ''}
                                     onChange={e => {
-                                        const val = e.target.value;
+                                        const val = maskCEP(e.target.value);
                                         setTenant({ ...tenant, address_zip: val });
                                         if (val.replace(/\D/g, '').length === 8) handleCepLookup(val);
                                     }}

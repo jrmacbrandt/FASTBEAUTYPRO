@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { format, addDays } from 'date-fns';
+import { maskPhone } from '@/lib/masks';
 import { ptBR } from 'date-fns/locale';
 
 export const dynamic = 'force-dynamic';
@@ -413,7 +414,13 @@ Até lá! 👋`;
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Seu WhatsApp</label>
-                                    <input type="tel" placeholder="(00) 00000-0000" className="w-full bg-black/40 border-2 border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 text-white font-black italic focus:outline-none focus:border-[#f2b90d]/30 transition-all placeholder:opacity-20 text-sm md:text-base" value={selection.phone} onChange={(e) => setSelection({ ...selection, phone: e.target.value })} />
+                                    <input
+                                        type="tel"
+                                        placeholder="(00) 00000-0000"
+                                        className="w-full bg-black/40 border-2 border-white/5 rounded-xl md:rounded-2xl p-4 md:p-5 text-white font-black italic focus:outline-none focus:border-[#f2b90d]/30 transition-all placeholder:text-white/20 text-sm md:text-base"
+                                        value={selection.phone}
+                                        onChange={(e) => setSelection({ ...selection, phone: maskPhone(e.target.value) })}
+                                    />
                                 </div>
                                 <div className="space-y-1.5">
                                     <label className="text-[9px] font-black uppercase tracking-[0.3em] text-white/40 ml-2">Mês de Aniversário</label>

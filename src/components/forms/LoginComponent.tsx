@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { processImage } from '@/lib/image-processing';
+import { maskCPF, maskPhone } from '@/lib/masks';
 
 interface LoginProps {
     type: 'standard' | 'master';
@@ -110,35 +111,6 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         footer: 'FASTBEAUTY PRO'
     };
 
-    // Helper functions for formatting
-    const formatCPFOrCNPJ = (value: string) => {
-        const numbers = value.replace(/\D/g, '');
-        if (numbers.length <= 11) {
-            // CPF Format: 000.000.000-00
-            return numbers
-                .replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d)/, '$1.$2')
-                .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-                .replace(/(-\d{2})\d+?$/, '$1');
-        } else {
-            // CNPJ Format: 00.000.000/0000-00
-            return numbers
-                .replace(/^(\d{2})(\d)/, '$1.$2')
-                .replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3')
-                .replace(/\.(\d{3})(\d)/, '.$1/$2')
-                .replace(/(\d{4})(\d)/, '$1-$2')
-                .replace(/(-\d{2})\d+?$/, '$1');
-        }
-    };
-
-    const formatPhone = (value: string) => {
-        const numbers = value.replace(/\D/g, '');
-        // Format: (00) 00000-0000
-        return numbers
-            .replace(/^(\d{2})(\d)/, '($1) $2')
-            .replace(/(\d{5})(\d)/, '$1-$2')
-            .replace(/(-\d{4})\d+?$/, '$1');
-    };
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -610,10 +582,10 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                                 <input
                                                     type="tel"
                                                     placeholder="(00) 00000-0000"
-                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs"
+                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs placeholder:text-white/20"
                                                     style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
                                                     value={storePhone}
-                                                    onChange={(e) => setStorePhone(formatPhone(e.target.value))}
+                                                    onChange={(e) => setStorePhone(maskPhone(e.target.value))}
                                                     required
                                                 />
                                             </div>
@@ -643,12 +615,12 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                         <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>fingerprint</span>
                                         <input
                                             type="text"
-                                            placeholder={activeTab === 'admin' ? "000.000.000-00 ou 00.000.000/0000-00" : "000.000.000-00"}
-                                            className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs"
+                                            placeholder={activeTab === 'admin' ? "000.000.000-00" : "000.000.000-00"}
+                                            className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs placeholder:text-white/20"
                                             style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
                                             value={cpf}
-                                            onChange={(e) => setCpf(formatCPFOrCNPJ(e.target.value))}
-                                            maxLength={activeTab === 'admin' ? 18 : 14}
+                                            onChange={(e) => setCpf(maskCPF(e.target.value))}
+                                            maxLength={14}
                                             required
                                         />
                                     </div>
@@ -662,10 +634,10 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                             <input
                                                 type="tel"
                                                 placeholder="(00) 00000-0000"
-                                                className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs"
+                                                className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs placeholder:text-white/20"
                                                 style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
                                                 value={phone}
-                                                onChange={(e) => setPhone(formatPhone(e.target.value))}
+                                                onChange={(e) => setPhone(maskPhone(e.target.value))}
                                                 required
                                             />
                                         </div>

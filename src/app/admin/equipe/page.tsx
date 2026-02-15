@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { processImage } from '@/lib/image-processing';
+import { maskCPF, maskPhone, maskPercent } from '@/lib/masks';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,41 +22,24 @@ export default function TeamManagementPage() {
         email: '',
         cpf: '',
         phone: '',
-        service_commission: 50,
-        product_commission: 0,
+        service_commission: '' as string | number,
+        product_commission: '' as string | number,
         status: UserStatus.ACTIVE
     });
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
 
-    // Helpers
-    const formatCPF = (value: string) => {
-        return value
-            .replace(/\D/g, '')
-            .replace(/(\d{3})(\d)/, '$1.$2')
-            .replace(/(\d{3})(\d)/, '$1.$2')
-            .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-            .replace(/(-\d{2})\d+?$/, '$1');
-    };
-
-    const formatPhone = (value: string) => {
-        return value
-            .replace(/\D/g, '')
-            .replace(/^(\d{2})(\d)/, '($1) $2')
-            .replace(/(\d{5})(\d)/, '$1-$2')
-            .replace(/(-\d{4})\d+?$/, '$1');
-    };
 
     useEffect(() => {
         if (editingBarber) {
             setFormData({
                 full_name: editingBarber.full_name || '',
                 email: editingBarber.email || '',
-                cpf: formatCPF(editingBarber.cpf || ''),
-                phone: formatPhone(editingBarber.phone || ''),
-                service_commission: editingBarber.service_commission || 50,
-                product_commission: editingBarber.product_commission || 0,
+                cpf: maskCPF(editingBarber.cpf || ''),
+                phone: maskPhone(editingBarber.phone || ''),
+                service_commission: editingBarber.service_commission?.toString() || '',
+                product_commission: editingBarber.product_commission?.toString() || '',
                 status: editingBarber.status || UserStatus.ACTIVE
             });
             setAvatarPreview(editingBarber.avatar_url || null);
@@ -65,8 +49,8 @@ export default function TeamManagementPage() {
                 email: '',
                 cpf: '',
                 phone: '',
-                service_commission: 50,
-                product_commission: 80,
+                service_commission: '',
+                product_commission: '',
                 status: UserStatus.ACTIVE
             });
             setAvatarPreview(null);
@@ -218,8 +202,8 @@ export default function TeamManagementPage() {
                         email: formData.email, // Updating email generally requires auth update too, but keeping in profile for display/contact
                         cpf: formData.cpf.replace(/\D/g, ''),
                         phone: formData.phone.replace(/\D/g, ''),
-                        service_commission: Number(formData.service_commission),
-                        product_commission: Number(formData.product_commission),
+                        service_commission: Number(formData.service_commission || 0),
+                        product_commission: Number(formData.product_commission || 0),
                         status: formData.status,
                         avatar_url: avatarUrl
                     })
@@ -398,9 +382,9 @@ export default function TeamManagementPage() {
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">CPF</label>
                                     <input
                                         type="text"
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
-                                        value={formatCPF(formData.cpf)}
-                                        onChange={(e) => setFormData({ ...formData, cpf: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs placeholder:text-white/20"
+                                        value={formData.cpf}
+                                        onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })}
                                         maxLength={14}
                                         placeholder="000.000.000-00"
                                     />
@@ -409,9 +393,9 @@ export default function TeamManagementPage() {
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">WhatsApp</label>
                                     <input
                                         type="tel"
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
-                                        value={formatPhone(formData.phone)}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs placeholder:text-white/20"
+                                        value={formData.phone}
+                                        onChange={(e) => setFormData({ ...formData, phone: maskPhone(e.target.value) })}
                                         maxLength={15}
                                         placeholder="(00) 00000-0000"
                                     />
@@ -422,19 +406,21 @@ export default function TeamManagementPage() {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão Serviços (%)</label>
                                     <input
-                                        type="number"
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
+                                        type="text"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs placeholder:text-white/20"
                                         value={formData.service_commission}
-                                        onChange={(e) => setFormData({ ...formData, service_commission: Number(e.target.value) })}
+                                        onChange={(e) => setFormData({ ...formData, service_commission: maskPercent(e.target.value) })}
+                                        placeholder="0"
                                     />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão Produtos (%)</label>
                                     <input
-                                        type="number"
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs"
+                                        type="text"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs placeholder:text-white/20"
                                         value={formData.product_commission}
-                                        onChange={(e) => setFormData({ ...formData, product_commission: Number(e.target.value) })}
+                                        onChange={(e) => setFormData({ ...formData, product_commission: maskPercent(e.target.value) })}
+                                        placeholder="0"
                                     />
                                 </div>
                             </div>

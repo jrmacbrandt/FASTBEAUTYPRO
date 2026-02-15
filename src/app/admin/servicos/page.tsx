@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { processImage } from '@/lib/image-processing';
+import { maskCurrency, maskNumber } from '@/lib/masks';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,7 +127,7 @@ export default function ServicesPage() {
                 tenant_id: tenantId,
                 name: newService.name,
                 price: parseFloat(newService.price.replace(',', '.')),
-                duration_minutes: parseInt(newService.duration_minutes),
+                duration_minutes: parseInt(newService.duration_minutes || '0'),
                 active: true,
                 image_url: imageUrl
             };
@@ -249,20 +250,20 @@ export default function ServicesPage() {
                                 required
                                 type="text"
                                 placeholder="0,00"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner placeholder:text-white/20"
                                 value={newService.price}
-                                onChange={e => setNewService({ ...newService, price: e.target.value })}
+                                onChange={e => setNewService({ ...newService, price: maskCurrency(e.target.value) })}
                             />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Tempo (minutos)</label>
                             <input
                                 required
-                                type="number"
-                                placeholder="30"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner"
+                                type="text"
+                                placeholder="0"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner placeholder:text-white/20"
                                 value={newService.duration_minutes}
-                                onChange={e => setNewService({ ...newService, duration_minutes: e.target.value })}
+                                onChange={e => setNewService({ ...newService, duration_minutes: maskNumber(e.target.value) })}
                             />
                         </div>
                         <div className="md:col-span-3 pt-4 flex gap-4">
