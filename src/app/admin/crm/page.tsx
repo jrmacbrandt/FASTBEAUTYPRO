@@ -5,7 +5,15 @@ import { useSearchParams } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getSegmentedClients } from '@/lib/crm';
 
+import { useProfile } from '@/hooks/useProfile';
+
 function CRMContent() {
+    const { profile, loading: profileLoading, businessType } = useProfile();
+
+    const colors = businessType === 'salon'
+        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', border: '#e2e8f0', secondaryBg: '#f5f3f0' }
+        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', border: '#27272a', secondaryBg: '#18181b' };
+
     const [loading, setLoading] = useState(true);
     const [tenant, setTenant] = useState<any>(null);
     const [stats, setStats] = useState({
@@ -78,7 +86,7 @@ function CRMContent() {
         }
     }, [searchParams, loading, engagementData]);
 
-    const { profile, loading: profileLoading } = require('@/hooks/useProfile').useProfile();
+
 
     useEffect(() => {
         if (profile?.tenant_id) {
@@ -527,21 +535,22 @@ function CRMContent() {
     }
 
     return (
-        <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-1000 text-slate-100 pb-24">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/10 pb-8 gap-4">
+        <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-1000 pb-24" style={{ color: colors?.text }}>
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-8 gap-4" style={{ borderColor: `${colors?.border || '#27272a'}40` }}>
                 <div className="relative">
-                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-12 bg-[#f2b90d] rounded-full blur-sm opacity-50"></div>
-                    <h1 className="text-4xl font-black italic tracking-tighter text-white uppercase leading-none">
-                        CRM <span className="text-[#f2b90d]">Intelligence</span>
+                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-12 rounded-full blur-sm opacity-50" style={{ backgroundColor: colors?.primary || '#f2b90d' }}></div>
+                    <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none" style={{ color: colors?.text }}>
+                        CRM <span style={{ color: colors?.primary || '#f2b90d' }}>Intelligence</span>
                     </h1>
-                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2 flex items-center gap-2">
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-2 flex items-center gap-2" style={{ color: colors?.textMuted }}>
                         <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                         Gestão de Relacionamento & Fidelidade v4.0
                     </p>
                 </div>
                 <button
                     onClick={() => window.location.href = '/admin/crm/nova-campanha'}
-                    className="w-full md:w-auto bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[10px] tracking-[0.2em] px-8 py-4 rounded-2xl transition-all shadow-2xl hover:shadow-[#f2b90d]/30 active:scale-95 flex items-center justify-center gap-3 group"
+                    className="w-full md:w-auto text-black font-black uppercase text-[10px] tracking-[0.2em] px-8 py-4 rounded-2xl transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-3 group"
+                    style={{ backgroundColor: colors?.primary || '#f2b90d', color: businessType === 'salon' ? '#fff' : '#000' }}
                 >
                     <span className="material-symbols-outlined text-lg group-hover:rotate-90 transition-transform">add</span>
                     Lançar Nova Campanha
@@ -560,6 +569,7 @@ function CRMContent() {
                     actionLabel="EDITAR"
                     isActive={activeFilter === 'all'}
                     onClick={() => setActiveFilter('all')}
+                    colors={colors}
                 />
                 <MetricCard
                     title="Risco de Evasão"
@@ -570,6 +580,7 @@ function CRMContent() {
                     alert={stats.churnRisk > 0}
                     isActive={activeFilter === 'churn'}
                     onClick={() => setActiveFilter('churn')}
+                    colors={colors}
                 />
                 <MetricCard
                     title="Aniversariantes"
@@ -580,6 +591,7 @@ function CRMContent() {
                     alert={stats.birthdays > 0}
                     isActive={activeFilter === 'birthdays'}
                     onClick={() => setActiveFilter('birthdays')}
+                    colors={colors}
                 />
                 <MetricCard
                     title="Clientes VIP"
@@ -589,6 +601,7 @@ function CRMContent() {
                     desc="LTV > R$ 500"
                     isActive={activeFilter === 'vip'}
                     onClick={() => setActiveFilter('vip')}
+                    colors={colors}
                 />
                 <MetricCard
                     title="Próximos Prêmios"
@@ -599,40 +612,49 @@ function CRMContent() {
                     alert={stats.loyaltyPending > 0}
                     isActive={activeFilter === 'loyalty'}
                     onClick={() => setActiveFilter('loyalty')}
+                    colors={colors}
                 />
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
                 {/* FIDELITY CENTER - State of the Art UI */}
                 <div className="xl:col-span-5 space-y-6">
-                    <div className="bg-[#121214] border border-white/5 rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group hover:border-[#f2b90d]/20 transition-all shadow-2xl">
+                    <div className="border rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}40` }}
+                    >
                         {/* Background Decoration */}
-                        <div className="absolute -top-12 -right-12 size-40 bg-[#f2b90d]/5 rounded-full blur-3xl pointer-events-none group-hover:bg-[#f2b90d]/10 transition-all"></div>
+                        <div className="absolute -top-12 -right-12 size-40 rounded-full blur-3xl pointer-events-none transition-all"
+                            style={{ backgroundColor: `${colors?.primary}0d` }}></div>
 
                         <div className="relative z-10">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
-                                    <h3 className="text-xl font-black italic uppercase text-white mb-1">Cartão Fidelidade</h3>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Configuração de Recompensa</p>
+                                    <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Cartão Fidelidade</h3>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Configuração de Recompensa</p>
                                 </div>
-                                <div className="size-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:rotate-12 transition-transform">
-                                    <span className="material-symbols-outlined text-[#f2b90d]">loyalty</span>
+                                <div className="size-12 rounded-2xl flex items-center justify-center border group-hover:rotate-12 transition-transform"
+                                    style={{ backgroundColor: `${colors?.text}0d`, borderColor: `${colors?.border}40` }}
+                                >
+                                    <span className="material-symbols-outlined" style={{ color: colors?.primary }}>loyalty</span>
                                 </div>
                             </div>
 
                             {/* Fidelity Target Selector */}
                             <div className="space-y-4 mb-10">
-                                <label className="text-[9px] font-black uppercase tracking-widest text-[#f2b90d] ml-1">Meta de Selos para o Prêmio</label>
+                                <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Meta de Selos para o Prêmio</label>
                                 <div className="grid grid-cols-3 gap-3">
                                     {[5, 8, 10].map((val) => (
                                         <button
                                             key={val}
                                             disabled={loading || !tenant}
                                             onClick={() => setSelectedLoyaltyTarget(Number(val))}
-                                            className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed ${Number(selectedLoyaltyTarget) === Number(val)
-                                                ? 'bg-[#f2b90d] border-[#f2b90d] text-black shadow-xl shadow-[#f2b90d]/20 scale-[1.05]'
-                                                : 'bg-black/40 border-white/5 text-slate-500 hover:border-white/20 hover:text-white'
-                                                }`}
+                                            className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed`}
+                                            style={{
+                                                backgroundColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : `${colors?.cardBg}40`,
+                                                borderColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : `${colors?.border}40`,
+                                                color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#fff' : '#000') : colors?.textMuted,
+                                                boxShadow: Number(selectedLoyaltyTarget) === Number(val) ? `0 10px 30px -10px ${colors?.primary}60` : undefined
+                                            }}
                                         >
                                             <span>{val}</span>
                                             <span className="text-[7px] font-black tracking-[0.2em] opacity-60 uppercase">Selos</span>
@@ -642,23 +664,31 @@ function CRMContent() {
                             </div>
 
                             {/* Intelligence Audit Preview */}
-                            <div className="bg-black/40 border border-white/5 rounded-3xl p-6 relative overflow-hidden mb-8">
-                                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500 mb-4 opacity-70">Visualização do App do Cliente</p>
+                            <div className="border rounded-3xl p-6 relative overflow-hidden mb-8" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}40` }}>
+                                <p className="text-[8px] font-black uppercase tracking-widest mb-4 opacity-70" style={{ color: colors?.textMuted }}>Visualização do App do Cliente</p>
                                 <div className="flex flex-wrap gap-2.5 justify-center py-4">
                                     {loyaltyPreviewCircles.map((_, i) => (
                                         <div
                                             key={i}
-                                            className={`size-10 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${i === 0 ? 'bg-[#f2b90d]/20 border-[#f2b90d] text-[#f2b90d] shadow-lg shadow-[#f2b90d]/20 scale-110 ring-4 ring-[#f2b90d]/10' : 'bg-white/5 border-white/10 text-white/5'}`}
+                                            className={`size-10 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${i === 0 ? 'scale-110' : ''}`}
+                                            style={{
+                                                backgroundColor: i === 0 ? `${colors?.primary}20` : `${colors?.cardBg}40`,
+                                                borderColor: i === 0 ? colors?.primary : `${colors?.border}40`,
+                                                color: i === 0 ? colors?.primary : `${colors?.text}20`,
+                                                boxShadow: i === 0 ? `0 0 0 4px ${colors?.primary}10` : undefined
+                                            }}
                                         >
                                             <span className="material-symbols-outlined text-[18px]">{i === 0 ? 'verified_user' : 'circle'}</span>
                                         </div>
                                     ))}
                                     {/* Reward slot */}
-                                    <div className="size-10 rounded-full border-2 border-dashed border-[#f2b90d]/30 flex items-center justify-center bg-[#f2b90d]/5 text-[#f2b90d]/40">
+                                    <div className="size-10 rounded-full border-2 border-dashed flex items-center justify-center"
+                                        style={{ borderColor: `${colors?.primary}40`, backgroundColor: `${colors?.primary}0d`, color: `${colors?.primary}60` }}
+                                    >
                                         <span className="material-symbols-outlined text-[18px]">redeem</span>
                                     </div>
                                 </div>
-                                <p className="text-[9px] text-center text-slate-500 mt-4 italic font-medium">Recompensa: 1 {tenant?.business_type === 'barber' ? 'Corte' : 'Serviço'} Grátis</p>
+                                <p className="text-[9px] text-center mt-4 italic font-medium" style={{ color: colors?.textMuted }}>Recompensa: 1 {tenant?.business_type === 'barber' ? 'Corte' : 'Serviço'} Grátis</p>
                             </div>
 
                             {/* Unificado: Botão SALVAR - Sempre Ativo e Visível */}
@@ -686,12 +716,14 @@ function CRMContent() {
 
                 {/* CAMPAIGN CENTER & ANNOTATIONS */}
                 <div className="xl:col-span-7 space-y-6">
-                    <div className="bg-[#121214] border border-white/5 rounded-[2.5rem] p-8 md:p-10 h-full flex flex-col shadow-2xl">
+                    <div className="border rounded-[2.5rem] p-8 md:p-10 h-full flex flex-col shadow-2xl"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}40` }}
+                    >
                         <div className="flex items-center justify-between mb-10">
                             <div className="flex items-center gap-6">
                                 <div>
-                                    <h3 className="text-xl font-black italic uppercase text-white mb-1">Central de Engajamento</h3>
-                                    <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Motor de Retenção Ativo</p>
+                                    <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Central de Engajamento</h3>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Motor de Retenção Ativo</p>
                                 </div>
                                 <button
                                     onClick={() => window.location.href = `/admin/crm/nova-campanha?segment=${activeFilter}`}
@@ -729,38 +761,42 @@ function CRMContent() {
                                         </tr>
                                     ) : (
                                         engagementData[activeFilter].slice(0, 5).map((client) => (
-                                            <tr key={client.id} className="group/row bg-white/[0.02] hover:bg-white/[0.05] transition-all border border-white/5">
-                                                <td className="px-6 py-4 rounded-l-2xl border-y border-l border-white/5">
+                                            <tr key={client.id} className="group/row transition-all border"
+                                                style={{ backgroundColor: `${colors?.cardBg}40`, borderColor: `${colors?.border}20` }}
+                                            >
+                                                <td className="px-6 py-4 rounded-l-2xl border-y border-l" style={{ borderColor: `${colors?.border}20` }}>
                                                     <div className="flex items-center gap-3">
-                                                        <div className="size-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black italic text-[#f2b90d]">
+                                                        <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black italic border"
+                                                            style={{ backgroundColor: `${colors?.text}0d`, borderColor: `${colors?.border}40`, color: colors?.primary }}
+                                                        >
                                                             {client.name.charAt(0)}
                                                         </div>
                                                         <div>
-                                                            <p className="text-[11px] font-black uppercase italic text-white leading-none">{client.name}</p>
-                                                            <p className="text-[8px] text-slate-500 font-bold mt-1 uppercase tracking-tighter">LTV: R$ {client.total_spent || '0,00'}</p>
+                                                            <p className="text-[11px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
+                                                            <p className="text-[8px] font-bold mt-1 uppercase tracking-tighter" style={{ color: colors?.textMuted }}>LTV: R$ {client.total_spent || '0,00'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 border-y border-white/5 text-center">
-                                                    <p className="text-[10px] font-bold text-slate-300">
+                                                <td className="px-6 py-4 border-y text-center" style={{ borderColor: `${colors?.border}20` }}>
+                                                    <p className="text-[10px] font-bold" style={{ color: colors?.textMuted }}>
                                                         {client.last_visit ? new Date(client.last_visit).toLocaleDateString() : '--'}
                                                     </p>
                                                 </td>
-                                                <td className="px-6 py-4 border-y border-white/5 text-center">
+                                                <td className="px-6 py-4 border-y text-center" style={{ borderColor: `${colors?.border}20` }}>
                                                     <div className="flex flex-col items-center">
-                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : 'text-slate-600'}`}>
+                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : ''}`} style={{ color: client.last_contact_at ? undefined : colors?.textMuted }}>
                                                             {client.last_contact_at ? 'Abordado' : 'Aguardando'}
                                                         </span>
-                                                        <span className="text-[7px] text-slate-700">
+                                                        <span className="text-[7px]" style={{ color: colors?.textMuted }}>
                                                             {client.last_contact_at ? new Date(client.last_contact_at).toLocaleDateString() : 'NUNCA'}
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 rounded-r-2xl border-y border-r border-white/5 text-right">
+                                                <td className="px-6 py-4 rounded-r-2xl border-y border-r text-right" style={{ borderColor: `${colors?.border}20` }}>
                                                     <button
                                                         onClick={() => openCampaignModal(client, (activeFilter === 'churn' ? 'recovery' : activeFilter === 'loyalty' ? 'loyalty' : 'manual'))}
                                                         disabled={updatingContact === client.id}
-                                                        className="size-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-black transition-all flex items-center justify-center group/btn active:scale-90 disabled:opacity-30"
+                                                        className="size-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white transition-all flex items-center justify-center group/btn active:scale-90 disabled:opacity-30"
                                                     >
                                                         <span className="material-symbols-outlined text-lg">{updatingContact === client.id ? 'sync' : 'chat'}</span>
                                                     </button>
@@ -771,7 +807,7 @@ function CRMContent() {
                                 </tbody>
                             </table>
                             {engagementData[activeFilter].length > 5 && (
-                                <p className="text-center text-[8px] font-black uppercase tracking-widest text-slate-600 mt-4 italic">+ {engagementData[activeFilter].length - 5} clientes ocultos. Use filtros para refinar.</p>
+                                <p className="text-center text-[8px] font-black uppercase tracking-widest mt-4 italic" style={{ color: colors?.textMuted }}>+ {engagementData[activeFilter].length - 5} clientes ocultos. Use filtros para refinar.</p>
                             )}
                         </div>
                     </div>
@@ -779,11 +815,13 @@ function CRMContent() {
             </div>
 
             {/* CAMPAIGN HISTORY - v6.0 New Feature */}
-            <div className="bg-[#121214] border border-white/5 rounded-[2.5rem] p-8 md:p-10 shadow-2xl space-y-8">
-                <div className="flex items-center justify-between border-b border-white/5 pb-6">
+            <div className="border rounded-[2.5rem] p-8 md:p-10 shadow-2xl space-y-8"
+                style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}40` }}
+            >
+                <div className="flex items-center justify-between border-b pb-6" style={{ borderColor: `${colors?.border}40` }}>
                     <div>
-                        <h3 className="text-xl font-black italic uppercase text-white mb-1">Histórico de Campanhas</h3>
-                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Acompanhamento de disparos e engajamento</p>
+                        <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Histórico de Campanhas</h3>
+                        <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Acompanhamento de disparos e engajamento</p>
                     </div>
                     <div className="flex items-center gap-4">
                         {campaigns.length > 0 && (
@@ -796,14 +834,14 @@ function CRMContent() {
                                 {isClearingHistory ? 'LIMPANDO...' : 'LIMPAR TUDO'}
                             </button>
                         )}
-                        <span className="material-symbols-outlined text-slate-500">history</span>
+                        <span className="material-symbols-outlined" style={{ color: colors?.textMuted }}>history</span>
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-separate border-spacing-y-2">
                         <thead>
-                            <tr className="text-[8px] font-black uppercase tracking-widest text-slate-500">
+                            <tr className="text-[8px] font-black uppercase tracking-widest" style={{ color: colors?.textMuted }}>
                                 <th className="px-6 py-2">Data / Campanha</th>
                                 <th className="px-6 py-2 text-center">Tipo</th>
                                 <th className="px-6 py-2 text-center">Volume</th>
@@ -815,33 +853,35 @@ function CRMContent() {
                             {campaigns.length === 0 ? (
                                 <tr>
                                     <td colSpan={5} className="py-12 text-center opacity-30">
-                                        <span className="material-symbols-outlined text-4xl mb-2 block">campaign</span>
-                                        <p className="text-[10px] font-black uppercase tracking-widest">Nenhuma campanha registrada</p>
+                                        <span className="material-symbols-outlined text-4xl mb-2 block" style={{ color: colors?.text }}>campaign</span>
+                                        <p className="text-[10px] font-black uppercase tracking-widest" style={{ color: colors?.textMuted }}>Nenhuma campanha registrada</p>
                                     </td>
                                 </tr>
                             ) : (
                                 campaigns.map((campaign) => (
-                                    <tr key={campaign.id} className="group bg-white/[0.02] hover:bg-white/[0.05] transition-all border border-white/5">
-                                        <td className="px-6 py-4 rounded-l-2xl border-y border-l border-white/5">
+                                    <tr key={campaign.id} className="group transition-all border"
+                                        style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}
+                                    >
+                                        <td className="px-6 py-4 rounded-l-2xl border-y border-l" style={{ borderColor: `${colors?.border}20` }}>
                                             <div>
-                                                <p className="text-[11px] font-black uppercase italic text-white leading-none mb-1">{campaign.name}</p>
-                                                <p className="text-[8px] text-slate-500 font-bold uppercase tracking-tighter">
+                                                <p className="text-[11px] font-black uppercase italic leading-none mb-1" style={{ color: colors?.text }}>{campaign.name}</p>
+                                                <p className="text-[8px] font-bold uppercase tracking-tighter" style={{ color: colors?.textMuted }}>
                                                     Criada em: {new Date(campaign.created_at).toLocaleDateString()} às {new Date(campaign.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 border-y border-white/5 text-center">
+                                        <td className="px-6 py-4 border-y text-center" style={{ borderColor: `${colors?.border}20` }}>
                                             <span className={`text-[8px] font-black uppercase px-2 py-1 rounded-md border ${campaign.name.includes('Envios Manuais') ? 'border-amber-500/20 text-amber-500 bg-amber-500/5' : 'border-indigo-500/20 text-indigo-500 bg-indigo-500/5'}`}>
                                                 {campaign.name.includes('Envios Manuais') ? 'Manual' : 'Segmentada'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 border-y border-white/5 text-center">
+                                        <td className="px-6 py-4 border-y text-center" style={{ borderColor: `${colors?.border}20` }}>
                                             <div className="flex flex-col items-center">
-                                                <span className="text-[10px] font-black text-white">{campaign.campaign_items?.[0]?.count || 0}</span>
-                                                <span className="text-[7px] text-slate-500 uppercase font-black">Impactos</span>
+                                                <span className="text-[10px] font-black" style={{ color: colors?.text }}>{campaign.campaign_items?.[0]?.count || 0}</span>
+                                                <span className="text-[7px] uppercase font-black" style={{ color: colors?.textMuted }}>Impactos</span>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 border-y border-white/5 text-center">
+                                        <td className="px-6 py-4 border-y text-center" style={{ borderColor: `${colors?.border}20` }}>
                                             <div className="flex items-center justify-center gap-1.5">
                                                 <span className="size-1.5 rounded-full bg-emerald-500"></span>
                                                 <span className="text-[8px] font-black uppercase text-emerald-500">Concluída</span>
@@ -878,15 +918,18 @@ function CRMContent() {
             {/* MODAL: GESTÃO DE CLIENTES (CIRÚRGICO) */}
             {isClientModalOpen && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                    <div className="border w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}20` }}
+                    >
+                        <div className="p-8 border-b flex items-center justify-between" style={{ borderColor: `${colors?.border}20` }}>
                             <div>
-                                <h3 className="text-xl font-black italic uppercase text-white">Gestão da Base</h3>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1">Excluir ou Sincronizar Clientes</p>
+                                <h3 className="text-xl font-black italic uppercase" style={{ color: colors?.text }}>Gestão da Base</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: colors?.textMuted }}>Excluir ou Sincronizar Clientes</p>
                             </div>
                             <button
                                 onClick={() => setIsClientModalOpen(false)}
-                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-400 transition-all"
+                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all"
+                                style={{ color: colors?.textMuted }}
                             >
                                 <span className="material-symbols-outlined">close</span>
                             </button>
@@ -916,7 +959,9 @@ function CRMContent() {
                                     </div>
                                 ) : (
                                     clientsList.map((client) => (
-                                        <div key={client.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-all group">
+                                        <div key={client.id} className="flex items-center justify-between p-4 rounded-2xl border transition-all group"
+                                            style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}
+                                        >
                                             <div className="flex items-center gap-4">
                                                 <input
                                                     type="checkbox"
@@ -928,13 +973,13 @@ function CRMContent() {
                                                     }}
                                                 />
                                                 <div>
-                                                    <p className="text-xs font-black uppercase italic text-white leading-none">{client.name}</p>
-                                                    <p className="text-[9px] text-slate-500 font-bold mt-1">{client.phone}</p>
+                                                    <p className="text-xs font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
+                                                    <p className="text-[9px] font-bold mt-1" style={{ color: colors?.textMuted }}>{client.phone}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right flex flex-col items-end">
-                                                <p className="text-[10px] font-black text-[#f2b90d]">R$ {Number(client.total_spent || 0).toFixed(2)}</p>
-                                                <p className="text-[7px] text-slate-600 uppercase font-black tracking-tighter">Gasto Total</p>
+                                                <p className="text-[10px] font-black" style={{ color: colors?.primary }}>R$ {Number(client.total_spent || 0).toFixed(2)}</p>
+                                                <p className="text-[7px] uppercase font-black tracking-tighter" style={{ color: colors?.textMuted }}>Gasto Total</p>
                                             </div>
                                         </div>
                                     ))
@@ -965,13 +1010,15 @@ function CRMContent() {
             {/* MODAL: CAMPANHA WHATSAPP (TEMPLATES INTELIGENTES) */}
             {isCampaignModalOpen && campaignClient && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                    <div className="border w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}20` }}
+                    >
+                        <div className="p-8 border-b flex items-center justify-between" style={{ borderColor: `${colors?.border}20` }}>
                             <div>
-                                <h3 className="text-xl font-black italic uppercase text-white leading-none mb-1">Engajar Cliente</h3>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{campaignClient.name}</p>
+                                <h3 className="text-xl font-black italic uppercase leading-none mb-1" style={{ color: colors?.text }}>Engajar Cliente</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>{campaignClient.name}</p>
                             </div>
-                            <button onClick={() => setIsCampaignModalOpen(false)} className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-500">
+                            <button onClick={() => setIsCampaignModalOpen(false)} className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center" style={{ color: colors?.textMuted }}>
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
@@ -1007,7 +1054,13 @@ function CRMContent() {
                                     value={campaignMessage}
                                     onChange={(e) => setCampaignMessage(e.target.value)}
                                     rows={5}
-                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-xs text-white placeholder:text-slate-700 focus:border-[#f2b90d]/30 focus:outline-none transition-all resize-none"
+                                    className="w-full border rounded-2xl p-4 text-xs placeholder:text-slate-700 focus:outline-none transition-all resize-none"
+                                    style={{
+                                        backgroundColor: `${colors?.secondaryBg}80`,
+                                        borderColor: `${colors?.border}40`,
+                                        color: colors?.text,
+                                        boxShadow: `0 0 0 1px ${colors?.border}20`
+                                    }}
                                 />
                                 <div className="flex items-center gap-2 px-1">
                                     <span className="size-1.5 rounded-full bg-[#f2b90d] animate-pulse"></span>
@@ -1038,15 +1091,18 @@ function CRMContent() {
             {/* MODAL: DETALHES DA CAMPANHA */}
             {isDetailsModalOpen && selectedCampaign && (
                 <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]">
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between shrink-0">
+                    <div className="border w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}20` }}
+                    >
+                        <div className="p-8 border-b flex items-center justify-between shrink-0" style={{ borderColor: `${colors?.border}20` }}>
                             <div>
-                                <h3 className="text-xl font-black italic uppercase text-white leading-none mb-1">Detalhes da Campanha</h3>
-                                <p className="text-[10px] text-[#f2b90d] font-bold uppercase tracking-widest">{selectedCampaign.name}</p>
+                                <h3 className="text-xl font-black italic uppercase leading-none mb-1" style={{ color: colors?.text }}>Detalhes da Campanha</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors?.primary }}>{selectedCampaign.name}</p>
                             </div>
                             <button
                                 onClick={() => setIsDetailsModalOpen(false)}
-                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-slate-500"
+                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all"
+                                style={{ color: colors?.textMuted }}
                             >
                                 <span className="material-symbols-outlined">close</span>
                             </button>
@@ -1055,17 +1111,17 @@ function CRMContent() {
                         <div className="flex-1 p-8 overflow-y-auto scrollbar-hide space-y-8">
                             {/* Summary Cards */}
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
-                                    <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Total Cliques/Envios</p>
-                                    <p className="text-xl font-black text-white">{campaignDetailsItems.length}</p>
+                                <div className="border p-4 rounded-2xl" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
+                                    <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Total Cliques/Envios</p>
+                                    <p className="text-xl font-black" style={{ color: colors?.text }}>{campaignDetailsItems.length}</p>
                                 </div>
-                                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl">
-                                    <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Data</p>
-                                    <p className="text-xs font-black text-white">{new Date(selectedCampaign.created_at).toLocaleDateString()}</p>
+                                <div className="border p-4 rounded-2xl" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
+                                    <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Data</p>
+                                    <p className="text-xs font-black" style={{ color: colors?.text }}>{new Date(selectedCampaign.created_at).toLocaleDateString()}</p>
                                 </div>
-                                <div className="bg-black/40 border border-white/5 p-4 rounded-2xl col-span-2">
-                                    <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Mensagem Base</p>
-                                    <p className="text-[10px] font-bold text-slate-300 italic truncate" title={selectedCampaign.message_template}>
+                                <div className="border p-4 rounded-2xl col-span-2" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
+                                    <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Mensagem Base</p>
+                                    <p className="text-[10px] font-bold italic truncate" title={selectedCampaign.message_template} style={{ color: colors?.textMuted }}>
                                         {selectedCampaign.message_template}
                                     </p>
                                 </div>
@@ -1080,14 +1136,18 @@ function CRMContent() {
                                         <p className="text-center py-6 text-[10px] font-black uppercase text-slate-700">Nenhum registro individual encontrado</p>
                                     ) : (
                                         campaignDetailsItems.map((item: any, idx: number) => (
-                                            <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white/[0.02] border border-white/5">
+                                            <div key={idx} className="flex items-center justify-between p-4 rounded-xl border"
+                                                style={{ backgroundColor: `${colors?.secondaryBg}20`, borderColor: `${colors?.border}20` }}
+                                            >
                                                 <div className="flex items-center gap-3">
-                                                    <div className="size-8 rounded-full bg-white/5 flex items-center justify-center text-[10px] font-black text-[#f2b90d]">
+                                                    <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black"
+                                                        style={{ backgroundColor: `${colors?.text}0d`, color: colors?.primary }}
+                                                    >
                                                         {item.client_name?.charAt(0)}
                                                     </div>
                                                     <div>
-                                                        <p className="text-[11px] font-black uppercase text-white leading-none">{item.client_name}</p>
-                                                        <p className="text-[8px] text-slate-600 font-bold mt-1">{item.client_phone}</p>
+                                                        <p className="text-[11px] font-black uppercase leading-none" style={{ color: colors?.text }}>{item.client_name}</p>
+                                                        <p className="text-[8px] font-bold mt-1" style={{ color: colors?.textMuted }}>{item.client_phone}</p>
                                                     </div>
                                                 </div>
                                                 <div className="px-3 py-1 rounded-full bg-emerald-500/5 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase">
@@ -1115,7 +1175,9 @@ function CRMContent() {
             {/* MODAL: FILA DE DISPARO RÁPIDO (CRM v5.0) */}
             {isQueueActive && (
                 <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="w-full max-w-xl bg-[#0a0a0b] border border-white/10 rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(242,185,13,0.1)]">
+                    <div className="w-full max-w-xl border rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(242,185,13,0.1)]"
+                        style={{ backgroundColor: colors?.cardBg || '#0a0a0b', borderColor: `${colors?.border}20` }}
+                    >
                         {/* Progress Bar */}
                         <div className="h-1 bg-white/5 w-full">
                             <div
@@ -1160,9 +1222,9 @@ function CRMContent() {
                                     </button>
                                 </header>
 
-                                <div className="bg-black/40 border border-white/5 rounded-3xl p-6 relative">
-                                    <div className="absolute -top-3 left-6 px-3 py-1 bg-[#075e54] rounded-full text-[8px] font-black uppercase tracking-widest text-white ring-4 ring-[#0a0a0b]">Preview WhatsApp</div>
-                                    <p className="text-sm text-slate-300 italic pt-2">
+                                <div className="border rounded-3xl p-6 relative" style={{ backgroundColor: `${colors?.secondaryBg}80`, borderColor: `${colors?.border}20` }}>
+                                    <div className="absolute -top-3 left-6 px-3 py-1 bg-[#075e54] rounded-full text-[8px] font-black uppercase tracking-widest text-white ring-4" style={{ ringColor: colors?.cardBg }}>Preview WhatsApp</div>
+                                    <p className="text-sm italic pt-2" style={{ color: colors?.textMuted }}>
                                         {activeFilter === 'churn' ? `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Sentimos sua falta...` :
                                             activeFilter === 'birthdays' ? `Parabéns, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 🎉 Temos um presente...` :
                                                 `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Como você está?`}
@@ -1216,11 +1278,16 @@ export default function CRMDashboard() {
 }
 
 
-function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel, isActive, onClick }: any) {
+function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel, isActive, onClick, colors }: any) {
     return (
         <div
             onClick={onClick}
-            className={`bg-[#121214] border ${isActive ? 'border-[#f2b90d] ring-4 ring-[#f2b90d]/10' : alert ? 'border-rose-500/30 bg-rose-500/[0.02]' : 'border-white/5'} p-6 rounded-[2rem] transition-all duration-500 group hover:translate-y-[-4px] hover:border-white/20 shadow-xl overflow-hidden relative ${onClick ? 'cursor-pointer' : ''}`}
+            className={`border p-6 rounded-[2rem] transition-all duration-500 group hover:translate-y-[-4px] shadow-xl overflow-hidden relative ${onClick ? 'cursor-pointer' : ''}`}
+            style={{
+                backgroundColor: colors?.cardBg || '#121214',
+                borderColor: isActive ? (colors?.primary || '#f2b90d') : (alert ? '#ef44444d' : `${colors?.border || '#27272a'}40`),
+                boxShadow: isActive ? `0 0 0 4px ${colors?.primary || '#f2b90d'}1a` : undefined
+            }}
         >
             {/* Action Icon (Quick Action Indicator) */}
             <div className={`absolute top-4 right-4 text-[18px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 ${color}`}>
@@ -1238,18 +1305,19 @@ function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLa
                     {onAction && (
                         <button
                             onClick={(e) => { e.stopPropagation(); onAction(); }}
-                            className="bg-white/5 hover:bg-[#f2b90d] hover:text-black border border-white/10 text-[8px] font-black uppercase px-3 py-1.5 rounded-full transition-all"
+                            className="bg-black/5 hover:text-black hover:bg-opacity-100 border text-[8px] font-black uppercase px-3 py-1.5 rounded-full transition-all"
+                            style={{ borderColor: `${colors?.border || '#27272a'}60`, color: colors?.textMuted || '#64748b' }}
                         >
                             {actionLabel}
                         </button>
                     )}
                 </div>
                 <div>
-                    <h2 className="text-4xl font-black text-white italic tracking-tighter mb-1 transition-all group-hover:text-white/90">
+                    <h2 className="text-4xl font-black italic tracking-tighter mb-1 transition-all group-hover:opacity-90" style={{ color: colors?.text || '#fff' }}>
                         {value}
                     </h2>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-white opacity-40 mb-1 group-hover:opacity-60 transition-opacity">{title}</p>
-                    <p className={`text-[7px] font-black uppercase tracking-widest ${alert ? 'text-rose-500' : 'text-slate-600'}`}>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] opacity-40 mb-1 group-hover:opacity-60 transition-opacity" style={{ color: colors?.text || '#fff' }}>{title}</p>
+                    <p className={`text-[7px] font-black uppercase tracking-widest ${alert ? 'text-rose-500' : ''}`} style={{ color: alert ? undefined : (colors?.textMuted || '#64748b') }}>
                         {desc}
                     </p>
                 </div>

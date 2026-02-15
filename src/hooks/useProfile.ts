@@ -115,9 +115,15 @@ export function useProfile() {
         return () => subscription.unsubscribe();
     }, []);
 
+    // THEME SYNC FIX: Priority to LocalStorage
+    const storedType = typeof window !== 'undefined' ? localStorage.getItem('elite_business_type') : null;
+    const computedType = storedType === 'salon' || storedType === 'barber'
+        ? storedType
+        : (profile?.tenant?.business_type === 'salon' ? 'salon' : 'barber');
+
     return {
         profile,
         loading,
-        businessType: profile?.tenant?.business_type === 'salon' ? 'salon' : 'barber'
+        businessType: computedType
     };
 }
