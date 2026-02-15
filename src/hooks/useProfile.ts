@@ -15,11 +15,37 @@ export function useProfile() {
             if (session) {
                 const { data, error } = await supabase
                     .from('profiles')
-                    .select('*')
+                    .select('*, tenant(*)')
                     .eq('id', session.user.id)
                     .single();
 
-                if (!error) setProfile(data);
+                if (!error && data) {
+                    let finalProfile = { ...data };
+
+                    // Impersonation Logic for Master Admin
+                    if (data.role === 'master' || data.email === 'jrmacbrandt@gmail.com') {
+                        const supportId = document.cookie
+                            .split('; ')
+                            .find(row => row.startsWith('support_tenant_id='))
+                            ?.split('=')[1];
+
+                        if (supportId) {
+                            console.log('🛡️ SUPPORT MODE ACTIVE: Impersonating tenant', supportId);
+                            finalProfile.tenant_id = supportId;
+                            // Optionally fetch the impersonated tenant data
+                            const { data: impersonatedTenant } = await supabase
+                                .from('tenants')
+                                .select('*')
+                                .eq('id', supportId)
+                                .single();
+                            if (impersonatedTenant) {
+                                finalProfile.tenant = impersonatedTenant;
+                            }
+                        }
+                    }
+
+                    setProfile(finalProfile as any);
+                }
             }
             setLoading(false);
         }

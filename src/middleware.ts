@@ -44,6 +44,14 @@ export async function middleware(request: NextRequest) {
     const isProPage = url.pathname.startsWith('/profissional');
     const isPaymentPage = url.pathname === '/pagamento-pendente';
     const isApprovalPage = url.pathname === '/aguardando-aprovacao';
+    const isMaintenancePage = url.pathname === '/manutencao';
+
+    // 1.5 Handle Impersonation (Support Mode)
+    const impersonateId = url.searchParams.get('impersonate');
+    const stopImpersonate = url.searchParams.has('stop_impersonate');
+
+    // Get existing support cookie
+    const supportTenantId = request.cookies.get('support_tenant_id')?.value;
 
     // 1. Unauthenticated users
     if (!user) {
@@ -58,14 +66,18 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
         .from('profiles')
         .select(`
+            id,
             role, 
             status, 
+            tenant_id,
             tenant (
+                id,
                 active,
                 has_paid,
                 status,
                 subscription_plan,
-                trial_ends_at
+                trial_ends_at,
+                maintenance_mode
             )
         `)
         .eq('id', user.id)
@@ -91,13 +103,42 @@ export async function middleware(request: NextRequest) {
     if (role === 'master') {
         hasPaid = true;
         subscriptionPlan = 'unlimited';
+
+        // Support Mode Logic
+        if (impersonateId) {
+            supabaseResponse.cookies.set('support_tenant_id', impersonateId, { path: '/' });
+            url.searchParams.delete('impersonate');
+            url.pathname = '/admin';
+            return NextResponse.redirect(url, { headers: supabaseResponse.headers });
+        }
+
+        if (stopImpersonate) {
+            supabaseResponse.cookies.set('support_tenant_id', '', { path: '/', maxAge: 0 });
+            url.searchParams.delete('stop_impersonate');
+            url.pathname = '/admin-master';
+            return NextResponse.redirect(url, { headers: supabaseResponse.headers });
+        }
     }
 
     const isSuspendedPage = url.pathname === '/unidade-suspensa';
 
     // ----------------------------------------------------------------
-    // NEW STRICT LOGIC (USER DEFINED V4.0)
+    // NEW STRICT LOGIC (USER DEFINED V4.0) + MAINTENANCE (V5.0)
     // ----------------------------------------------------------------
+
+    // Global Maintenance Check
+    const isMaintenance = tenantObj?.maintenance_mode === true;
+
+    if (isMaintenance && role !== 'master' && !isMaintenancePage) {
+        url.pathname = '/manutencao';
+        return NextResponse.redirect(url);
+    }
+
+    if (!isMaintenance && isMaintenancePage) {
+        // Redirect back home if maintenance is over
+        url.pathname = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
+        return NextResponse.redirect(url);
+    }
 
     // 1. MASTER Logic
     // Only jrmacbrandt@gmail.com (Whitelisted) access /admin-master. 
@@ -195,6 +236,11 @@ export async function middleware(request: NextRequest) {
     if (role === 'barber' && (isAdminPage || isMasterPage)) {
         url.pathname = '/profissional';
         return NextResponse.redirect(url);
+    }
+
+    // 4. Impersonation Allow
+    if (role === 'master' && isAdminPage && supportTenantId) {
+        return supabaseResponse;
     }
 
     return supabaseResponse;
