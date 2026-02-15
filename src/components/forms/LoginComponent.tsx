@@ -49,7 +49,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             : (type === 'master' ? 'ACESSO MASTER v4.0' : 'LOGIN INTEGRADO'),
         subtitle: view === 'register'
             ? 'Crie sua conta e gerencie seu negócio'
-            : (type === 'master' ? 'Acesso restrito para administração global' : 'Identificação automática (Administrador / Profissional)'),
+            : (type === 'master' ? 'Acesso restrito para administração global' : 'Identificação automática'),
         idLabel: 'E-MAIL',
         passLabel: 'SENHA',
         footer: 'FASTBEAUTY PRO'
