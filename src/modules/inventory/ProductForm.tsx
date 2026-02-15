@@ -65,6 +65,22 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
             let productId;
 
             if (productToEdit) {
+                // Auditoria de Acerto de Estoque: Se a quantidade mudou, registramos a movimentação
+                const oldStock = parseInt(productToEdit.current_stock?.toString() || '0');
+                const newStock = parseInt(formData.current_stock || '0');
+
+                if (oldStock !== newStock) {
+                    const diff = newStock - oldStock;
+                    await supabase.from('stock_transactions').insert({
+                        tenant_id: profile.tenant_id,
+                        product_id: productToEdit.id,
+                        type: diff > 0 ? 'IN' : 'OUT',
+                        quantity: Math.abs(diff),
+                        reason: `Acerto manual via Admin (De ${oldStock} para ${newStock})`,
+                        created_by: user.id
+                    });
+                }
+
                 const { error: updateError } = await supabase
                     .from('products')
                     .update(payload)
@@ -184,37 +200,38 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                         </div>
                     </div>
 
-                    {!productToEdit && (
-                        <div className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10">
-                            <label className="text-[10px] font-black uppercase text-emerald-500 ml-1 mb-2 block">Estoque Inicial</label>
-                            <div className="flex gap-4">
+                    <div className={`p-5 rounded-2xl border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
+                        <label className={`text-[10px] font-black uppercase ml-1 mb-3 block ${productToEdit ? 'text-amber-500' : 'text-emerald-500'}`}>
+                            {productToEdit ? 'Controle & Acerto de Estoque' : 'Estoque Inicial & Alerta'}
+                        </label>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Estoque Atual ({formData.unit_type})</label>
                                 <input
                                     type="text"
                                     placeholder="0"
                                     value={formData.current_stock}
                                     onChange={e => setFormData({ ...formData, current_stock: maskNumber(e.target.value) })}
-                                    className="w-1/2 bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-emerald-500 focus:outline-none transition-colors placeholder:text-white/20"
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20 text-center"
                                 />
-                                <div className="space-y-1 w-1/2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Alerta Mínimo</label>
-                                    <input
-                                        type="text"
-                                        placeholder="0"
-                                        value={formData.min_threshold}
-                                        onChange={e => setFormData({ ...formData, min_threshold: maskNumber(e.target.value) })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20"
-                                    />
-                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Alerta Mínimo</label>
+                                <input
+                                    type="text"
+                                    placeholder="0"
+                                    value={formData.min_threshold}
+                                    onChange={e => setFormData({ ...formData, min_threshold: maskNumber(e.target.value) })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20 text-center"
+                                />
                             </div>
                         </div>
-                    )}
-
-                    {productToEdit && (
-                        <div className="p-4 rounded-xl bg-white/5 border border-white/10 flex justify-between items-center px-6">
-                            <span className="text-zinc-400 font-bold text-sm">Estoque Atual (Gerenciado via Movimentações)</span>
-                            <span className="text-2xl font-black text-white">{formData.current_stock} <span className="text-sm text-zinc-500">{formData.unit_type}</span></span>
-                        </div>
-                    )}
+                        {productToEdit && (
+                            <p className="text-[8px] font-bold text-amber-500/50 uppercase tracking-widest mt-3 text-center">
+                                * Edições manuais geram uma movimentação automática de acerto
+                            </p>
+                        )}
+                    </div>
 
                     <div className="flex justify-end pt-4">
                         <button
