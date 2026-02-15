@@ -64,6 +64,7 @@ export default function EstablishmentSettingsPage() {
                 payment_methods: tenant.payment_methods,
                 primary_color: tenant.primary_color,
                 secondary_color: tenant.secondary_color,
+                tertiary_color: tenant.tertiary_color,
             })
             .eq('id', tenant.id);
 
@@ -165,7 +166,23 @@ export default function EstablishmentSettingsPage() {
                                     />
                                     <div className="flex-1">
                                         <p className="text-white font-bold uppercase">{tenant.secondary_color || '#09090b'}</p>
-                                        <p className="text-[10px] text-slate-500 uppercase">Usada como cor de fundo principal</p>
+                                        <p className="text-[10px] text-slate-500 uppercase">Cor base do fundo</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Cor Terciária (Degradê)</label>
+                                <div className="flex items-center gap-4 bg-black/40 border border-white/5 rounded-2xl p-4">
+                                    <input
+                                        type="color"
+                                        value={tenant.tertiary_color || '#09090b'}
+                                        onChange={e => setTenant({ ...tenant, tertiary_color: e.target.value })}
+                                        className="size-10 rounded-lg cursor-pointer bg-transparent border-none appearance-none"
+                                    />
+                                    <div className="flex-1">
+                                        <p className="text-white font-bold uppercase">{tenant.tertiary_color || '#09090b'}</p>
+                                        <p className="text-[10px] text-slate-500 uppercase">Efeito de luz central no fundo</p>
                                     </div>
                                 </div>
                             </div>

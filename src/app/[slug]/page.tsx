@@ -92,7 +92,8 @@ export default function ShopLandingPage() {
     const theme = useMemo(() => {
         return {
             primary: tenant?.primary_color || '#f2b90d',
-            secondary: tenant?.secondary_color || '#000000'
+            secondary: tenant?.secondary_color || '#000000',
+            tertiary: tenant?.tertiary_color || '#000000'
         };
     }, [tenant]);
 
@@ -238,7 +239,13 @@ Aguardo sua confirmação! 😊`;
     const progress = (step / 4) * 100;
 
     return (
-        <div className="min-h-screen relative overflow-hidden font-sans selection:bg-white/10" style={{ backgroundColor: theme.secondary }}>
+        // Apply gradient background: start at center with tertiary color, fade to secondary color at edges
+        <div
+            className="min-h-screen text-white font-display relative overflow-hidden selection:bg-yellow-500/30"
+            style={{
+                background: `radial-gradient(circle at center, ${theme.tertiary}, ${theme.secondary})`
+            }}
+        >
             {/* Success Modal - REMOVED for unified Step 6 Success Screen */}
 
             {/* Background Effect */}

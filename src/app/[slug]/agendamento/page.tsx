@@ -93,7 +93,8 @@ export default function DynamicBookingPage() {
     const theme = useMemo(() => {
         return {
             primary: tenant?.primary_color || '#f2b90d',
-            secondary: tenant?.secondary_color || '#09090b'
+            secondary: tenant?.secondary_color || '#09090b',
+            tertiary: tenant?.tertiary_color || '#09090b'
         };
     }, [tenant]);
 
@@ -229,7 +230,12 @@ Até lá! 👋`;
     const buttonTextColor = isPrimaryLight ? '#000000' : '#ffffff';
 
     return (
-        <div className="min-h-screen text-white font-display relative overflow-hidden bg-[#09090b] selection:bg-yellow-500/30">
+        <div
+            className="min-h-screen text-white font-display relative overflow-hidden selection:bg-yellow-500/30"
+            style={{
+                background: `radial-gradient(circle at center, ${theme.tertiary}, ${theme.secondary})`
+            }}
+        >
             {/* Decorative background */}
             <div className="absolute -top-24 -right-24 size-96 blur-[120px] rounded-full opacity-20 pointer-events-none transition-all duration-1000" style={{ backgroundColor: primaryColor }}></div>
             <div className="absolute bottom-0 -left-24 size-96 blur-[150px] rounded-full opacity-10 pointer-events-none" style={{ backgroundColor: primaryColor }}></div>

@@ -32,6 +32,7 @@ export interface Tenant {
   owner_email: string;
   primary_color?: string;
   secondary_color?: string;
+  tertiary_color?: string;
 }
 
 export interface Profile {
