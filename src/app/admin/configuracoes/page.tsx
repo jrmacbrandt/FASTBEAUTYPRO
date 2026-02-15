@@ -474,79 +474,108 @@ export default function EstablishmentSettingsPage() {
                             </div>
                         </div>
 
-                        {/* Preview Section */}
+                        {/* Preview Section - Side by Side Desktop & Mobile */}
                         <div className="mt-8 space-y-4">
-                            <h5 className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] opacity-70 ml-1">Pré-visualização</h5>
+                            <h5 className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] opacity-70 ml-1">Pré-visualização (Desktop & Mobile)</h5>
 
-                            <div className="relative w-full aspect-[16/9] md:aspect-[21/9] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl flex flex-col">
-                                {/* Simulated Background with radial gradient */}
-                                <div
-                                    className="absolute inset-0 transition-all duration-700 ease-in-out"
-                                    style={{
-                                        background: `radial-gradient(circle at center, ${tenant.tertiary_color || '#09090b'}, ${tenant.secondary_color || '#09090b'})`
-                                    }}
-                                />
-
-                                {/* Background Highlight Effect */}
-                                <div
-                                    className="absolute inset-0 pointer-events-none transition-all duration-700 ease-in-out opacity-20"
-                                    style={{ background: `radial-gradient(circle, ${tenant.primary_color || '#f2b90d'} 0%, transparent 70%)` }}
-                                />
-
-                                {/* Content Overlay */}
-                                <div className="relative flex-1 flex flex-col p-4 md:p-8">
-                                    {/* Mini Header */}
-                                    <div className="flex items-center justify-between mb-4 md:mb-8 bg-black/40 backdrop-blur-md p-3 md:p-4 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-3">
-                                            <div className="size-8 md:size-10 rounded-full bg-white/10 overflow-hidden border border-white/20">
-                                                {logoPreview ? (
-                                                    <img src={logoPreview} alt="" className="size-full object-cover" />
-                                                ) : (
-                                                    <div className="size-full flex items-center justify-center text-[10px] font-black text-white/20">FB</div>
-                                                )}
-                                            </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] md:text-sm font-black italic uppercase text-white tracking-tighter truncate max-w-[120px] leading-none">
-                                                    {tenant.name || 'Sua Loja'}
-                                                </span>
-                                                <span className="text-[6px] md:text-[8px] font-black uppercase text-[#f2b90d] tracking-[0.2em] opacity-80">Premium Excellence</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-1.5">
-                                            {[1, 2, 3, 4, 5].map(i => (
-                                                <div
-                                                    key={i}
-                                                    className="size-1.5 md:size-2 rounded-full transition-all duration-500"
-                                                    style={{
-                                                        backgroundColor: i === 1 ? (tenant.primary_color || '#f2b90d') : 'rgba(255,255,255,0.1)',
-                                                        boxShadow: i === 1 ? `0 0 10px ${tenant.primary_color || '#f2b90d'}80` : 'none'
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Desktop Version (takes 2 cols) */}
+                                <div className="lg:col-span-2 relative aspect-[16/9] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl flex flex-col group/desktop">
+                                    <div className="absolute top-3 left-6 flex gap-1.5 z-20">
+                                        <div className="size-2 rounded-full bg-red-500/50"></div>
+                                        <div className="size-2 rounded-full bg-amber-500/50"></div>
+                                        <div className="size-2 rounded-full bg-emerald-500/50"></div>
                                     </div>
 
-                                    {/* Mini Hero */}
-                                    <div className="flex-1 flex flex-col justify-center items-center text-center space-y-4 md:space-y-6">
-                                        <h6 className="text-2xl md:text-5xl font-black italic uppercase leading-[0.9] tracking-tighter text-white drop-shadow-2xl">
-                                            O QUE VAMOS <br />
-                                            <span className="transition-colors duration-500" style={{ color: tenant.primary_color || '#f2b90d' }}>FAZER HOJE?</span>
-                                        </h6>
+                                    <div
+                                        className="absolute inset-0 transition-all duration-700 ease-in-out"
+                                        style={{
+                                            background: `radial-gradient(circle at center, ${tenant.tertiary_color || '#09090b'}, ${tenant.secondary_color || '#09090b'})`
+                                        }}
+                                    />
+                                    <div
+                                        className="absolute inset-0 pointer-events-none transition-all duration-700 ease-in-out opacity-20"
+                                        style={{ background: `radial-gradient(circle, ${tenant.primary_color || '#f2b90d'} 0%, transparent 70%)` }}
+                                    />
 
-                                        {/* Mini Service Card */}
-                                        <div className="w-full max-w-[240px] md:max-w-sm bg-white/5 backdrop-blur-xl border border-white/10 rounded-[1.5rem] p-4 md:p-6 flex items-center justify-between group cursor-default transition-all">
-                                            <div className="text-left">
-                                                <p className="text-[10px] md:text-xs font-black italic text-white uppercase tracking-tight">Corte Moderno</p>
-                                                <p className="text-[8px] md:text-[10px] text-white/40 font-black uppercase tracking-widest mt-0.5">Duração: 30 min</p>
+                                    <div className="relative flex-1 flex flex-col p-6 lg:p-10">
+                                        {/* Mini Header */}
+                                        <div className="flex items-center justify-between mb-8 bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="size-10 rounded-full bg-white/10 overflow-hidden border border-white/20">
+                                                    {logoPreview ? <img src={logoPreview} alt="" className="size-full object-cover" /> : <div className="size-full flex items-center justify-center text-[10px] font-black text-white/20">FB</div>}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-black italic uppercase text-white tracking-tighter truncate max-w-[150px] leading-none">{tenant.name || 'Sua Loja'}</span>
+                                                    <span className="text-[8px] font-black uppercase text-[#f2b90d] tracking-[0.2em] opacity-80">Premium Excellence</span>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                <p className="text-xs md:text-xl font-black italic transition-colors duration-500" style={{ color: tenant.primary_color || '#f2b90d' }}>R$ 50</p>
-                                                <div className="size-6 md:size-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-[#f2b90d]/50 transition-all">
-                                                    <span className="material-symbols-outlined text-[14px] md:text-[18px] text-white/20">arrow_forward</span>
+                                            <div className="flex gap-1.5">
+                                                {[1, 2, 3, 4, 5].map(i => (
+                                                    <div key={i} className="size-2 rounded-full" style={{ backgroundColor: i === 1 ? (tenant.primary_color || '#f2b90d') : 'rgba(255,255,255,0.1)', boxShadow: i === 1 ? `0 0 10px ${tenant.primary_color || '#f2b90d'}80` : 'none' }} />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 flex flex-col justify-center items-center text-center space-y-8">
+                                            <h6 className="text-4xl lg:text-6xl font-black italic uppercase leading-[0.9] tracking-tighter text-white drop-shadow-2xl">
+                                                O QUE VAMOS <br />
+                                                <span className="transition-colors duration-500" style={{ color: tenant.primary_color || '#f2b90d' }}>FAZER HOJE?</span>
+                                            </h6>
+                                            <div className="w-full max-w-sm bg-white/5 backdrop-blur-xl border border-white/10 rounded-[1.8rem] p-6 flex items-center justify-between transition-all">
+                                                <div className="text-left">
+                                                    <p className="text-sm font-black italic text-white uppercase tracking-tight">Corte Moderno</p>
+                                                    <p className="text-[10px] text-white/40 font-black uppercase tracking-widest mt-0.5">Duração: 30 min</p>
+                                                </div>
+                                                <div className="flex items-center gap-4">
+                                                    <p className="text-2xl font-black italic" style={{ color: tenant.primary_color || '#f2b90d' }}>R$ 50</p>
+                                                    <div className="size-8 rounded-full bg-white/5 flex items-center justify-center border border-white/10 shadow-lg"><span className="material-symbols-outlined text-[18px] text-white/20">arrow_forward</span></div>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[8px] font-black text-white/40 uppercase tracking-widest">Visualização Desktop</div>
+                                </div>
+
+                                {/* Mobile Version (takes 1 col) */}
+                                <div className="relative aspect-[9/16] max-w-[280px] mx-auto rounded-[3rem] overflow-hidden border-[6px] border-[#1a1a1e] shadow-2xl flex flex-col group/mobile bg-black">
+                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-20 h-5 bg-[#1a1a1e] rounded-b-2xl z-20"></div>
+                                    <div
+                                        className="absolute inset-0 transition-all duration-700 ease-in-out"
+                                        style={{
+                                            background: `radial-gradient(circle at center, ${tenant.tertiary_color || '#09090b'}, ${tenant.secondary_color || '#09090b'})`
+                                        }}
+                                    />
+                                    <div
+                                        className="absolute inset-0 pointer-events-none transition-all duration-700 ease-in-out opacity-20"
+                                        style={{ background: `radial-gradient(circle, ${tenant.primary_color || '#f2b90d'} 0%, transparent 70%)` }}
+                                    />
+
+                                    <div className="relative flex-1 flex flex-col p-5 pt-10">
+                                        <div className="flex flex-col items-center gap-3 mb-8 bg-black/40 backdrop-blur-md p-4 rounded-2xl border border-white/5">
+                                            <div className="size-12 rounded-full bg-white/10 overflow-hidden border border-white/20">
+                                                {logoPreview ? <img src={logoPreview} alt="" className="size-full object-cover" /> : <div className="size-full flex items-center justify-center text-[10px] font-black text-white/20">FB</div>}
+                                            </div>
+                                            <h6 className="text-xs font-black italic uppercase text-white tracking-tighter text-center leading-none">{tenant.name || 'Sua Loja'}</h6>
+                                            <div className="flex gap-1.5">
+                                                {[1, 2, 3, 4, 5].map(i => (
+                                                    <div key={i} className="size-1.5 rounded-full" style={{ backgroundColor: i === 1 ? (tenant.primary_color || '#f2b90d') : 'rgba(255,255,255,0.1)' }} />
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex-1 flex flex-col justify-center items-center text-center space-y-6">
+                                            <h6 className="text-2xl font-black italic uppercase leading-[0.9] tracking-tighter text-white">
+                                                O QUE VAMOS <br /><span style={{ color: tenant.primary_color || '#f2b90d' }}>FAZER HOJE?</span>
+                                            </h6>
+                                            <div className="w-full bg-white/5 backdrop-blur-xl border border-white/10 rounded-[1.2rem] p-4 flex items-center justify-between">
+                                                <div className="text-left"><p className="text-[10px] font-black italic text-white uppercase leading-none">Corte Moderno</p></div>
+                                                <p className="text-sm font-black italic" style={{ color: tenant.primary_color || '#f2b90d' }}>R$ 50</p>
+                                            </div>
+                                            <button className="w-full py-4 rounded-xl font-black uppercase text-[10px] tracking-widest shadow-xl" style={{ backgroundColor: tenant.primary_color || '#f2b90d', color: '#000' }}>Agendar</button>
+                                        </div>
+                                    </div>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-[8px] font-black text-white/40 uppercase tracking-widest whitespace-nowrap">Mobile</div>
                                 </div>
                             </div>
                         </div>
