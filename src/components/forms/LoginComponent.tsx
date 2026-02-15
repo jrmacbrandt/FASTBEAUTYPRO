@@ -327,7 +327,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
                         {view === 'register' && (
                             <div className="space-y-4">
-                                {/* Business Type Selector - Added to replace Gateway Page */}
+                                {/* Business Type Selector */}
                                 <div className="grid grid-cols-2 gap-3 mb-4">
                                     <button
                                         type="button"
@@ -344,6 +344,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                         Salão & Spa
                                     </button>
                                 </div>
+
 
                                 <div className="space-y-1.5">
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME COMPLETO</label>
