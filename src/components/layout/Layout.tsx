@@ -59,7 +59,12 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                                     setIsMaintenance(impTenant.maintenance_mode);
                                 }
                             } else {
-                                setIsMaintenance(data.tenant?.maintenance_mode);
+                                // Master Admin viewing their own dashboard should NOT see maintenance banner
+                                if (data.role === 'master' || data.email === 'jrmacbrandt@gmail.com') {
+                                    setIsMaintenance(false);
+                                } else {
+                                    setIsMaintenance(data.tenant?.maintenance_mode);
+                                }
                             }
 
                             setUser(finalUser);

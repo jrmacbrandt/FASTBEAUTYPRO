@@ -106,32 +106,36 @@ export async function middleware(request: NextRequest) {
 
         // Support Mode Logic
         if (impersonateId) {
+            console.log('🛡️ MASTER: Starting impersonation for', impersonateId);
             // AUTO-LOCK: Block others when master enters
-            await supabase
+            const { error: lockError } = await supabase
                 .from('tenants')
                 .update({ maintenance_mode: true })
                 .eq('id', impersonateId);
 
-            supabaseResponse.cookies.set('support_tenant_id', impersonateId, { path: '/' });
-            url.searchParams.delete('impersonate');
-            url.pathname = '/admin';
-            return NextResponse.redirect(url, { headers: supabaseResponse.headers });
+            if (lockError) console.error('❌ Failed to lock tenant:', lockError);
+
+            const response = NextResponse.redirect(new URL('/admin', request.url));
+            response.cookies.set('support_tenant_id', impersonateId, { path: '/', maxAge: 60 * 60 * 4 }); // 4 hours
+            return response;
         }
 
         if (stopImpersonate) {
+            console.log('🛡️ MASTER: Stopping impersonation');
             // AUTO-UNLOCK: Restore access when master leaves
             const currentSupportId = request.cookies.get('support_tenant_id')?.value;
             if (currentSupportId) {
-                await supabase
+                const { error: unlockError } = await supabase
                     .from('tenants')
                     .update({ maintenance_mode: false })
                     .eq('id', currentSupportId);
+
+                if (unlockError) console.error('❌ Failed to unlock tenant:', unlockError);
             }
 
-            supabaseResponse.cookies.set('support_tenant_id', '', { path: '/', maxAge: 0 });
-            url.searchParams.delete('stop_impersonate');
-            url.pathname = '/admin-master';
-            return NextResponse.redirect(url, { headers: supabaseResponse.headers });
+            const response = NextResponse.redirect(new URL('/admin-master', request.url));
+            response.cookies.delete('support_tenant_id');
+            return response;
         }
     }
 
@@ -142,14 +146,29 @@ export async function middleware(request: NextRequest) {
     // ----------------------------------------------------------------
 
     // Global Maintenance Check
-    const isMaintenance = tenantObj?.maintenance_mode === true;
+    // IMPORTANT: If we are impersonating, we check the impersonated tenant's mode
+    let targetMaintenance = tenantObj?.maintenance_mode === true;
 
-    if (isMaintenance && role !== 'master' && !isMaintenancePage) {
-        url.pathname = '/manutencao';
-        return NextResponse.redirect(url);
+    if (role === 'master' && supportTenantId) {
+        // Fetch the mode for the impersonated tenant
+        const { data: impTenant } = await supabase.from('tenants').select('maintenance_mode').eq('id', supportTenantId).single();
+        if (impTenant) targetMaintenance = impTenant.maintenance_mode;
+    } else if (role !== 'master' && (isAdminPage || isProPage)) {
+        // EXTRA SAFETY: Fresh check for regular users to prevent cache bypass
+        const tid = profile?.tenant_id;
+        if (tid) {
+            const { data: freshTenant } = await supabase.from('tenants').select('maintenance_mode').eq('id', tid).single();
+            if (freshTenant?.maintenance_mode) targetMaintenance = true;
+        }
     }
 
-    if (!isMaintenance && isMaintenancePage) {
+    if (targetMaintenance && role !== 'master' && !isMaintenancePage) {
+        console.log('🚪 REDIRECT: Maintenance active, locking out non-master');
+        // Final protection: Ensure redirect is to absolute URL
+        return NextResponse.redirect(new URL('/manutencao', request.url));
+    }
+
+    if (!targetMaintenance && isMaintenancePage) {
         // Redirect back home if maintenance is over
         url.pathname = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
         return NextResponse.redirect(url);
