@@ -325,11 +325,11 @@ Aguardo sua confirmação! 😊`;
                 </div>
             </div>
 
-            <main className="relative z-10 max-w-4xl mx-auto px-6 pt-32 md:pt-40 pb-24 min-h-[calc(100vh-160px)] flex flex-col justify-center">
+            <main className="relative z-10 max-w-4xl mx-auto px-6 pt-56 md:pt-40 pb-24 min-h-[calc(100vh-160px)] flex flex-col justify-center">
                 {step > 1 && step < 6 && (
                     <button
                         onClick={() => setStep(step - 1)}
-                        className="fixed left-6 md:left-[calc((100vw-56rem)/2+1.5rem)] top-[140px] md:top-[120px] size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
+                        className="fixed left-6 md:left-[calc((100vw-56rem)/2+1.5rem)] top-[210px] md:top-[120px] size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
                         style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff' }}
                     >
                         <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
