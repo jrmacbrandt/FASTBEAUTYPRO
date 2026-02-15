@@ -147,8 +147,10 @@ export async function middleware(request: NextRequest) {
     // ----------------------------------------------------------------
 
     // 🚀 CRITICAL MAINTENANCE LOCKOUT (V10.0)
-    // Rule: Every non-master and non-owner is blocked if tenant is in maintenance.
-    if (role !== 'master' && role !== 'owner' && (isAdminPage || isProPage || isMaintenancePage)) {
+    // 🚀 CRITICAL MAINTENANCE LOCKOUT (V12.0 - Strict Master Only)
+    // Rule: Every non-master is blocked if tenant is in maintenance.
+    // Owners (Real Admins) MUST be blocked during maintenance per audit request.
+    if (role !== 'master' && (isAdminPage || isProPage || isMaintenancePage)) {
         const tid = profile?.tenant_id;
         if (tid) {
             const { data: dbTenant } = await supabase
