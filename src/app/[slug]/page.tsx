@@ -215,19 +215,8 @@ Aguardo sua confirmação! 😊`;
 
             window.open(whatsappLink, '_blank');
 
-            // 7. Resetar formulário após 2 segundos
-            setTimeout(() => {
-                setStep(1);
-                setSelection({
-                    service: null,
-                    barber: null,
-                    date: '',
-                    time: '',
-                    clientName: '',
-                    clientPhone: '',
-                    birthMonth: ''
-                });
-            }, 2000);
+            // 7. Move to Success Screen instead of resetting
+            setStep(6);
 
         } catch (err: any) {
             console.error('Erro ao confirmar agendamento:', err);
@@ -251,26 +240,7 @@ Aguardo sua confirmação! 😊`;
 
     return (
         <div className="min-h-screen relative overflow-hidden font-sans selection:bg-white/10" style={{ backgroundColor: theme.secondary }}>
-            {/* Success Modal */}
-            {isConfirmed && (
-                <div className="fixed inset-0 z-[200] flex items-center justify-center px-6">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => router.push(`/${slug}`)} />
-                    <div className="relative bg-zinc-900 border border-white/10 p-10 rounded-[3rem] max-w-sm w-full text-center shadow-2xl animate-in zoom-in duration-300">
-                        <div className="size-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-500 mx-auto mb-6">
-                            <span className="material-symbols-outlined text-4xl">check_circle</span>
-                        </div>
-                        <h2 className="text-2xl font-black italic uppercase text-white mb-2">AGENDAMENTO REALIZADO!</h2>
-                        <p className="text-white/40 text-xs font-bold uppercase tracking-widest mb-8">Sua vaga está garantida. Enviamos os detalhes para o WhatsApp do profissional.</p>
-                        <button
-                            onClick={() => router.push(`/${slug}`)}
-                            className="w-full py-4 rounded-2xl font-black italic uppercase tracking-widest text-sm"
-                            style={{ backgroundColor: theme.primary, color: '#000' }}
-                        >
-                            FECHAR
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Success Modal - REMOVED for unified Step 6 Success Screen */}
 
             {/* Background Effect */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -323,17 +293,17 @@ Aguardo sua confirmação! 😊`;
                         ].map((s) => (
                             <div key={s.num} className="flex flex-col items-center gap-2 relative">
                                 <div
-                                    className={`size-10 md:size-12 rounded-full flex items-center justify-center font-black text-sm md:text-base transition-all duration-500 ${step >= s.num
+                                    className={`size-10 md:size-12 rounded-full flex items-center justify-center font-black text-sm md:text-base transition-all duration-500 ${step >= s.num && step < 6
                                         ? 'scale-110 shadow-lg'
                                         : 'scale-100'
                                         }`}
                                     style={{
-                                        backgroundColor: step >= s.num ? theme.primary : 'rgba(255,255,255,0.05)',
-                                        color: step >= s.num ? '#000' : 'rgba(255,255,255,0.3)',
+                                        backgroundColor: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.05)',
+                                        color: (step >= s.num || step === 6) ? '#000' : 'rgba(255,255,255,0.3)',
                                         border: step === s.num ? `2px solid ${theme.primary}` : '2px solid transparent'
                                     }}
                                 >
-                                    {step > s.num ? (
+                                    {(step > s.num || step === 6) ? (
                                         <span className="material-symbols-outlined text-lg">check</span>
                                     ) : (
                                         s.num
@@ -341,7 +311,7 @@ Aguardo sua confirmação! 😊`;
                                 </div>
                                 <span
                                     className="text-[9px] md:text-[10px] font-black uppercase tracking-wider hidden md:block transition-all duration-300"
-                                    style={{ color: step >= s.num ? theme.primary : 'rgba(255,255,255,0.3)' }}
+                                    style={{ color: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.3)' }}
                                 >
                                     {s.label}
                                 </span>
@@ -531,6 +501,71 @@ Aguardo sua confirmação! 😊`;
                             >
                                 <span className="material-symbols-outlined text-2xl md:text-3xl">chat</span>
                                 ENVIAR NO WHATSAPP
+                            </button>
+                        </div>
+                    )}
+                    {step === 6 && (
+                        <div className="animate-in fade-in zoom-in duration-700 max-w-lg mx-auto text-center">
+                            <div className="size-24 bg-emerald-500/10 rounded-[2.5rem] flex items-center justify-center text-emerald-500 mx-auto mb-8 border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
+                                <span className="material-symbols-outlined text-5xl">check_circle</span>
+                            </div>
+
+                            <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-none mb-4">
+                                AGENDAMENTO <br /><span style={{ color: theme.primary }}>REALIZADO COM SUCESSO!</span>
+                            </h2>
+
+                            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-12">
+                                Sua solicitação foi enviada para o WhatsApp do profissional.
+                            </p>
+
+                            <div className="bg-white/[0.03] border border-white/5 rounded-[2.5rem] p-8 space-y-6 mb-10 text-left">
+                                <p className="text-white/60 text-xs font-bold uppercase tracking-widest leading-relaxed">
+                                    Caso precise alterar algo ou queira confirmar agora mesmo, entre em contato direto:
+                                </p>
+
+                                <div className="space-y-3">
+                                    <a
+                                        href={`tel:${tenant.phone}`}
+                                        className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
+                                    >
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Ligar para a Loja</p>
+                                            <p className="text-white font-black italic uppercase">{tenant.name}</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">call</span>
+                                    </a>
+
+                                    <a
+                                        href={`tel:${selection.barber?.phone}`}
+                                        className="w-full flex items-center justify-between p-5 rounded-2xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
+                                    >
+                                        <div>
+                                            <p className="text-[9px] font-black uppercase tracking-widest opacity-40 mb-1">Falar com o Profissional</p>
+                                            <p className="text-white font-black italic uppercase">{selection.barber?.full_name}</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors">call</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setStep(1);
+                                    setSelection({
+                                        service: null,
+                                        barber: null,
+                                        date: '',
+                                        time: '',
+                                        clientName: '',
+                                        clientPhone: '',
+                                        birthMonth: ''
+                                    });
+                                }}
+                                className="w-full py-6 rounded-[2rem] font-black italic uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all active:scale-95"
+                                style={{ backgroundColor: theme.primary, color: '#000' }}
+                            >
+                                <span className="material-symbols-outlined">add_circle</span>
+                                NOVO AGENDAMENTO
                             </button>
                         </div>
                     )}

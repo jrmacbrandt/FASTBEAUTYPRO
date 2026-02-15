@@ -205,7 +205,8 @@ Até lá! 👋`;
 
             window.open(`https://wa.me/${targetPhoneFull}?text=${encodeURIComponent(message)}`, '_blank');
 
-            router.push(`/${slug}?confirmed=true`);
+            // 7. Success Step
+            setStep(5);
         } catch (err: any) {
             alert('Erro ao finalizar agendamento: ' + err.message);
         } finally {
@@ -255,7 +256,7 @@ Até lá! 👋`;
                 {/* Progress Bar */}
                 <div className="flex gap-2.5 md:gap-3 mb-10 md:mb-14">
                     {[1, 2, 3, 4].map(s => (
-                        <div key={s} className="h-1.5 flex-1 rounded-full transition-all duration-700 ease-out" style={{ backgroundColor: step >= s ? primaryColor : 'rgba(255,255,255,0.05)', boxShadow: step >= s ? `0 0 15px ${primaryColor}40` : 'none' }}></div>
+                        <div key={s} className="h-1.5 flex-1 rounded-full transition-all duration-700 ease-out" style={{ backgroundColor: (step >= s || step === 5) ? primaryColor : 'rgba(255,255,255,0.05)', boxShadow: (step >= s || step === 5) ? `0 0 15px ${primaryColor}40` : 'none' }}></div>
                     ))}
                 </div>
 
@@ -420,6 +421,73 @@ Até lá! 👋`;
                                 </button>
                                 {/* Loyalty/VIP Feedback would be here in full implementation */}
                             </div>
+                        </div>
+                    )}
+                    {/* Step 5: Success */}
+                    {step === 5 && (
+                        <div className="animate-in fade-in zoom-in duration-700 max-w-lg mx-auto text-center py-4">
+                            <div className="size-20 bg-emerald-500/10 rounded-[2rem] flex items-center justify-center text-emerald-500 mx-auto mb-8 border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
+                                <span className="material-symbols-outlined text-4xl">check_circle</span>
+                            </div>
+
+                            <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-none mb-4">
+                                AGENDAMENTO <br /><span style={{ color: primaryColor }}>REALIZADO COM SUCESSO!</span>
+                            </h2>
+
+                            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-10">
+                                Sua solicitação foi enviada para o WhatsApp do profissional.
+                            </p>
+
+                            <div className="bg-white/[0.03] border border-white/5 rounded-[2rem] p-6 space-y-5 mb-10 text-left">
+                                <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
+                                    Caso precise alterar algo ou queira confirmar agora mesmo, entre em contato direto:
+                                </p>
+
+                                <div className="space-y-3">
+                                    <a
+                                        href={`tel:${tenant.phone}`}
+                                        className="w-full flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
+                                    >
+                                        <div className="min-w-0 pr-4">
+                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Ligar para a Loja</p>
+                                            <p className="text-white font-black italic uppercase text-sm truncate">{tenant.name}</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors shrink-0">call</span>
+                                    </a>
+
+                                    <a
+                                        href={`tel:${selection.barber?.phone}`}
+                                        className="w-full flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
+                                    >
+                                        <div className="min-w-0 pr-4">
+                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Falar com o Profissional</p>
+                                            <p className="text-white font-black italic uppercase text-sm truncate">{selection.barber?.full_name}</p>
+                                        </div>
+                                        <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors shrink-0">call</span>
+                                    </a>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={() => {
+                                    setStep(1);
+                                    setSelection({
+                                        service: null,
+                                        barber: null,
+                                        date: '',
+                                        time: '',
+                                        name: '',
+                                        phone: '',
+                                        birthMonth: '',
+                                        price: 0
+                                    });
+                                }}
+                                className="w-full py-5 rounded-[1.8rem] font-black italic uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all active:scale-95"
+                                style={{ backgroundColor: primaryColor, color: buttonTextColor }}
+                            >
+                                <span className="material-symbols-outlined">add_circle</span>
+                                NOVO AGENDAMENTO
+                            </button>
                         </div>
                     )}
                 </div>
