@@ -67,9 +67,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 onClose={() => setIsMobileMenuOpen(false)}
             />
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                {/* Master Support / Maintenance Banner (V11.0) */}
-                {/* Rule: Show if Support Cookie exists AND we are NOT in the Master Admin panel */}
-                {(isSupportMode && !pathname.includes('/admin-master')) && (
+                {/* Master Support / Maintenance Banner (V12.0) */}
+                {/* Rule: Show SEMPRE que o Support Cookie existir (inclusive no Master Admin) */}
+                {isSupportMode && (
                     <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
                         <div className="flex items-center gap-3">
                             <span className="material-symbols-outlined font-bold animate-pulse text-xl">
