@@ -232,13 +232,21 @@ Até lá! 👋`;
             <div className="absolute -top-24 -right-24 size-96 blur-[120px] rounded-full opacity-20 pointer-events-none transition-all duration-1000" style={{ backgroundColor: primaryColor }}></div>
             <div className="absolute bottom-0 -left-24 size-96 blur-[150px] rounded-full opacity-10 pointer-events-none" style={{ backgroundColor: primaryColor }}></div>
 
-            <header className="px-4 md:px-8 py-4 md:py-6 border-b border-white/5 flex justify-between items-center bg-black/40 backdrop-blur-2xl sticky top-0 z-50">
-                <button onClick={() => router.push(`/${slug}`)} className="text-lg md:text-xl font-black italic tracking-tighter uppercase transition-all hover:opacity-70 active:scale-95">
-                    FASTBEAUTY <span style={{ color: primaryColor }}>PRO</span>
+            <header className="px-6 md:px-10 py-5 md:py-8 border-b border-white/5 flex justify-between items-center bg-black/60 backdrop-blur-3xl sticky top-0 z-50">
+                <button onClick={() => router.push(`/${slug}`)} className="flex items-center gap-4 group transition-all">
+                    {tenant.logo_url && (
+                        <img src={tenant.logo_url} alt={tenant.name} className="size-10 md:size-12 rounded-xl object-cover border border-white/10 group-hover:scale-105 transition-transform" />
+                    )}
+                    <div className="text-left">
+                        <h1 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase leading-none">
+                            {tenant.name}
+                        </h1>
+                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] opacity-40 mt-1">Premium Excellence</p>
+                    </div>
                 </button>
-                <div className="flex items-center gap-2 max-w-[50%]">
-                    <span className="material-symbols-outlined text-sm md:text-base hidden sm:block" style={{ color: primaryColor }}>location_on</span>
-                    <span className="text-[8px] md:text-[10px] uppercase font-black tracking-widest opacity-60 truncate">{tenant.name}</span>
+                <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/5">
+                    <span className="material-symbols-outlined text-xs" style={{ color: primaryColor }}>location_on</span>
+                    <span className="text-[9px] uppercase font-black tracking-widest opacity-60">{tenant.name}</span>
                 </div>
             </header>
 

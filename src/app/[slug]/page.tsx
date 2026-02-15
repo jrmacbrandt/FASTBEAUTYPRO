@@ -254,13 +254,13 @@ Aguardo sua confirmação! 😊`;
                 <div className="max-w-7xl mx-auto px-6 py-4">
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         {/* Store ID */}
-                        <div className="flex items-center gap-4 shrink-0 justify-center md:justify-start">
+                        <div className="flex items-center gap-5 shrink-0 justify-center md:justify-start">
                             {tenant.logo_url && (
-                                <img src={tenant.logo_url} alt={tenant.name} className="size-10 rounded-xl object-cover border border-white/10" />
+                                <img src={tenant.logo_url} alt={tenant.name} className="size-14 md:size-16 rounded-[1.2rem] object-cover border-2 border-white/10 shadow-2xl" />
                             )}
                             <div className="text-center md:text-left">
-                                <h1 className="text-white text-lg font-black italic tracking-tighter leading-none uppercase">{tenant.name}</h1>
-                                <p className="text-[#f2b90d] text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Premium Excellence</p>
+                                <h1 className="text-white text-2xl md:text-4xl font-black italic tracking-tighter leading-none uppercase mb-1">{tenant.name}</h1>
+                                <p className="text-[#f2b90d] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] opacity-80">Premium Excellence</p>
                             </div>
                         </div>
 
