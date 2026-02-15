@@ -4,6 +4,7 @@ import React from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { supabase } from '@/lib/supabase';
+import { usePathname } from 'next/navigation';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -11,10 +12,10 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
+    const pathname = usePathname();
     const [user, setUser] = React.useState<any>(null);
     const [businessType, setBusinessType] = React.useState<'barber' | 'salon'>('barber');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
-
     const [isSupportMode, setIsSupportMode] = React.useState(false);
     const [isMaintenance, setIsMaintenance] = React.useState(false);
 
@@ -27,59 +28,55 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 return;
             }
 
-            const supportId = document.cookie
-                .split('; ')
-                .find(row => row.startsWith('support_tenant_id='))
-                ?.split('=')[1];
+            const cookies = document.cookie.split('; ');
+            const supportCookie = cookies.find(row => row.trim().startsWith('support_tenant_id='));
+            const supportId = supportCookie?.split('=')[1];
+
+            console.log('[Layout] Pathname change detected:', pathname);
+            console.log('[Layout] support_tenant_id cookie:', supportId);
+
             setIsSupportMode(!!supportId);
         };
         checkSupport();
-    }, []);
+    }, [pathname]);
 
     React.useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) {
-            setBusinessType(savedType);
-        }
+        if (savedType) setBusinessType(savedType);
 
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) {
-                // Fetch User Profile + Tenant Details
-                supabase.from('profiles')
-                    .select('*, tenant(*)')
-                    .eq('id', session.user.id)
-                    .single()
-                    .then(async ({ data }) => {
-                        if (data) {
-                            let finalUser = { ...data };
+        const fetchStatus = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
 
-                            // Support Mode Sync
-                            const supportId = document.cookie
-                                .split('; ')
-                                .find(row => row.startsWith('support_tenant_id='))
-                                ?.split('=')[1];
+            const { data: profile } = await supabase.from('profiles')
+                .select('*, tenant(*)')
+                .eq('id', session.user.id)
+                .single();
 
-                            if (supportId && (data.role === 'master' || data.email === 'jrmacbrandt@gmail.com')) {
-                                const { data: impTenant } = await supabase.from('tenants').select('*').eq('id', supportId).single();
-                                if (impTenant) {
-                                    finalUser.tenant = impTenant;
-                                    setIsMaintenance(impTenant.maintenance_mode);
-                                }
-                            } else {
-                                // Master Admin viewing their own dashboard should NOT see maintenance banner
-                                if (data.role === 'master' || data.email === 'jrmacbrandt@gmail.com') {
-                                    setIsMaintenance(false);
-                                } else {
-                                    setIsMaintenance(data.tenant?.maintenance_mode);
-                                }
-                            }
+            if (profile) {
+                let finalUser = { ...profile };
+                const cookies = document.cookie.split('; ');
+                const supportId = cookies.find(row => row.trim().startsWith('support_tenant_id='))?.split('=')[1];
 
-                            setUser(finalUser);
-                        }
-                    });
+                if (supportId && (profile.role === 'master' || profile.email === 'jrmacbrandt@gmail.com')) {
+                    const { data: impTenant } = await supabase.from('tenants').select('*').eq('id', supportId).single();
+                    if (impTenant) {
+                        finalUser.tenant = impTenant;
+                        setIsMaintenance(impTenant.maintenance_mode === true);
+                    }
+                } else {
+                    if (profile.role === 'master' || profile.email === 'jrmacbrandt@gmail.com') {
+                        setIsMaintenance(false);
+                    } else {
+                        setIsMaintenance(profile.tenant?.maintenance_mode === true);
+                    }
+                }
+                setUser(finalUser);
             }
-        });
-    }, []);
+        };
+
+        fetchStatus();
+    }, [pathname]);
 
     const handleStopSupport = () => {
         window.location.href = '/admin-master?stop_impersonate=true';
@@ -99,31 +96,29 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 onClose={() => setIsMobileMenuOpen(false)}
             />
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                {/* Master Support / Maintenance Banner */}
-                {((isSupportMode && (user?.role === 'master' || user?.email === 'jrmacbrandt@gmail.com') && !window.location.pathname.includes('/admin-master')) ||
-                    (isMaintenance && user?.role !== 'master')) && (
-                        <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
-                            <div className="flex items-center gap-3">
-                                <span className="material-symbols-outlined font-bold animate-pulse text-xl">
-                                    {isMaintenance && user?.role !== 'master' ? 'engineering' : 'admin_panel_settings'}
-                                </span>
-                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap">
-                                    {isMaintenance && user?.role !== 'master'
-                                        ? 'Manutenção preventiva ou corretiva sendo realizada.'
-                                        : 'Modos Suporte Ativo: Visualizando painel administrativo da unidade.'}
-                                </span>
-                            </div>
-                            {(isSupportMode && (user?.role === 'master' || user?.email === 'jrmacbrandt@gmail.com')) && (
-                                <button
-                                    onClick={handleStopSupport}
-                                    className="bg-black text-[#f2b90d] px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter hover:bg-zinc-900 transition-all flex items-center gap-2"
-                                >
-                                    <span className="material-symbols-outlined text-[14px]">logout</span>
-                                    Finalizar Manutenção
-                                </button>
-                            )}
+                {/* Master Support / Maintenance Banner (V10.0) */}
+                {/* Rule: ONLY Master Admin, ONLY in Support Mode, ONLY outside Master Dashboard */}
+                {(isSupportMode && (user?.role === 'master' || user?.role === 'admin_master' || user?.email === 'jrmacbrandt@gmail.com') && !window.location.pathname.includes('/admin-master')) && (
+                    <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
+                        <div className="flex items-center gap-3">
+                            <span className="material-symbols-outlined font-bold animate-pulse text-xl">
+                                {isMaintenance ? 'engineering' : 'admin_panel_settings'}
+                            </span>
+                            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                                {isMaintenance
+                                    ? 'Modo Manutenção Ativo: Bloqueio Total da Unidade em Execução.'
+                                    : 'Modo Suporte Ativo: Visualizando painel administrativo da unidade.'}
+                            </span>
                         </div>
-                    )}
+                        <button
+                            onClick={handleStopSupport}
+                            className="bg-black text-[#f2b90d] px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter hover:bg-zinc-900 transition-all flex items-center gap-2"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">logout</span>
+                            {isMaintenance ? 'Finalizar Manutenção' : 'Sair do Suporte'}
+                        </button>
+                    </div>
+                )}
 
                 <Header
                     title={title || "FastBeauty Pro"}

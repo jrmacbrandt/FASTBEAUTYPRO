@@ -135,6 +135,7 @@ export async function middleware(request: NextRequest) {
 
             const response = NextResponse.redirect(new URL('/admin-master', request.url));
             response.cookies.delete('support_tenant_id');
+            response.headers.append('Set-Cookie', 'support_tenant_id=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
             return response;
         }
     }
@@ -145,27 +146,28 @@ export async function middleware(request: NextRequest) {
     // NEW STRICT LOGIC (USER DEFINED V4.0) + MAINTENANCE (V5.0)
     // ----------------------------------------------------------------
 
-    // 🚀 CRITICAL LOCKOUT: If any maintenance is active and user is NOT Master
-    let isMaintenanceActive = tenantObj?.maintenance_mode === true;
+    // 🚀 CRITICAL MAINTENANCE LOCKOUT (V10.0)
+    // Rule: Every non-master is blocked if tenant is in maintenance.
+    if (role !== 'master' && (isAdminPage || isProPage || isMaintenancePage)) {
+        const tid = profile?.tenant_id;
+        if (tid) {
+            const { data: dbTenant } = await supabase
+                .from('tenants')
+                .select('maintenance_mode')
+                .eq('id', tid)
+                .single();
 
-    // Support Mode for Master
-    if (role === 'master' && supportTenantId) {
-        const { data: impT } = await supabase.from('tenants').select('maintenance_mode').eq('id', supportTenantId).single();
-        if (impT?.maintenance_mode) isMaintenanceActive = true;
-    } else if (role !== 'master' && (isAdminPage || isProPage)) {
-        // Re-check DB for regular users to prevent any cache issues
-        const { data: freshT } = await supabase.from('tenants').select('maintenance_mode').eq('id', profile?.tenant_id).single();
-        if (freshT?.maintenance_mode) isMaintenanceActive = true;
-    }
+            if (dbTenant?.maintenance_mode && !isMaintenancePage) {
+                console.log('🚪 LOCKOUT: Maintenance active. Blocking access.');
+                return NextResponse.redirect(new URL('/manutencao', request.url));
+            }
 
-    if (isMaintenanceActive && role !== 'master' && !isMaintenancePage) {
-        console.log('🚪 LOCKOUT: Maintenance active for tenant. Redirecting.');
-        return NextResponse.redirect(new URL('/manutencao', request.url));
-    }
-
-    if (!isMaintenanceActive && isMaintenancePage) {
-        const homeUrl = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
-        return NextResponse.redirect(new URL(homeUrl, request.url));
+            if (!dbTenant?.maintenance_mode && isMaintenancePage) {
+                console.log('🚪 UNLOCK: Maintenance over. Returning home.');
+                const homeUrl = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
+                return NextResponse.redirect(new URL(homeUrl, request.url));
+            }
+        }
     }
 
     // 1. MASTER Logic
