@@ -649,9 +649,15 @@ export default function EstablishmentSettingsPage() {
                                 <h4 className="text-xl font-black italic uppercase text-white mb-2">Segurança & Acesso</h4>
                                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gerencie suas credenciais de acesso</p>
                             </div>
-                            <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
-                                <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Login Atual</p>
-                                <p className="text-[10px] font-bold text-[#f2b90d]">{currentLoginEmail}</p>
+                            <div className="flex flex-wrap gap-3">
+                                <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-2xl min-w-[160px] shadow-inner group/info">
+                                    <p className="text-[9px] font-black uppercase text-slate-500 mb-1.5 tracking-tighter opacity-70 group-hover/info:text-[#f2b90d] transition-colors">Login Atual</p>
+                                    <p className="text-[11px] font-bold text-[#f2b90d] tracking-tight">{currentLoginEmail}</p>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-2xl min-w-[140px] shadow-inner group/info">
+                                    <p className="text-[9px] font-black uppercase text-slate-500 mb-1.5 tracking-tighter opacity-70 group-hover/info:text-[#f2b90d] transition-colors">Senha Atual</p>
+                                    <p className="text-[11px] font-bold text-[#f2b90d] tracking-[0.3em]">••••••••</p>
+                                </div>
                             </div>
                         </div>
 

@@ -203,9 +203,15 @@ export default function ProfessionalSettingsPage() {
                             <h3 className="text-xl text-white font-black italic uppercase tracking-tight leading-none mb-1">Segurança & Acesso</h3>
                             <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Gerencie suas credenciais</p>
                         </div>
-                        <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl self-start sm:self-auto">
-                            <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Login Atual</p>
-                            <p className="text-[10px] font-bold text-[#f2b90d]">{currentLoginEmail}</p>
+                        <div className="flex flex-wrap gap-3">
+                            <div className="bg-white/5 border border-white/10 px-5 py-3 rounded-2xl min-w-[140px] group/info">
+                                <p className="text-[8px] font-black uppercase text-slate-500 mb-1 group-hover/info:text-[#f2b90d] transition-colors">Login Atual</p>
+                                <p className="text-[10px] font-bold text-[#f2b90d]">{currentLoginEmail}</p>
+                            </div>
+                            <div className="bg-white/5 border border-white/10 px-5 py-3 rounded-2xl min-w-[120px] group/info">
+                                <p className="text-[8px] font-black uppercase text-slate-500 mb-1 group-hover/info:text-[#f2b90d] transition-colors">Senha Atual</p>
+                                <p className="text-[11px] font-bold text-[#f2b90d] tracking-[0.2em]">••••••••</p>
+                            </div>
                         </div>
                     </div>
 
