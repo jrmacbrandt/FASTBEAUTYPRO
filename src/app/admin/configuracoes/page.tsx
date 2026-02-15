@@ -20,6 +20,9 @@ export default function EstablishmentSettingsPage() {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [isUpdatingAuth, setIsUpdatingAuth] = useState(false);
+    const [currentLoginEmail, setCurrentLoginEmail] = useState('');
+    const [showNewPassword, setShowNewPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -36,6 +39,7 @@ export default function EstablishmentSettingsPage() {
         if (!session) return;
 
         setUserEmail(session.user.email || '');
+        setCurrentLoginEmail(session.user.email || '');
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -640,14 +644,20 @@ export default function EstablishmentSettingsPage() {
             {activeTab === 'security' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <form onSubmit={handleUpdateAuth} className="bg-[#121214] p-8 md:p-10 rounded-[2.5rem] border border-white/5 space-y-10 shadow-2xl">
-                        <div>
-                            <h4 className="text-xl font-black italic uppercase text-white mb-2">Segurança & Acesso</h4>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Altere seu e-mail de login e sua senha de acesso</p>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h4 className="text-xl font-black italic uppercase text-white mb-2">Segurança & Acesso</h4>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Gerencie suas credenciais de acesso</p>
+                            </div>
+                            <div className="bg-white/5 border border-white/10 px-4 py-2 rounded-xl">
+                                <p className="text-[8px] font-black uppercase text-slate-500 mb-1">Login Atual</p>
+                                <p className="text-[10px] font-bold text-[#f2b90d]">{currentLoginEmail}</p>
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-4">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">E-mail de Login</label>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Novo E-mail de Login</label>
                                 <input
                                     type="email"
                                     value={userEmail}
@@ -659,24 +669,48 @@ export default function EstablishmentSettingsPage() {
 
                             <div className="md:col-start-1 space-y-4">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nova Senha</label>
-                                <input
-                                    type="password"
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
-                                    placeholder="••••••••"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showNewPassword ? "text" : "password"}
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                        placeholder="Min. 6 caracteres"
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[20px]">
+                                            {showNewPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Confirmar Nova Senha</label>
-                                <input
-                                    type="password"
-                                    value={confirmPassword}
-                                    onChange={e => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
-                                    placeholder="••••••••"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                        placeholder="Repita a nova senha"
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[20px]">
+                                            {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -686,7 +720,7 @@ export default function EstablishmentSettingsPage() {
                                 disabled={isUpdatingAuth}
                                 className="w-full md:w-auto bg-[#f2b90d] text-black px-12 py-4 rounded-2xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/10 active:scale-95 transition-all disabled:opacity-50"
                             >
-                                {isUpdatingAuth ? 'Sincronizando...' : 'ATUALIZAR DADOS DE ACESSO'}
+                                {isUpdatingAuth ? 'SINCRONIZANDO...' : 'ATUALIZAR ACESSO'}
                             </button>
                         </div>
                     </form>
