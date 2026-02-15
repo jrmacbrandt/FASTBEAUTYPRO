@@ -250,89 +250,86 @@ Aguardo sua confirmação! 😊`;
                 />
             </div>
 
-            {/* Header */}
-            <header className="relative z-50 px-8 py-6 flex justify-between items-start">
-                <div className="flex items-center gap-4">
-                    {tenant.logo_url && (
-                        <img src={tenant.logo_url} alt={tenant.name} className="size-12 rounded-xl object-cover border border-white/10" />
-                    )}
-                    <div>
-                        <h1 className="text-white text-xl font-black italic tracking-tighter leading-none uppercase">{tenant.name}</h1>
-                        <p className="text-[#f2b90d] text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Premium Excellence</p>
-                    </div>
-                </div>
-
-                <div className="text-right space-y-1 hidden md:block">
-                    <p className="text-white text-[10px] font-bold uppercase tracking-widest leading-none opacity-60">{tenant.address}</p>
-                    <p className="text-[#f2b90d] text-xs font-black italic">{tenant.phone}</p>
-                </div>
-            </header>
-
-            {/* Progress Stepper */}
-            <div className="fixed top-0 left-0 w-full bg-black/40 backdrop-blur-md z-[60] py-4 border-b border-white/5">
-                <div className="max-w-4xl mx-auto px-6">
-                    <div className="flex items-center justify-between relative">
-                        {/* Connection Line */}
-                        <div
-                            className="absolute top-1/2 h-[2.5px] -translate-y-1/2 -z-10 bg-white/10"
-                            style={{
-                                left: '2.5rem',
-                                right: '2.5rem'
-                            }}
-                        />
-                        <div
-                            className="absolute top-1/2 h-[2.5px] -translate-y-1/2 -z-10 transition-all duration-700 ease-in-out"
-                            style={{
-                                left: '2.5rem',
-                                width: `calc((100% - 5rem) * ${(Math.min(step - 1, 4) / 4)})`,
-                                backgroundColor: theme.primary,
-                                boxShadow: `0 0 15px ${theme.primary}50`
-                            }}
-                        />
-
-                        {/* Steps */}
-                        {[
-                            { num: 1, label: 'Serviço' },
-                            { num: 2, label: 'Profissional' },
-                            { num: 3, label: 'Data' },
-                            { num: 4, label: 'Horário' },
-                            { num: 5, label: 'Confirmar' }
-                        ].map((s) => (
-                            <div key={s.num} className="flex flex-col items-center gap-2 relative">
-                                <div
-                                    className={`size-10 md:size-12 rounded-full flex items-center justify-center font-black text-sm md:text-base transition-all duration-500 ${step >= s.num && step < 6
-                                        ? 'scale-110 shadow-lg'
-                                        : 'scale-100'
-                                        }`}
-                                    style={{
-                                        backgroundColor: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.05)',
-                                        color: (step >= s.num || step === 6) ? '#000' : 'rgba(255,255,255,0.3)',
-                                        border: step === s.num ? `2px solid ${theme.primary}` : '2px solid transparent'
-                                    }}
-                                >
-                                    {(step > s.num || step === 6) ? (
-                                        <span className="material-symbols-outlined text-lg">check</span>
-                                    ) : (
-                                        s.num
-                                    )}
-                                </div>
-                                <span
-                                    className="text-[9px] md:text-[10px] font-black uppercase tracking-wider hidden md:block transition-all duration-300"
-                                    style={{ color: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.3)' }}
-                                >
-                                    {s.label}
-                                </span>
+            <div className="fixed top-0 left-0 w-full bg-black/80 backdrop-blur-xl z-[60] border-b border-white/5">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        {/* Store ID */}
+                        <div className="flex items-center gap-4 shrink-0 justify-center md:justify-start">
+                            {tenant.logo_url && (
+                                <img src={tenant.logo_url} alt={tenant.name} className="size-10 rounded-xl object-cover border border-white/10" />
+                            )}
+                            <div className="text-center md:text-left">
+                                <h1 className="text-white text-lg font-black italic tracking-tighter leading-none uppercase">{tenant.name}</h1>
+                                <p className="text-[#f2b90d] text-[9px] font-bold uppercase tracking-[0.2em] mt-1">Premium Excellence</p>
                             </div>
-                        ))}
+                        </div>
+
+                        {/* Progress Stepper */}
+                        <div className="flex-1 max-w-2xl w-full">
+                            <div className="flex items-center justify-between relative">
+                                {/* Connection Line */}
+                                <div
+                                    className="absolute top-1/2 h-[2.5px] -translate-y-1/2 -z-10 bg-white/10"
+                                    style={{
+                                        left: '1.5rem',
+                                        right: '1.5rem'
+                                    }}
+                                />
+                                <div
+                                    className="absolute top-1/2 h-[2.5px] -translate-y-1/2 -z-10 transition-all duration-700 ease-in-out"
+                                    style={{
+                                        left: '1.5rem',
+                                        width: `calc((100% - 3rem) * ${(Math.min(step - 1, 4) / 4)})`,
+                                        backgroundColor: theme.primary,
+                                        boxShadow: `0 0 15px ${theme.primary}50`
+                                    }}
+                                />
+
+                                {/* Steps */}
+                                {[
+                                    { num: 1, label: 'Serviço' },
+                                    { num: 2, label: 'Profissional' },
+                                    { num: 3, label: 'Data' },
+                                    { num: 4, label: 'Horário' },
+                                    { num: 5, label: 'Confirmar' }
+                                ].map((s) => (
+                                    <div key={s.num} className="flex flex-col items-center gap-2 relative">
+                                        <div
+                                            className={`size-8 md:size-10 rounded-full flex items-center justify-center font-black text-xs md:text-sm transition-all duration-500 ${step >= s.num && step < 6
+                                                ? 'scale-110 shadow-lg'
+                                                : 'scale-100'
+                                                }`}
+                                            style={{
+                                                backgroundColor: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.05)',
+                                                color: (step >= s.num || step === 6) ? '#000' : 'rgba(255,255,255,0.3)',
+                                                border: step === s.num ? `2px solid ${theme.primary}` : '2px solid transparent'
+                                            }}
+                                        >
+                                            {(step > s.num || step === 6) ? (
+                                                <span className="material-symbols-outlined text-sm md:text-lg">check</span>
+                                            ) : (
+                                                s.num
+                                            )}
+                                        </div>
+                                        <span
+                                            className="text-[8px] md:text-[9px] font-black uppercase tracking-wider hidden sm:block transition-all duration-300"
+                                            style={{ color: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.3)' }}
+                                        >
+                                            {s.label}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <main className="relative z-10 max-w-4xl mx-auto px-6 pt-12 pb-24 min-h-[calc(100vh-100px)] flex flex-col justify-center">
+            <main className="relative z-10 max-w-4xl mx-auto px-6 pt-32 md:pt-40 pb-24 min-h-[calc(100vh-160px)] flex flex-col justify-center">
                 {step > 1 && step < 6 && (
                     <button
                         onClick={() => setStep(step - 1)}
-                        className="fixed left-6 md:left-[calc((100vw-56rem)/2+1.5rem)] top-[100px] md:top-[110px] size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
+                        className="fixed left-6 md:left-[calc((100vw-56rem)/2+1.5rem)] top-[140px] md:top-[120px] size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[100] cursor-pointer"
                         style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#ffffff' }}
                     >
                         <span className="material-symbols-outlined text-[20px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
