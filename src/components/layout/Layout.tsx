@@ -20,6 +20,13 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
 
     React.useEffect(() => {
         const checkSupport = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('stop_impersonate')) {
+                document.cookie = "support_tenant_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                setIsSupportMode(false);
+                return;
+            }
+
             const supportId = document.cookie
                 .split('; ')
                 .find(row => row.startsWith('support_tenant_id='))
@@ -93,29 +100,30 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             />
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
                 {/* Master Support / Maintenance Banner */}
-                {(isSupportMode || isMaintenance) && (
-                    <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
-                        <div className="flex items-center gap-3">
-                            <span className="material-symbols-outlined font-bold animate-pulse text-xl">
-                                {isMaintenance ? 'engineering' : 'admin_panel_settings'}
-                            </span>
-                            <span className="text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap">
-                                {isMaintenance
-                                    ? 'Manutenção preventiva ou corretiva sendo realizada.'
-                                    : 'Modo Suporte Ativo: Visualizando painel administrativo da unidade.'}
-                            </span>
+                {((isSupportMode && (user?.role === 'master' || user?.email === 'jrmacbrandt@gmail.com') && !window.location.pathname.includes('/admin-master')) ||
+                    (isMaintenance && user?.role !== 'master')) && (
+                        <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
+                            <div className="flex items-center gap-3">
+                                <span className="material-symbols-outlined font-bold animate-pulse text-xl">
+                                    {isMaintenance && user?.role !== 'master' ? 'engineering' : 'admin_panel_settings'}
+                                </span>
+                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                                    {isMaintenance && user?.role !== 'master'
+                                        ? 'Manutenção preventiva ou corretiva sendo realizada.'
+                                        : 'Modos Suporte Ativo: Visualizando painel administrativo da unidade.'}
+                                </span>
+                            </div>
+                            {(isSupportMode && (user?.role === 'master' || user?.email === 'jrmacbrandt@gmail.com')) && (
+                                <button
+                                    onClick={handleStopSupport}
+                                    className="bg-black text-[#f2b90d] px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter hover:bg-zinc-900 transition-all flex items-center gap-2"
+                                >
+                                    <span className="material-symbols-outlined text-[14px]">logout</span>
+                                    Finalizar Manutenção
+                                </button>
+                            )}
                         </div>
-                        {isSupportMode && (
-                            <button
-                                onClick={handleStopSupport}
-                                className="bg-black text-[#f2b90d] px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter hover:bg-zinc-900 transition-all flex items-center gap-2"
-                            >
-                                <span className="material-symbols-outlined text-[14px]">logout</span>
-                                Finalizar Manutenção
-                            </button>
-                        )}
-                    </div>
-                )}
+                    )}
 
                 <Header
                     title={title || "FastBeauty Pro"}

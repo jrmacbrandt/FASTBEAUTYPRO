@@ -145,33 +145,27 @@ export async function middleware(request: NextRequest) {
     // NEW STRICT LOGIC (USER DEFINED V4.0) + MAINTENANCE (V5.0)
     // ----------------------------------------------------------------
 
-    // Global Maintenance Check
-    // IMPORTANT: If we are impersonating, we check the impersonated tenant's mode
-    let targetMaintenance = tenantObj?.maintenance_mode === true;
+    // 🚀 CRITICAL LOCKOUT: If any maintenance is active and user is NOT Master
+    let isMaintenanceActive = tenantObj?.maintenance_mode === true;
 
+    // Support Mode for Master
     if (role === 'master' && supportTenantId) {
-        // Fetch the mode for the impersonated tenant
-        const { data: impTenant } = await supabase.from('tenants').select('maintenance_mode').eq('id', supportTenantId).single();
-        if (impTenant) targetMaintenance = impTenant.maintenance_mode;
+        const { data: impT } = await supabase.from('tenants').select('maintenance_mode').eq('id', supportTenantId).single();
+        if (impT?.maintenance_mode) isMaintenanceActive = true;
     } else if (role !== 'master' && (isAdminPage || isProPage)) {
-        // EXTRA SAFETY: Fresh check for regular users to prevent cache bypass
-        const tid = profile?.tenant_id;
-        if (tid) {
-            const { data: freshTenant } = await supabase.from('tenants').select('maintenance_mode').eq('id', tid).single();
-            if (freshTenant?.maintenance_mode) targetMaintenance = true;
-        }
+        // Re-check DB for regular users to prevent any cache issues
+        const { data: freshT } = await supabase.from('tenants').select('maintenance_mode').eq('id', profile?.tenant_id).single();
+        if (freshT?.maintenance_mode) isMaintenanceActive = true;
     }
 
-    if (targetMaintenance && role !== 'master' && !isMaintenancePage) {
-        console.log('🚪 REDIRECT: Maintenance active, locking out non-master');
-        // Final protection: Ensure redirect is to absolute URL
+    if (isMaintenanceActive && role !== 'master' && !isMaintenancePage) {
+        console.log('🚪 LOCKOUT: Maintenance active for tenant. Redirecting.');
         return NextResponse.redirect(new URL('/manutencao', request.url));
     }
 
-    if (!targetMaintenance && isMaintenancePage) {
-        // Redirect back home if maintenance is over
-        url.pathname = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
-        return NextResponse.redirect(url);
+    if (!isMaintenanceActive && isMaintenancePage) {
+        const homeUrl = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
+        return NextResponse.redirect(new URL(homeUrl, request.url));
     }
 
     // 1. MASTER Logic
