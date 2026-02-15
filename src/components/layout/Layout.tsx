@@ -19,6 +19,15 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     const [isSupportMode, setIsSupportMode] = React.useState(false);
     const [isMaintenance, setIsMaintenance] = React.useState(false);
 
+    // 1. Initial Theme Check (LocalStorage) - Garante continuidade visual do Login
+    React.useEffect(() => {
+        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
+        if (savedType) {
+            setBusinessType(savedType);
+            document.body.className = savedType === 'salon' ? 'theme-salon' : 'theme-barber';
+        }
+    }, []);
+
     React.useEffect(() => {
         const checkSupport = () => {
             const urlParams = new URLSearchParams(window.location.search);
