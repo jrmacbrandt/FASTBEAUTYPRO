@@ -105,7 +105,7 @@ export default function MasterDashboardPage() {
         }
     };
 
-    const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save' | 'toggle_maintenance', data?: any, tenant?: any) => {
+    const handleAction = async (action: 'pause' | 'delete' | 'resume' | 'save', data?: any, tenant?: any) => {
         const targetTenant = tenant || selectedTenant;
         console.log('========== MASTER ACTION DIAGNOSTIC ==========');
         console.log('[MasterAction-V3] Initiating action:', action);
@@ -186,17 +186,6 @@ export default function MasterDashboardPage() {
                 setTenants(prev => prev.map(t => t.id === targetTenant.id ? { ...t, active: newStatus } : t));
 
                 alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
-            } else if (action === 'toggle_maintenance') {
-                const newMaint = !targetTenant.maintenance_mode;
-                const { error } = await supabase
-                    .from('tenants')
-                    .update({ maintenance_mode: newMaint })
-                    .eq('id', targetTenant.id);
-
-                if (error) throw error;
-                setTenants(prev => prev.map(t => t.id === targetTenant.id ? { ...t, maintenance_mode: newMaint } : t));
-                if (selectedTenant?.id === targetTenant.id) setSelectedTenant({ ...selectedTenant, maintenance_mode: newMaint });
-                alert(`Manutenção ${newMaint ? 'ATIVADA' : 'DESATIVADA'} para esta unidade.`);
             } else if (action === 'save') {
                 console.log('[MasterAction-V3] Attempting to save tenant data for:', targetTenant.id);
                 console.log('[MasterAction-V3] Data to save:', data);
@@ -360,13 +349,6 @@ export default function MasterDashboardPage() {
                                             <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>
                                             <td className="py-4 px-8 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
                                                 <div className="flex items-center justify-end gap-2 whitespace-nowrap min-w-max">
-                                                    <button
-                                                        onClick={() => handleAction('toggle_maintenance', null, t)}
-                                                        className={`size-9 rounded-xl flex items-center justify-center transition-all border shadow-md ${t.maintenance_mode ? 'bg-amber-500 text-black border-amber-600' : 'bg-white/5 text-slate-500 border-white/5 hover:border-amber-500/50'}`}
-                                                        title={t.maintenance_mode ? 'Encerrar Manutenção' : 'Iniciar Manutenção (Bloqueia Acesso)'}
-                                                    >
-                                                        <span className="material-symbols-outlined text-[18px]">{t.maintenance_mode ? 'engineering' : 'build'}</span>
-                                                    </button>
 
                                                     <button
                                                         onClick={() => handleSupport(t)}
@@ -610,18 +592,6 @@ export default function MasterDashboardPage() {
 
                                     {/* Advanced Stats / Support Section */}
                                     <div className="pt-6 mt-6 border-t border-white/5 space-y-4">
-                                        <div className="flex items-center justify-between p-4 bg-amber-500/5 border border-amber-500/10 rounded-[1.5rem] group">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-amber-500">Modo Manutenção</span>
-                                                <span className="text-[8px] font-bold text-slate-500 uppercase">Bloqueia acesso da unidade</span>
-                                            </div>
-                                            <button
-                                                onClick={() => handleAction('toggle_maintenance', null, selectedTenant)}
-                                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${selectedTenant.maintenance_mode ? 'bg-amber-500 text-black' : 'bg-white/5 text-slate-400 hover:text-white border border-white/10'}`}
-                                            >
-                                                {selectedTenant.maintenance_mode ? 'ATIVADO' : 'DESATIVADO'}
-                                            </button>
-                                        </div>
 
                                         <button
                                             onClick={() => handleSupport(selectedTenant)}

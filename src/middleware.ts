@@ -106,6 +106,12 @@ export async function middleware(request: NextRequest) {
 
         // Support Mode Logic
         if (impersonateId) {
+            // AUTO-LOCK: Block others when master enters
+            await supabase
+                .from('tenants')
+                .update({ maintenance_mode: true })
+                .eq('id', impersonateId);
+
             supabaseResponse.cookies.set('support_tenant_id', impersonateId, { path: '/' });
             url.searchParams.delete('impersonate');
             url.pathname = '/admin';
@@ -113,6 +119,15 @@ export async function middleware(request: NextRequest) {
         }
 
         if (stopImpersonate) {
+            // AUTO-UNLOCK: Restore access when master leaves
+            const currentSupportId = request.cookies.get('support_tenant_id')?.value;
+            if (currentSupportId) {
+                await supabase
+                    .from('tenants')
+                    .update({ maintenance_mode: false })
+                    .eq('id', currentSupportId);
+            }
+
             supabaseResponse.cookies.set('support_tenant_id', '', { path: '/', maxAge: 0 });
             url.searchParams.delete('stop_impersonate');
             url.pathname = '/admin-master';
