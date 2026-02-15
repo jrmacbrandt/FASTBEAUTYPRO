@@ -91,8 +91,10 @@ export default function DynamicBookingPage() {
     }, [selection.barber, selection.date]);
 
     const theme = useMemo(() => {
-        if (tenant?.config?.theme) return tenant.config.theme;
-        return { primary: '#f2b90d', secondary: '#09090b' };
+        return {
+            primary: tenant?.primary_color || '#f2b90d',
+            secondary: tenant?.secondary_color || '#09090b'
+        };
     }, [tenant]);
 
     const nextStep = () => setStep(step + 1);

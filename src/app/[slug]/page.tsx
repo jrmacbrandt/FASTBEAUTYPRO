@@ -90,10 +90,9 @@ export default function ShopLandingPage() {
     }, [selection.barber, selection.date]);
 
     const theme = useMemo(() => {
-        const config = tenant?.config as any;
         return {
-            primary: config?.theme?.primary || '#f2b90d',
-            secondary: config?.theme?.secondary || '#000000'
+            primary: tenant?.primary_color || '#f2b90d',
+            secondary: tenant?.secondary_color || '#000000'
         };
     }, [tenant]);
 

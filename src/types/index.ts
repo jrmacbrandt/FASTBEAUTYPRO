@@ -30,6 +30,8 @@ export interface Tenant {
   trial_ends_at: string;
   created_at: string;
   owner_email: string;
+  primary_color?: string;
+  secondary_color?: string;
 }
 
 export interface Profile {
