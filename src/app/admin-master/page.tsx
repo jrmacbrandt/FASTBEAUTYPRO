@@ -99,9 +99,35 @@ export default function MasterDashboardPage() {
             .trim();
     };
 
-    const handleSupport = (tenant: any) => {
-        if (confirm(`Acessar painel administrativo da unidade "${tenant.name}" como Suporte Master?`)) {
+    const handleSupport = async (tenant: any) => {
+        if (!confirm(`MODO SUPORTE MASTER\n\nIsso irá:\n1. ATIVAR o bloqueio de manutenção para ${tenant.name}.\n2. Deslogar usuários ativos da loja.\n3. Permitir seu acesso exclusivo.\n\nDeseja continuar?`)) {
+            return;
+        }
+
+        try {
+            // 1. Tentar ativar via RPC (Mais seguro)
+            const { error: rpcError } = await supabase.rpc('master_toggle_maintenance', {
+                target_tenant_id: tenant.id,
+                enable_maintenance: true
+            });
+
+            if (rpcError) {
+                console.warn('RPC falhou, tentando update direto...', rpcError);
+                // 2. Fallback: Update direto
+                const { error: updateError } = await supabase
+                    .from('tenants')
+                    .update({ maintenance_mode: true })
+                    .eq('id', tenant.id);
+
+                if (updateError) throw updateError;
+            }
+
+            // 3. Sucesso: Redirecionar com param para o middleware setar o cookie
             window.location.href = `/admin?impersonate=${tenant.id}`;
+
+        } catch (err: any) {
+            console.error('Erro ao ativar suporte:', err);
+            alert(`ERRO CRÍTICO: Não foi possível ativar o modo manutenção.\n\nDetalhes: ${err.message}`);
         }
     };
 

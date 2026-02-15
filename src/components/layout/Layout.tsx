@@ -49,8 +49,41 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         }
     }, [profile]);
 
-    const handleStopSupport = () => {
-        window.location.href = '/admin-master?stop_impersonate=true';
+    const handleStopSupport = async () => {
+        // Obter ID do suporte atual
+        const cookies = document.cookie.split('; ');
+        const supportId = cookies.find(row => row.trim().startsWith('support_tenant_id='))?.split('=')[1];
+
+        if (!supportId) {
+            window.location.href = '/admin-master?stop_impersonate=true';
+            return;
+        }
+
+        try {
+            // 1. Tentar desbloquear via RPC
+            const { error: rpcError } = await supabase.rpc('master_toggle_maintenance', {
+                target_tenant_id: supportId,
+                enable_maintenance: false
+            });
+
+            if (rpcError) {
+                // 2. Fallback
+                const { error } = await supabase
+                    .from('tenants')
+                    .update({ maintenance_mode: false })
+                    .eq('id', supportId);
+
+                if (error) throw error;
+            }
+
+            // 3. Sucesso: Redirecionar para limpeza de cookies
+            window.location.href = '/admin-master?stop_impersonate=true';
+
+        } catch (err: any) {
+            console.error('Erro ao sair do suporte:', err);
+            // Redireciona mesmo com erro para liberar o Master, mas loga.
+            window.location.href = '/admin-master?stop_impersonate=true';
+        }
     };
 
     const theme = businessType === 'salon'
