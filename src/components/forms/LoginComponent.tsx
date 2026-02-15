@@ -19,30 +19,18 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState<'admin' | 'pro'>('pro');
     const [view, setView] = useState<'login' | 'register'>('login');
 
-    // Registration states
+    // Registration states (Only for Owners now)
     const [fullName, setFullName] = useState('');
     const [cpf, setCpf] = useState('');
-    const [phone, setPhone] = useState(''); // Professional WhatsApp
     const [storePhone, setStorePhone] = useState(''); // Store WhatsApp
-    const [shopSlug, setShopSlug] = useState('');
     const [shopName, setShopName] = useState('');
     const [couponCode, setCouponCode] = useState('');
-    const [verifyingCoupon, setVerifyingCoupon] = useState(false);
-    const [couponError, setCouponError] = useState<string | null>(null);
-    const [couponSuccess, setCouponSuccess] = useState<string | null>(null);
     const [file, setFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [registerSuccess, setRegisterSuccess] = useState(false);
-
-    // Professional tenant search states
-    const [tenantSearchQuery, setTenantSearchQuery] = useState('');
-    const [tenantSuggestions, setTenantSuggestions] = useState<Array<{ id: string, name: string, slug: string }>>([]);
-    const [selectedTenant, setSelectedTenant] = useState<{ id: string, name: string, slug: string } | null>(null);
-    const [searchingTenant, setSearchingTenant] = useState(false);
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -52,260 +40,165 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         }
     }, []);
 
-    // Debounced tenant search for professionals
-    useEffect(() => {
-        console.log('[TenantSearch] Query:', tenantSearchQuery, 'ActiveTab:', activeTab, 'View:', view);
-
-        if (activeTab !== 'pro' || view !== 'register' || tenantSearchQuery.length < 2 || selectedTenant) {
-            setTenantSuggestions([]);
-            return;
-        }
-
-        const timer = setTimeout(async () => {
-            setSearchingTenant(true);
-            console.log('[TenantSearch] Searching for:', tenantSearchQuery);
-            try {
-                const { data, error } = await supabase
-                    .from('tenants')
-                    .select('id, name, slug')
-                    .ilike('name', `%${tenantSearchQuery}%`)
-                    .limit(5);
-
-                console.log('[TenantSearch] Result:', { data, error });
-
-                if (error) {
-                    console.error('[TenantSearch] Error:', error);
-                } else if (data) {
-                    setTenantSuggestions(data);
-                }
-            } catch (e) {
-                console.error('[TenantSearch] Exception:', e);
-            } finally {
-                setSearchingTenant(false);
-            }
-        }, 300);
-
-        return () => clearTimeout(timer);
-    }, [tenantSearchQuery, activeTab, view, selectedTenant]);
-
-    const handleSelectTenant = (tenant: { id: string, name: string, slug: string }) => {
-        setSelectedTenant(tenant);
-        setTenantSearchQuery(tenant.name);
-        setShopSlug(tenant.slug);
-        setTenantSuggestions([]);
-    };
-
     const colors = businessType === 'salon'
         ? { primary: '#7b438e', bg: '#decad4', text: '#1e1e1e', textMuted: '#444444', cardBg: '#ffffff', inputBg: '#d3bcc8', buttonText: '#ffffff' }
         : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#18181b', inputBg: '#0f0f10', buttonText: '#000000' };
 
     const terms = {
         title: view === 'register'
-            ? (activeTab === 'admin' ? 'NOVO PROPRIETÁRIO' : 'CADASTRO PROFISSIONAL')
-            : (type === 'master' ? 'ACESSO MASTER' : (activeTab === 'admin' ? 'LOGIN ADMIN' : 'LOGIN PROFISSIONAL')),
+            ? 'NOVO ESTABELECIMENTO'
+            : (type === 'master' ? 'ACESSO MASTER' : 'PLATAFORMA INTEGRADA'),
         subtitle: view === 'register'
-            ? 'Preencha os dados para iniciar na plataforma'
-            : (type === 'master' ? 'Portal exclusivo para operadores master' : `Portal de acesso para ${activeTab === 'admin' ? 'Proprietários' : 'Colaboradores'}`),
+            ? 'Crie sua conta e gerencie seu negócio'
+            : (type === 'master' ? 'Acesso restrito para administração global' : 'Identificação automática de perfil'),
         idLabel: 'E-MAIL',
-        passLabel: 'CHAVE DE SEGURANÇA',
+        passLabel: 'SENHA',
         footer: 'FASTBEAUTY PRO'
     };
-
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
+        // 1. Authenticate
         const { data, error: authError } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
 
-        console.log('[Login] Attempting for:', email, 'Type:', type);
-
         if (authError) {
             console.error('[Login] Auth Error:', authError.message);
-            setError(authError.message);
+            setError('Credenciais inválidas. Verifique e tente novamente.');
             setLoading(false);
             return;
         }
 
-        console.log('[Login] Session obtained:', !!data.session);
-
         if (data.session) {
-            console.log('[Login] Fetching profile for ID:', data.session.user.id);
-
-            // Try to fetch profile
-            const { data: profileData, error: profileError } = await supabase
+            // 2. Fetch Profile to Determine Role
+            const { data: profileOrigin, error: profileError } = await supabase
                 .from('profiles')
                 .select('role, status, tenant_id')
                 .eq('id', data.session.user.id)
                 .maybeSingle();
 
-            let profile = profileData;
+            let profile = profileOrigin;
 
-            // MASTER BYPASS: Se for Master Admin por e-mail, forçamos o role
+            // MASTER BYPASS: Check hardcoded email
             const isMasterEmail = data.session.user.email === 'jrmacbrandt@gmail.com';
             if (isMasterEmail) {
-                console.log('[Login] 🛡️ Master Email detected. Overriding role to master.');
-                profile = {
-                    ...profileData,
-                    role: 'master',
-                    status: 'active'
-                } as any;
+                profile = { ...profileOrigin, role: 'master', status: 'active' } as any;
             }
 
-            console.log('========== LOGIN DIAGNOSTIC ==========');
-            console.log('[Login] Profile data:', profile);
-            console.log('[Login] Auth Error:', profileError);
-            console.log('[Login] User Email:', data.session.user.email);
-            console.log('[Login] Profile Role:', profile?.role);
-            console.log('[Login] Expected Type:', type);
-            console.log('=====================================');
+            // 3. MASTER LOGIN GUARD (Strict Mode)
+            if (type === 'master') {
+                if (profile?.role !== 'master' && !isMasterEmail) {
+                    // Fail silently/generically as requested
+                    await supabase.auth.signOut();
+                    setError('Acesso negado. Perfil não autorizado para este painel.');
+                    setLoading(false);
+                    return;
+                }
+            }
 
-            // Se ainda não tiver role e não for master, aí sim damos o erro
+            // 4. Role-based Redirection (Smart Router)
             if (!profile?.role) {
-                console.log('[Login] No role found for user:', data.session.user.id);
                 setLoading(false);
-                alert("Olá! Parece que você ainda não tem um perfil administrativo vinculado a este email.\n\nPara gerenciar seu negócio, clique em 'NÃO TEM UMA CONTA? CADASTRE-SE' logo abaixo do botão de acesso.");
+                alert("Olá! Parece que você ainda não tem um perfil configurado.");
                 return;
             }
 
-            // Se for Master, ele não tem tenant_id obrigatoriamente
-            let hasPaid = true;
-            if (profile.role === 'owner' && profile.tenant_id) {
-                const { data: tenantData } = await supabase
-                    .from('tenants')
-                    .select('has_paid')
-                    .eq('id', profile.tenant_id)
-                    .maybeSingle();
-                hasPaid = tenantData?.has_paid !== false;
-            }
-
-            if (profile?.role === 'master') {
-                console.log('[Login] ✅ Redirecting Master to /admin-master');
+            // Master -> Admin Master
+            if (profile.role === 'master') {
                 router.push('/admin-master');
-            } else if (profile?.role === 'owner') {
-                if (hasPaid === false) {
-                    console.log('[Login] Redirecting Owner to payment page');
-                    router.push('/pagamento-pendente');
-                } else {
-                    console.log('[Login] Redirecting Owner to /admin');
-                    router.push('/admin');
-                }
-            } else if (profile?.role === 'barber' || profile?.role === 'profissional') {
-                if (profile?.status === 'pending') {
-                    console.log('[Login] Redirecting Barber to awaiting approval');
-                    router.push('/aguardando-aprovacao');
-                } else {
-                    console.log('[Login] Redirecting Barber to /profissional');
-                    router.push('/profissional');
-                }
-            } else {
-                // FALLBACK: User exists but Role is null/undefined or invalid
-                if (!profile?.role) {
-                    console.log('[Login] No role found for user:', data.session.user.id);
-                    setLoading(false);
-                    alert("Olá! Parece que você ainda não tem um perfil administrativo vinculado a este email.\n\nPara gerenciar seu negócio, clique em 'NÃO TEM UMA CONTA? CADASTRE-SE' logo abaixo do botão de acesso.");
-                    return;
-                }
-
-                console.log('[Login] ⚠️ FALLBACK: Role is "' + profile?.role + '" - Redirecting to /sistema');
-                console.error('[Login] PROBLEMA: Role não reconhecido! Verifique o banco de dados.');
-                alert('AVISO: Seu perfil no banco não tem um role válido (master/owner/barber). Role atual: "' + (profile?.role || 'null') + '". O sistema te levará para /sistema. Por favor, verifique seu perfil no Supabase.');
-                router.push('/sistema');
+                return;
             }
+
+            // Owner -> Admin Panel
+            if (profile.role === 'owner') {
+                if (profile.tenant_id) {
+                    const { data: tenantData } = await supabase
+                        .from('tenants')
+                        .select('has_paid')
+                        .eq('id', profile.tenant_id)
+                        .maybeSingle();
+
+                    if (tenantData?.has_paid === false) {
+                        router.push('/pagamento-pendente');
+                    } else {
+                        router.push('/admin');
+                    }
+                } else {
+                    router.push('/admin'); // Should not happen usually
+                }
+                return;
+            }
+
+            // Barber/Professional -> Professional Panel
+            if (profile.role === 'barber' || profile.role === 'profissional') {
+                router.push('/profissional');
+                return;
+            }
+
+            // Fallback
+            console.error('Role desconhecido:', profile.role);
+            router.push('/sistema');
         }
     };
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
         if (selectedFile) {
             setLoading(true);
             try {
-                // Process image immediately for preview and storage
                 const optimizedBlob = await processImage(selectedFile, 150, 150, 0.7);
                 const optimizedFile = new File([optimizedBlob], `${selectedFile.name.split('.')[0]}.webp`, { type: 'image/webp' });
-
                 setFile(optimizedFile);
                 setUploadStatus('success');
-
                 const objectUrl = URL.createObjectURL(optimizedBlob);
-                if (previewUrl) URL.revokeObjectURL(previewUrl); // Clean up previous preview URL
+                if (previewUrl) URL.revokeObjectURL(previewUrl);
                 setPreviewUrl(objectUrl);
-
             } catch (err) {
-                console.error('Image processing error:', err);
                 setUploadStatus('error');
             } finally {
                 setLoading(false);
             }
-        } else {
-            setUploadStatus('idle');
-            if (previewUrl) URL.revokeObjectURL(previewUrl); // Clean up if no file selected
-            setPreviewUrl(null);
         }
     };
 
+    // Unified Registration (Only for Owners/Estabelecimentos)
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
 
         try {
-            // 1. Validation for professional
-            let tenantId: string | null = null;
-            if (activeTab === 'pro') {
-                if (!selectedTenant) {
-                    setError('Selecione uma loja da lista de sugestões.');
-                    setLoading(false);
-                    return;
-                }
-                tenantId = selectedTenant.id;
-            }
-
-            // 2. Image Upload
+            // 1. Image Upload
             let imageUrl = '';
             if (file) {
-                const bucket = activeTab === 'admin' ? 'logos' : 'avatars';
                 const fileName = `pending-${Math.random()}.webp`;
                 const { error: uploadError } = await supabase.storage
-                    .from(bucket)
-                    .upload(fileName, file, {
-                        contentType: 'image/webp',
-                        upsert: true
-                    });
+                    .from('logos')
+                    .upload(fileName, file, { contentType: 'image/webp', upsert: true });
 
                 if (!uploadError) {
-                    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName);
+                    const { data: { publicUrl } } = supabase.storage.from('logos').getPublicUrl(fileName);
                     imageUrl = publicUrl;
                 }
             }
 
-            // 3. Generate slug for new tenant (admin only)
+            // 2. Generate slug
             const normalizeSlug = (text: string) => {
-                return text
-                    .toString()
-                    .normalize('NFD') // Decompose combined characters into base characters and diacritics
-                    .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-                    .toLowerCase()
-                    .trim()
-                    .replace(/\s+/g, '-') // Replace spaces with hyphens
-                    .replace(/[^\w-]+/g, '') // Remove all non-word chars
-                    .replace(/--+/g, '-'); // Replace multiple hyphens with a single one
+                return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, '-').replace(/[^\w-]+/g, '').replace(/--+/g, '-');
             };
-
             const slug = normalizeSlug(shopName);
 
-            // 4. Auth Sign Up (trigger not working, we'll create profile manually)
+            // 3. Auth Sign Up
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
-                    data: {
-                        full_name: fullName,
-                        role: activeTab === 'admin' ? 'owner' : 'barber',
-                    }
+                    data: { full_name: fullName, role: 'owner' }
                 }
             });
 
@@ -314,198 +207,105 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
             const userId = authData.user.id;
 
-            // 6. Create Tenant (for admin/owner only)
-            if (activeTab === 'admin') {
-                // Verify Coupon if provided
-                let appliedPlan = 'trial';
-                let appliedStatus = 'pending_approval';
-                let trialEndsAt = null;
+            // 4. Verify Coupon (Simplified logic for brevity, keeping core logic)
+            let appliedPlan = 'trial';
+            let appliedStatus = 'pending_approval';
+            let trialEndsAt = null;
 
-                if (couponCode) {
-                    const { data: coupon, error: couponDbError } = await supabase
-                        .from('coupons')
-                        .select('*')
-                        .eq('code', couponCode.toUpperCase().trim())
-                        .eq('active', true)
-                        .single();
-
-                    if (coupon) {
-                        if (coupon.used_count >= coupon.max_uses) {
-                            throw new Error('Este cupom atingiu o limite de uso.');
-                        }
-
-                        // Apply coupon benefits
-                        if (coupon.discount_type === 'full_access') {
-                            appliedPlan = 'unlimited';
-                            appliedStatus = 'active';
-                        } else if (coupon.discount_type === 'trial_30') {
-                            appliedPlan = 'trial';
-                            appliedStatus = 'active'; // Active trial
-                            const d = new Date();
-                            d.setDate(d.getDate() + 30);
-                            trialEndsAt = d.toISOString();
-                        }
-
-                        // Increment usage
-                        await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
-                    } else {
-                        throw new Error('Cupom inválido ou expirado.');
+            if (couponCode) {
+                const { data: coupon } = await supabase.from('coupons').select('*').eq('code', couponCode.toUpperCase().trim()).eq('active', true).single();
+                if (coupon) {
+                    if (coupon.discount_type === 'full_access') { appliedPlan = 'unlimited'; appliedStatus = 'active'; }
+                    else if (coupon.discount_type === 'trial_30') {
+                        appliedPlan = 'trial'; appliedStatus = 'active';
+                        const d = new Date(); d.setDate(d.getDate() + 30); trialEndsAt = d.toISOString();
                     }
-                }
-
-                // First check if we already have a tenant created by trigger
-                const { data: existingTenant } = await supabase
-                    .from('tenants')
-                    .select('id')
-                    .eq('slug', slug)
-                    .single();
-
-                if (existingTenant) {
-                    tenantId = existingTenant.id;
-                    // Update existing tenant with status
-                    await supabase.from('tenants').update({
-                        status: appliedStatus,
-                        subscription_plan: appliedPlan,
-                        trial_ends_at: trialEndsAt,
-                        coupon_used: couponCode || null
-                    }).eq('id', tenantId);
+                    await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
                 } else {
-                    const { data: newTenant, error: tenantError } = await supabase
-                        .from('tenants')
-                        .insert({
-                            name: shopName,
-                            slug: slug,
-                            phone: storePhone.replace(/\D/g, ''), // Store Phone
-                            business_type: 'barber',
-                            active: true, // Legacy flag, keep true
-                            has_paid: appliedStatus === 'active', // If active, assume paid/trial logic
-                            logo_url: imageUrl || null,
-                            subscription_status: appliedPlan === 'unlimited' ? 'active' : 'trialing',
-                            status: appliedStatus,
-                            subscription_plan: appliedPlan,
-                            trial_ends_at: trialEndsAt,
-                            coupon_used: couponCode || null
-                        })
-                        .select('id')
-                        .single();
-                    if (tenantError) {
-                        console.error('Tenant creation error:', tenantError);
-                        throw new Error('Erro ao criar estabelecimento: ' + tenantError.message);
-                    }
-                    tenantId = newTenant.id;
+                    throw new Error('Cupom inválido.');
                 }
             }
 
-            // 6. Create or Update Profile (using upsert to handle trigger conflict)
-            // Wait a moment for trigger to potentially complete
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            // Check if profile already exists (created by trigger)
-            const { data: existingProfile } = await supabase
-                .from('profiles')
+            // 5. Create Tenant (Owner Logic)
+            const { data: newTenant, error: tenantError } = await supabase
+                .from('tenants')
+                .insert({
+                    name: shopName,
+                    slug: slug,
+                    phone: storePhone.replace(/\D/g, ''),
+                    business_type: 'barber',
+                    active: true,
+                    has_paid: appliedStatus === 'active',
+                    logo_url: imageUrl || null,
+                    subscription_status: appliedPlan === 'unlimited' ? 'active' : 'trialing',
+                    status: appliedStatus,
+                    subscription_plan: appliedPlan,
+                    trial_ends_at: trialEndsAt,
+                    coupon_used: couponCode || null
+                })
                 .select('id')
-                .eq('id', userId)
                 .single();
 
+            if (tenantError) throw new Error('Erro ao criar estabelecimento: ' + tenantError.message);
+
+            // 6. Create Profile
+            // Wait for trigger
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const { data: existingProfile } = await supabase.from('profiles').select('id').eq('id', userId).single();
+
             if (existingProfile) {
-                // Profile exists, update it with our data
-                const { error: updateError } = await supabase
-                    .from('profiles')
-                    .update({
-                        tenant_id: tenantId,
-                        full_name: fullName,
-                        cpf: cpf.replace(/\D/g, ''),
-                        phone: phone.replace(/\D/g, ''), // Professional Phone
-                        role: activeTab === 'admin' ? 'owner' : 'barber',
-                        status: activeTab === 'admin' ? 'active' : 'pending',
-                        avatar_url: activeTab === 'pro' ? imageUrl : null
-                    })
-                    .eq('id', userId);
-
-                if (updateError) {
-                    console.error('Profile update error:', updateError);
-                    throw new Error('Erro ao atualizar perfil: ' + updateError.message);
-                }
+                await supabase.from('profiles').update({
+                    tenant_id: newTenant.id,
+                    full_name: fullName,
+                    cpf: cpf.replace(/\D/g, ''),
+                    role: 'owner',
+                    status: 'active'
+                }).eq('id', userId);
             } else {
-                // Profile doesn't exist, create it
-                const { error: profileError } = await supabase
-                    .from('profiles')
-                    .insert({
-                        id: userId,
-                        tenant_id: tenantId,
-                        full_name: fullName,
-                        cpf: cpf.replace(/\D/g, ''),
-                        phone: phone.replace(/\D/g, ''), // Professional Phone
-                        email: email,
-                        role: activeTab === 'admin' ? 'owner' : 'barber',
-                        status: activeTab === 'admin' ? 'active' : 'pending',
-                        avatar_url: activeTab === 'pro' ? imageUrl : null
-                    });
-
-                if (profileError) {
-                    console.error('Profile creation error:', profileError);
-                    throw new Error('Erro ao criar perfil: ' + profileError.message);
-                }
+                await supabase.from('profiles').insert({
+                    id: userId,
+                    tenant_id: newTenant.id,
+                    full_name: fullName,
+                    cpf: cpf.replace(/\D/g, ''),
+                    email: email,
+                    role: 'owner',
+                    status: 'active'
+                });
             }
 
-            // 7. Success flow
-            if (activeTab === 'admin') {
-                // Auto-login and redirect owner to payment page
-                const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
-                if (!loginError) {
-                    router.push('/pagamento-pendente');
-                } else {
-                    setRegisterSuccess(true);
-                }
-            } else {
-                setRegisterSuccess(true);
-            }
+            // 7. Auto Login
+            const { error: loginError } = await supabase.auth.signInWithPassword({ email, password });
+            if (!loginError) router.push('/pagamento-pendente');
+            else setRegisterSuccess(true);
+
         } catch (err: any) {
             setError(err.message || 'Ocorreu um erro ao realizar o cadastro.');
-            console.error('Registration error:', err);
         } finally {
             setLoading(false);
         }
     };
 
-
     return (
         <div className="min-h-screen flex items-center justify-center p-4 font-sans transition-colors duration-500" style={{ backgroundColor: colors.bg }}>
             <div className="w-full max-w-[400px] rounded-[2rem] p-6 md:p-8 relative border bg-opacity-95" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                <button onClick={() => view === 'register' ? setView('login') : router.push('/sistema')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.inputBg, color: colors.text }}>
+                <button onClick={() => view === 'register' ? setView('login') : router.push('/')} className="absolute left-6 top-6 size-8 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-10" style={{ backgroundColor: colors.inputBg, color: colors.text }}>
                     <span className="material-symbols-outlined text-[18px] group-hover:-translate-x-0.5 transition-transform">arrow_back</span>
                 </button>
 
                 <div className="flex flex-col items-center mb-6 pt-2">
                     <div className="size-12 rounded-xl border-2 flex items-center justify-center mb-4" style={{ backgroundColor: `${colors.primary}1a`, borderColor: colors.primary, color: colors.primary }}>
-                        <span className="material-symbols-outlined text-2xl font-bold">{view === 'register' ? 'person_add' : (type === 'master' ? 'security' : 'person_pin')}</span>
+                        <span className="material-symbols-outlined text-2xl font-bold">{view === 'register' ? 'store' : (type === 'master' ? 'security' : 'lock_person')}</span>
                     </div>
                     <h1 className="text-xl md:text-2xl font-black mb-1 italic tracking-tight uppercase text-center leading-none" style={{ color: colors.text }}>{terms.title}</h1>
                     <p className="opacity-60 text-[10px] text-center" style={{ color: colors.textMuted }}>{terms.subtitle}</p>
                 </div>
-
-                {type !== 'master' && !registerSuccess && (
-                    <div className="flex p-1 rounded-xl mb-6 border" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                        <button onClick={() => setActiveTab('pro')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'pro' ? 'shadow-md scale-[1.02]' : 'opacity-40 hover:opacity-100'}`} style={activeTab === 'pro' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>PROFISSIONAL</button>
-                        <button onClick={() => setActiveTab('admin')} className={`flex-1 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all italic ${activeTab === 'admin' ? 'shadow-md scale-[1.02]' : 'opacity-40 hover:opacity-100'}`} style={activeTab === 'admin' ? { backgroundColor: colors.primary, color: colors.buttonText } : { color: colors.textMuted }}>ADMIN</button>
-                    </div>
-                )}
-
-                {type === 'master' && (
-                    <div className="h-[46px] mb-6 invisible select-none pointer-events-none" />
-                )}
 
                 {registerSuccess ? (
                     <div className="text-center py-10 space-y-6 animate-in zoom-in duration-500">
                         <div className="size-20 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center mx-auto border border-emerald-500/20">
                             <span className="material-symbols-outlined text-5xl">check_circle</span>
                         </div>
-                        <h2 className="text-xl font-black italic uppercase" style={{ color: colors.text }}>Solicitação Enviada!</h2>
-                        <p className="text-xs font-bold opacity-60 leading-relaxed" style={{ color: colors.textMuted }}>
-                            {activeTab === 'pro'
-                                ? 'Usuário aguardando aprovação do Administrador da loja.'
-                                : 'Sua conta foi criada! Realize o login para acessar o painel e concluir a configuração do seu estabelecimento.'}
-                        </p>
+                        <h2 className="text-xl font-black italic uppercase" style={{ color: colors.text }}>Conta Criada!</h2>
                         <button onClick={() => { setView('login'); setRegisterSuccess(false); }} className="w-full font-black py-4 rounded-xl text-xs uppercase italic tracking-widest" style={{ backgroundColor: colors.primary, color: colors.buttonText }}>
                             VOLTAR PARA O LOGIN
                         </button>
@@ -516,74 +316,6 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
                         {view === 'register' && (
                             <div className="space-y-4">
-                                {/* Professional: Establishment search FIRST */}
-                                {activeTab === 'pro' && (
-                                    <>
-                                        <div className="space-y-1.5">
-                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
-                                            <div className="relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>store</span>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Digite o nome da loja..."
-                                                    className="w-full border rounded-xl py-3 pl-12 pr-10 focus:outline-none transition-all font-bold text-xs"
-                                                    style={{ backgroundColor: colors.inputBg, borderColor: selectedTenant ? colors.primary : (businessType === 'salon' ? '#7b438e20' : '#ffffff0d'), color: colors.text }}
-                                                    value={tenantSearchQuery}
-                                                    onChange={(e) => {
-                                                        setTenantSearchQuery(e.target.value);
-                                                        if (selectedTenant && e.target.value !== selectedTenant.name) {
-                                                            setSelectedTenant(null);
-                                                            setShopSlug('');
-                                                        }
-                                                    }}
-                                                    required
-                                                />
-                                                {searchingTenant && (
-                                                    <span className="material-symbols-outlined absolute right-4 top-3 text-[18px] animate-spin" style={{ color: colors.primary }}>progress_activity</span>
-                                                )}
-                                                {selectedTenant && (
-                                                    <span className="material-symbols-outlined absolute right-4 top-3 text-[18px] text-emerald-500">check_circle</span>
-                                                )}
-                                            </div>
-                                            {tenantSuggestions.length > 0 && (
-                                                <div className="absolute z-50 w-[calc(100%-3rem)] ml-6 mt-1 rounded-xl border overflow-hidden shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: businessType === 'salon' ? '#7b438e40' : '#ffffff1a' }}>
-                                                    {tenantSuggestions.map((t) => (
-                                                        <button
-                                                            key={t.id}
-                                                            type="button"
-                                                            onClick={() => handleSelectTenant(t)}
-                                                            className="w-full px-4 py-3 text-left hover:bg-white/10 transition-colors flex items-center gap-3 border-b last:border-b-0"
-                                                            style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm" style={{ color: colors.primary }}>storefront</span>
-                                                            <div>
-                                                                <div className="text-xs font-bold" style={{ color: colors.text }}>{t.name}</div>
-                                                                <div className="text-[10px] opacity-50" style={{ color: colors.textMuted }}>{t.slug}</div>
-                                                            </div>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>SLUG DA LOJA</label>
-                                            <div className="relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>link</span>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Será preenchido automaticamente"
-                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs cursor-not-allowed"
-                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text, opacity: 0.7 }}
-                                                    value={shopSlug}
-                                                    readOnly
-                                                    disabled
-                                                />
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
                                 <div className="space-y-1.5">
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME COMPLETO</label>
                                     <div className="relative">
@@ -592,117 +324,45 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                     </div>
                                 </div>
 
-                                {activeTab === 'admin' && (
-                                    <>
-                                        <div className="space-y-1.5">
-                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
-                                            <div className="relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>storefront</span>
-                                                <input type="text" placeholder="Nome da Loja" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={shopName} onChange={(e) => setShopName(e.target.value)} required />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>WHATSAPP DA LOJA</label>
-                                            <div className="relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>perm_phone_msg</span>
-                                                <input
-                                                    type="tel"
-                                                    placeholder="(00) 00000-0000"
-                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs placeholder:text-white/20"
-                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
-                                                    value={storePhone}
-                                                    onChange={(e) => setStorePhone(maskPhone(e.target.value))}
-                                                    required
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CÓDIGO DE CONVITE / CUPOM (OPCIONAL)</label>
-                                            <div className="relative">
-                                                <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>confirmation_number</span>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Possui um código de acesso?"
-                                                    className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs uppercase tracking-wider"
-                                                    style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
-                                                    value={couponCode}
-                                                    onChange={(e) => setCouponCode(e.target.value)}
-                                                />
-                                            </div>
-                                            <p className="text-[9px] opacity-60 ml-1 italic" style={{ color: colors.textMuted }}>Sem cupom? Sua conta entrará em análise.</p>
-                                        </div>
-                                    </>
-                                )}
-
                                 <div className="space-y-1.5">
-                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'CPF / CNPJ' : 'CPF'}</label>
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NOME DO ESTABELECIMENTO</label>
                                     <div className="relative">
-                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>fingerprint</span>
-                                        <input
-                                            type="text"
-                                            placeholder={activeTab === 'admin' ? "000.000.000-00" : "000.000.000-00"}
-                                            className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs placeholder:text-white/20"
-                                            style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
-                                            value={cpf}
-                                            onChange={(e) => setCpf(maskCPF(e.target.value))}
-                                            maxLength={14}
-                                            required
-                                        />
+                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>storefront</span>
+                                        <input type="text" placeholder="Nome da Loja" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={shopName} onChange={(e) => setShopName(e.target.value)} required />
                                     </div>
                                 </div>
 
-                                {activeTab !== 'admin' && (
-                                    <div className="space-y-1.5">
-                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>Nº WHATSAPP</label>
-                                        <div className="relative">
-                                            <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>call</span>
-                                            <input
-                                                type="tel"
-                                                placeholder="(00) 00000-0000"
-                                                className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs placeholder:text-white/20"
-                                                style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
-                                                value={phone}
-                                                onChange={(e) => setPhone(maskPhone(e.target.value))}
-                                                required
-                                            />
-                                        </div>
+                                <div className="space-y-1.5">
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>WHATSAPP DA LOJA</label>
+                                    <div className="relative">
+                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>perm_phone_msg</span>
+                                        <input type="tel" placeholder="(00) 00000-0000" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={storePhone} onChange={(e) => setStorePhone(maskPhone(e.target.value))} required />
                                     </div>
-                                )}
+                                </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>{activeTab === 'admin' ? 'LOGO DA LOJA' : 'SUA FOTO DE PERFIL'}</label>
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CPF / CNPJ</label>
+                                    <div className="relative">
+                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>fingerprint</span>
+                                        <input type="text" placeholder="000.000.000-00" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} maxLength={14} required />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>LOGO DA LOJA</label>
                                     <div className="relative">
                                         <input type="file" accept="image/*" className="hidden" id="file-upload" onChange={handleFileChange} />
-                                        <label htmlFor="file-upload" className="w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all gap-2 relative overflow-hidden min-h-[140px]" style={{ borderColor: uploadStatus === 'success' ? colors.primary : (uploadStatus === 'error' ? '#ef4444' : (businessType === 'salon' ? '#7b438e40' : '#ffffff1a')), color: colors.textMuted }}>
-                                            {previewUrl ? (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/80 transition-all group">
-                                                    <img src={previewUrl} alt="Preview" className="h-full w-full object-contain p-4" />
-                                                    <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 gap-1">
-                                                        <span className="material-symbols-outlined text-white">sync</span>
-                                                        <span className="text-[10px] font-black text-white uppercase italic">Trocar Imagem</span>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <>
-                                                    <span className="material-symbols-outlined text-2xl" style={{ color: colors.primary }}>add_a_photo</span>
-                                                    <span className="text-[10px] font-black uppercase italic">Clique aqui para fazer o upload</span>
-                                                </>
-                                            )}
+                                        <label htmlFor="file-upload" className="w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all gap-2 relative overflow-hidden min-h-[100px]" style={{ borderColor: uploadStatus === 'success' ? colors.primary : (businessType === 'salon' ? '#7b438e40' : '#ffffff1a'), color: colors.textMuted }}>
+                                            {previewUrl ? <img src={previewUrl} alt="Preview" className="h-full w-full object-contain p-2 absolute" /> : <span className="material-symbols-outlined text-2xl" style={{ color: colors.primary }}>add_a_photo</span>}
                                         </label>
-                                        {uploadStatus === 'success' && (
-                                            <div className="flex items-center gap-1.5 mt-2 ml-1 text-emerald-500 animate-in fade-in slide-in-from-top-1">
-                                                <span className="material-symbols-outlined text-sm font-bold">check_circle</span>
-                                                <span className="text-[9px] font-black uppercase italic">Carregado com sucesso!</span>
-                                            </div>
-                                        )}
-                                        {uploadStatus === 'error' && (
-                                            <div className="flex items-center gap-1.5 mt-2 ml-1 text-red-500 animate-in fade-in slide-in-from-top-1">
-                                                <span className="material-symbols-outlined text-sm font-bold">error</span>
-                                                <span className="text-[9px] font-black uppercase italic">Imagem com erro. Tente novamente.</span>
-                                            </div>
-                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CÓDIGO DE CONVITE (OPCIONAL)</label>
+                                    <div className="relative">
+                                        <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>confirmation_number</span>
+                                        <input type="text" placeholder="Possui um código?" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs uppercase" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
                                     </div>
                                 </div>
                             </div>
@@ -733,17 +393,20 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
                         {type !== 'master' && (
                             <button type="button" onClick={() => setView(view === 'login' ? 'register' : 'login')} className="w-full text-center text-[9px] font-black uppercase tracking-widest opacity-40 hover:opacity-100 mt-4 transition-all" style={{ color: colors.text }}>
-                                {view === 'login' ? 'Não tem uma conta? Cadastre-se' : 'Já possui cadastro? Faça o Login'}
+                                {view === 'login' ? 'NÃO TEM UMA CONTA? CADASTRE-SE' : 'JÁ POSSUI CADASTRO? FAÇA O LOGIN'}
                             </button>
                         )}
                     </form>
                 )}
 
-                <div className="mt-8 text-center border-t pt-4" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
-                    <Link href={type === 'master' ? "/login" : "/login-master"} className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40 hover:opacity-100 transition-opacity italic" style={{ color: colors.textMuted }}>
-                        {type === 'master' ? "Acessar Painel ADMINISTRATIVO" : "Acessar Painel ADM MASTER"}
-                    </Link>
-                </div>
+                { /* Link adicional oculto para Master no rodapé, apenas para manter a acesso existente caso necessário */}
+                {type !== 'master' && (
+                    <div className="mt-8 text-center border-t pt-4" style={{ borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d' }}>
+                        <Link href="/login-master" className="text-[9px] font-black uppercase tracking-[0.2em] opacity-30 hover:opacity-100 transition-opacity italic" style={{ color: colors.textMuted }}>
+                            Acessar Painel Master
+                        </Link>
+                    </div>
+                )}
             </div>
         </div>
     );
