@@ -253,7 +253,7 @@ Até lá! 👋`;
             {step > 1 && (
                 <button
                     onClick={(e) => { e.preventDefault(); prevStep(); }}
-                    className="fixed left-4 top-20 md:left-8 md:top-24 size-12 md:size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[9999] cursor-pointer shadow-2xl"
+                    className="fixed left-4 top-[120px] md:top-24 size-12 md:size-10 flex items-center justify-center rounded-full hover:opacity-80 transition-all group z-[9999] cursor-pointer shadow-2xl"
                     style={{ backgroundColor: 'rgba(255,255,255,0.1)', backdropFilter: 'blur(10px)', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
                 >
                     <span className="material-symbols-outlined text-[24px] md:text-[20px] group-hover:-translate-x-0.5 transition-transform pointer-events-none">arrow_back</span>
