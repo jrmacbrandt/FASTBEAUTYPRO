@@ -19,7 +19,6 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [view, setView] = useState<'login' | 'register'>('login');
-    const [themeMode, setThemeMode] = useState<'light' | 'dark'>('dark');
 
     // Registration states (Only for Owners now)
     const [fullName, setFullName] = useState('');
@@ -34,41 +33,20 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        const savedMode = localStorage.getItem('fastbeauty_theme_mode') as 'light' | 'dark';
-
         if (savedType) setBusinessType(savedType);
-        if (savedMode) setThemeMode(savedMode);
-        else if (savedType === 'salon') setThemeMode('light'); // Default salon to light
     }, []);
 
-    const toggleTheme = () => {
-        const newMode = themeMode === 'light' ? 'dark' : 'light';
-        setThemeMode(newMode);
-        localStorage.setItem('fastbeauty_theme_mode', newMode);
-    };
-
-    const isDark = themeMode === 'dark';
     const isSalon = businessType === 'salon';
 
-    const colors = isDark
-        ? {
-            primary: isSalon ? '#7b438e' : '#f2b90d',
-            bg: '#000000',
-            text: '#f8fafc',
-            textMuted: '#64748b',
-            cardBg: '#18181b',
-            inputBg: '#0f0f10',
-            buttonText: isSalon ? '#ffffff' : '#000000'
-        }
-        : {
-            primary: isSalon ? '#7b438e' : '#f2b90d',
-            bg: '#faf8f5',
-            text: '#1e1e1e',
-            textMuted: '#6b6b6b',
-            cardBg: '#ffffff',
-            inputBg: '#f1f5f9',
-            buttonText: '#ffffff'
-        };
+    const colors = {
+        primary: isSalon ? '#7b438e' : '#f2b90d',
+        bg: '#000000',
+        text: '#f8fafc',
+        textMuted: '#64748b',
+        cardBg: '#18181b',
+        inputBg: '#0f0f10',
+        buttonText: isSalon ? '#ffffff' : '#000000'
+    };
 
     const terms = {
         title: view === 'register'
@@ -324,18 +302,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 </button>
 
                 <div className="flex flex-col items-center mb-6 pt-2">
-                    {/* Theme Toggle Button */}
-                    <button
-                        type="button"
-                        onClick={toggleTheme}
-                        className="absolute right-6 top-6 size-10 flex items-center justify-center rounded-xl border transition-all hover:scale-105 active:scale-95"
-                        style={{ backgroundColor: colors.inputBg, borderColor: colors.primary + '20', color: colors.primary }}
-                        title={`Mudar para tema ${isDark ? 'claro' : 'escuro'}`}
-                    >
-                        <span className="material-symbols-outlined text-[20px] font-bold">
-                            {isDark ? 'light_mode' : 'dark_mode'}
-                        </span>
-                    </button>
+
 
                     <div className="size-12 rounded-xl border-2 flex items-center justify-center mb-4" style={{ backgroundColor: `${colors.primary}1a`, borderColor: colors.primary, color: colors.primary }}>
                         <span className="material-symbols-outlined text-2xl font-bold">{view === 'register' ? 'store' : (type === 'master' ? 'security' : 'lock_person')}</span>

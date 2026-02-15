@@ -100,9 +100,13 @@ export default function AdminCommissionsPage() {
         setLoading(false);
     };
 
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214' };
+    const colors = {
+        primary: businessType === 'salon' ? '#7b438e' : '#f2b90d',
+        bg: '#000000',
+        text: '#f8fafc',
+        textMuted: '#64748b',
+        cardBg: '#121214'
+    };
 
     return (
         <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-20">

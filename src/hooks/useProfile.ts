@@ -115,42 +115,35 @@ export function useProfile() {
         return () => subscription.unsubscribe();
     }, []);
 
-    // THEME SYNC FIX: Independent Mode and Type
+    // THEME SYNC FIX: Enforce Dark Mode
     const storedType = typeof window !== 'undefined' ? localStorage.getItem('elite_business_type') : null;
-    const storedMode = typeof window !== 'undefined' ? localStorage.getItem('fastbeauty_theme_mode') : null;
 
     const businessType = (storedType === 'salon' || storedType === 'barber'
         ? storedType
         : (profile?.tenant?.business_type === 'salon' ? 'salon' : 'barber')) as 'barber' | 'salon';
 
-    // Default to dark for Barber and light for Salon if not specified
-    const themeMode = (storedMode === 'light' || storedMode === 'dark'
-        ? storedMode
-        : (businessType === 'salon' ? 'light' : 'dark')) as 'light' | 'dark';
-
-    const isDark = themeMode === 'dark';
     const isSalon = businessType === 'salon';
 
     const theme = {
         primary: isSalon ? '#7b438e' : '#f2b90d',
-        bg: isDark ? '#000000' : '#faf8f5',
-        text: isDark ? '#f8fafc' : '#1e1e1e',
-        textMuted: isDark ? '#64748b' : '#6b6b6b',
-        cardBg: isDark ? '#121214' : '#ffffff',
-        border: isDark ? '#ffffff0d' : '#7b438e33',
-        secondaryBg: isDark ? '#18181b' : '#decad4',
-        chartGrid: isDark ? '#27272a' : '#e2e8f0',
-        chartStroke: isDark ? '#52525b' : '#94a3b8',
-        sidebarBg: isDark ? '#121214' : '#ffffff',
-        headerBg: isDark ? '#121214' : '#faf8f5',
-        mode: themeMode
+        bg: '#000000',
+        text: '#f8fafc',
+        textMuted: '#64748b',
+        cardBg: '#121214',
+        border: '#ffffff0d',
+        secondaryBg: '#18181b',
+        chartGrid: '#27272a',
+        chartStroke: '#52525b',
+        sidebarBg: '#121214',
+        headerBg: '#121214',
+        mode: 'dark'
     };
 
     return {
         profile,
         loading,
         businessType,
-        themeMode,
+        themeMode: 'dark',
         theme
     };
 }

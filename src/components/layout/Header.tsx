@@ -13,6 +13,7 @@ interface HeaderProps {
         sidebarBg: string;
         headerBg: string;
         border: string;
+        textMuted: string;
     };
     onMenuToggle?: () => void;
 }
@@ -44,19 +45,7 @@ const Header: React.FC<HeaderProps> = ({ title, theme, onMenuToggle }) => {
                     <button className="size-8 md:size-10 rounded-full flex items-center justify-center transition-all" style={{ color: theme.primary }} title="Acessibilidade">
                         <span className="material-symbols-outlined text-[16px] md:text-[20px] font-bold">format_size</span>
                     </button>
-                    <button
-                        onClick={() => {
-                            const newMode = (theme as any).mode === 'dark' ? 'light' : 'dark';
-                            localStorage.setItem('fastbeauty_theme_mode', newMode);
-                            window.location.reload();
-                        }}
-                        className="size-8 md:size-10 rounded-full flex items-center justify-center opacity-40 hover:opacity-100 transition-all md:flex hidden"
-                        style={{ color: theme.text }}
-                    >
-                        <span className="material-symbols-outlined text-[18px] md:text-[22px]">
-                            {(theme as any).mode === 'dark' ? 'light_mode' : 'dark_mode'}
-                        </span>
-                    </button>
+
                 </div>
                 <button className="size-9 md:size-11 rounded-full border flex items-center justify-center hover:scale-105 transition-all shadow-md" style={{ backgroundColor: `${theme.primary}1a`, borderColor: `${theme.primary}4d`, color: theme.primary }}>
                     <span className="material-symbols-outlined text-[18px] md:text-[24px]">person</span>
