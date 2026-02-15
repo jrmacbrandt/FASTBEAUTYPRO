@@ -227,7 +227,7 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                             </div>
                         </div>
                         {productToEdit && (
-                            <p className="text-[8px] font-bold text-amber-500/50 uppercase tracking-widest mt-3 text-center">
+                            <p className="text-[10px] font-black text-amber-500 uppercase tracking-widest mt-4 text-center opacity-90 italic">
                                 * Edições manuais geram uma movimentação automática de acerto
                             </p>
                         )}
