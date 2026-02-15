@@ -273,13 +273,20 @@ Aguardo sua confirmação! 😊`;
                 <div className="max-w-4xl mx-auto px-6">
                     <div className="flex items-center justify-between relative">
                         {/* Connection Line */}
-                        <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-white/10 -translate-y-1/2 -z-10" />
                         <div
-                            className="absolute top-1/2 left-0 h-[2px] -translate-y-1/2 -z-10 transition-all duration-700 ease-in-out"
+                            className="absolute top-1/2 h-[2.5px] -translate-y-1/2 -z-10 bg-white/10"
                             style={{
-                                width: `${((step - 1) / 4) * 100}%`,
+                                left: '2.5rem',
+                                right: '2.5rem'
+                            }}
+                        />
+                        <div
+                            className="absolute top-1/2 h-[2.5px] -translate-y-1/2 -z-10 transition-all duration-700 ease-in-out"
+                            style={{
+                                left: '2.5rem',
+                                width: `calc((100% - 5rem) * ${(Math.min(step - 1, 4) / 4)})`,
                                 backgroundColor: theme.primary,
-                                boxShadow: `0 0 10px ${theme.primary}`
+                                boxShadow: `0 0 15px ${theme.primary}50`
                             }}
                         />
 
