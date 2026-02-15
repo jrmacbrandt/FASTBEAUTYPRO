@@ -107,13 +107,23 @@ export async function middleware(request: NextRequest) {
         // Support Mode Logic
         if (impersonateId) {
             console.log('🛡️ MASTER: Starting impersonation for', impersonateId);
-            // AUTO-LOCK: Block others when master enters
-            const { error: lockError } = await supabase
-                .from('tenants')
-                .update({ maintenance_mode: true })
-                .eq('id', impersonateId);
+            // AUTO-LOCK: Block others when master enters via SECURE RPC
+            const { data: rpcData, error: rpcError } = await supabase.rpc('master_toggle_maintenance', {
+                target_tenant_id: impersonateId,
+                enable_maintenance: true
+            });
 
-            if (lockError) console.error('❌ Failed to lock tenant:', lockError);
+            if (rpcError) {
+                console.error('❌ Failed to lock tenant (RPC Error):', rpcError);
+                // Fallback attempt via direct update if RPC fails
+                const { error: lockError } = await supabase
+                    .from('tenants')
+                    .update({ maintenance_mode: true })
+                    .eq('id', impersonateId);
+                if (lockError) console.error('❌ Failed to lock tenant (Fallback):', lockError);
+            } else {
+                console.log('✅ Tenant LOCKED via RPC:', rpcData);
+            }
 
             const response = NextResponse.redirect(new URL('/admin', request.url));
             response.cookies.set('support_tenant_id', impersonateId, { path: '/', maxAge: 60 * 60 * 4 }); // 4 hours
@@ -122,19 +132,30 @@ export async function middleware(request: NextRequest) {
 
         if (stopImpersonate) {
             console.log('🛡️ MASTER: Stopping impersonation');
-            // AUTO-UNLOCK: Restore access when master leaves
+            // AUTO-UNLOCK: Restore access when master leaves via SECURE RPC
             const currentSupportId = request.cookies.get('support_tenant_id')?.value;
             if (currentSupportId) {
-                const { error: unlockError } = await supabase
-                    .from('tenants')
-                    .update({ maintenance_mode: false })
-                    .eq('id', currentSupportId);
+                const { data: rpcData, error: rpcError } = await supabase.rpc('master_toggle_maintenance', {
+                    target_tenant_id: currentSupportId,
+                    enable_maintenance: false
+                });
 
-                if (unlockError) console.error('❌ Failed to unlock tenant:', unlockError);
+                if (rpcError) {
+                    console.error('❌ Failed to unlock tenant (RPC Error):', rpcError);
+                    // Fallback attempt via direct update if RPC fails
+                    const { error: unlockError } = await supabase
+                        .from('tenants')
+                        .update({ maintenance_mode: false })
+                        .eq('id', currentSupportId);
+                    if (unlockError) console.error('❌ Failed to unlock tenant (Fallback):', unlockError);
+                } else {
+                    console.log('✅ Tenant UNLOCKED via RPC:', rpcData);
+                }
             }
 
             const response = NextResponse.redirect(new URL('/admin-master', request.url));
             response.cookies.delete('support_tenant_id');
+            // Force expire cookie immediately
             response.headers.append('Set-Cookie', 'support_tenant_id=; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT');
             return response;
         }
