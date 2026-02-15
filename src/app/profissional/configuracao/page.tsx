@@ -119,9 +119,9 @@ export default function ProfessionalSettingsPage() {
                 alert('Senha atualizada com sucesso! Por segurança, você será deslogado.');
             }
 
-            // Deslogar e redirecionar
+            // Deslogar e redirecionar para a página de login
             await supabase.auth.signOut();
-            router.push('/');
+            router.push('/login');
         } catch (error: any) {
             alert('Erro ao atualizar dados: ' + error.message);
         } finally {
