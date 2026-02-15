@@ -96,9 +96,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 onClose={() => setIsMobileMenuOpen(false)}
             />
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                {/* Master Support / Maintenance Banner (V10.0) */}
-                {/* Rule: ONLY Master Admin, ONLY in Support Mode, ONLY outside Master Dashboard */}
-                {(isSupportMode && (user?.role === 'master' || user?.role === 'admin_master' || user?.email === 'jrmacbrandt@gmail.com') && !window.location.pathname.includes('/admin-master')) && (
+                {/* Master Support / Maintenance Banner (V11.0) */}
+                {/* Rule: Show if Support Cookie exists AND we are NOT in the Master Admin panel */}
+                {(isSupportMode && !pathname.includes('/admin-master')) && (
                     <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
                         <div className="flex items-center gap-3">
                             <span className="material-symbols-outlined font-bold animate-pulse text-xl">
@@ -106,8 +106,8 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                             </span>
                             <span className="text-[10px] md:text-xs font-black uppercase tracking-widest whitespace-nowrap">
                                 {isMaintenance
-                                    ? 'Modo Manutenção Ativo: Bloqueio Total da Unidade em Execução.'
-                                    : 'Modo Suporte Ativo: Visualizando painel administrativo da unidade.'}
+                                    ? 'Modo Manutenção Ativo: Unidade Bloqueada para Usuários.'
+                                    : 'Modo Suporte Ativo: Visualizando Unidade.'}
                             </span>
                         </div>
                         <button
