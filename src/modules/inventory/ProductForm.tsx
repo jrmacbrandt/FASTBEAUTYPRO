@@ -119,130 +119,137 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto pt-10 md:pt-20">
-            <div className="bg-[#18181b] border border-white/10 w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl animate-in zoom-in-95 duration-200 mb-20 h-fit">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-2xl font-black italic uppercase text-white">
-                        {productToEdit ? 'Editar Produto' : 'Novo Produto'}
-                    </h3>
-                    <button onClick={onClose} className="size-8 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                        <span className="material-symbols-outlined text-zinc-400">close</span>
-                    </button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Nome do Produto</label>
-                            <input
-                                required
-                                type="text"
-                                value={formData.name}
-                                onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Código de Barras</label>
-                            <input
-                                type="text"
-                                value={formData.barcode}
-                                onChange={e => setFormData({ ...formData, barcode: e.target.value })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Descrição</label>
-                        <textarea
-                            value={formData.description}
-                            onChange={e => setFormData({ ...formData, description: e.target.value })}
-                            className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors h-24 resize-none"
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Custo (R$)</label>
-                            <input
-                                type="text"
-                                placeholder="0,00"
-                                value={formData.cost_price}
-                                onChange={e => setFormData({ ...formData, cost_price: maskCurrency(e.target.value) })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Venda (R$)</label>
-                            <input
-                                type="text"
-                                placeholder="0,00"
-                                value={formData.sale_price}
-                                onChange={e => setFormData({ ...formData, sale_price: maskCurrency(e.target.value) })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Unidade</label>
-                            <select
-                                value={formData.unit_type}
-                                onChange={e => setFormData({ ...formData, unit_type: e.target.value })}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors"
-                            >
-                                <option value="un">Unidade (un)</option>
-                                <option value="ml">Mililitros (ml)</option>
-                                <option value="g">Gramas (g)</option>
-                                <option value="l">Litros (l)</option>
-                                <option value="kg">Quilos (kg)</option>
-                                <option value="kit">Kit</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className={`p-5 rounded-2xl border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10 shadow-[0_0_20px_rgba(242,185,13,0.05)]' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
-                        <label className={`text-[10px] font-black uppercase ml-1 mb-3 block ${productToEdit ? 'text-amber-500' : 'text-emerald-500'}`}>
-                            {productToEdit ? 'Controle & Acerto de Estoque' : 'Estoque Inicial & Alerta'}
-                        </label>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Estoque Atual ({formData.unit_type})</label>
-                                <input
-                                    type="text"
-                                    placeholder="0"
-                                    value={formData.current_stock}
-                                    onChange={e => setFormData({ ...formData, current_stock: maskNumber(e.target.value) })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20 text-center"
-                                />
-                            </div>
-                            <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Alerta Mínimo</label>
-                                <input
-                                    type="text"
-                                    placeholder="0"
-                                    value={formData.min_threshold}
-                                    onChange={e => setFormData({ ...formData, min_threshold: maskNumber(e.target.value) })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white font-bold focus:border-[#f2b90d] focus:outline-none transition-colors placeholder:text-white/20 text-center"
-                                />
-                            </div>
-                        </div>
-                        {productToEdit && (
-                            <p className="text-[10px] font-black text-white uppercase tracking-widest mt-4 text-center opacity-70 italic bg-white/5 py-2 rounded-lg border border-white/5">
-                                * Edições manuais geram uma movimentação automática de acerto
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="flex justify-end pt-4">
-                        <button
-                            type="submit"
-                            disabled={saving}
-                            className="bg-[#f2b90d] text-black font-black py-4 px-12 rounded-xl uppercase tracking-widest hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-lg shadow-[#f2b90d]/20"
-                        >
-                            {saving ? 'Salvando...' : 'Salvar Produto'}
+        <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4">
+            <div className="bg-[#18181b] border border-white/10 w-full max-w-2xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
+                <div className="p-8 md:p-10">
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
+                            {productToEdit ? 'Editar Produto' : 'Novo Produto'}
+                        </h3>
+                        <button onClick={onClose} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                            <span className="material-symbols-outlined text-zinc-400">close</span>
                         </button>
                     </div>
-                </form>
+
+                    <form onSubmit={handleSubmit} className="space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Nome do Produto</label>
+                                <input
+                                    required
+                                    type="text"
+                                    value={formData.name}
+                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-white/10"
+                                    placeholder="Ex: Vaselina Premium"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Código de Barras</label>
+                                <input
+                                    type="text"
+                                    value={formData.barcode}
+                                    onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-white/10"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Descrição</label>
+                            <textarea
+                                value={formData.description}
+                                onChange={e => setFormData({ ...formData, description: e.target.value })}
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all h-28 resize-none"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Custo (R$)</label>
+                                <input
+                                    type="text"
+                                    placeholder="0,00"
+                                    value={formData.cost_price}
+                                    onChange={e => setFormData({ ...formData, cost_price: maskCurrency(e.target.value) })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Venda (R$)</label>
+                                <input
+                                    type="text"
+                                    placeholder="0,00"
+                                    value={formData.sale_price}
+                                    onChange={e => setFormData({ ...formData, sale_price: maskCurrency(e.target.value) })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Unidade</label>
+                                <select
+                                    value={formData.unit_type}
+                                    onChange={e => setFormData({ ...formData, unit_type: e.target.value })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer"
+                                >
+                                    <option value="un">Unid. (un)</option>
+                                    <option value="ml">Milit. (ml)</option>
+                                    <option value="g">Gram. (g)</option>
+                                    <option value="l">Litr. (l)</option>
+                                    <option value="kg">Quilo (kg)</option>
+                                    <option value="kit">Kit</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div className={`p-6 rounded-[2rem] border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10 shadow-[0_0_30px_rgba(242,185,13,0.05)]' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
+                            <label className={`text-[11px] font-black uppercase ml-1 mb-4 block tracking-tighter ${productToEdit ? 'text-amber-500' : 'text-emerald-500'}`}>
+                                {productToEdit ? '🛡️ CONTROLE & ACERTO DE ESTOQUE' : '📦 ESTOQUE INICIAL & ALERTA'}
+                            </label>
+
+                            <div className="grid grid-cols-2 gap-5">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Estoque Atual ({formData.unit_type})</label>
+                                    <input
+                                        type="text"
+                                        placeholder="0"
+                                        value={formData.current_stock}
+                                        onChange={e => setFormData({ ...formData, current_stock: maskNumber(e.target.value) })}
+                                        className="w-full bg-black/60 border border-white/5 rounded-2xl p-4 text-lg font-black text-white focus:border-[#f2b90d] focus:outline-none transition-all text-center"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Alerta Mínimo</label>
+                                    <input
+                                        type="text"
+                                        placeholder="0"
+                                        value={formData.min_threshold}
+                                        onChange={e => setFormData({ ...formData, min_threshold: maskNumber(e.target.value) })}
+                                        className="w-full bg-black/60 border border-white/5 rounded-2xl p-4 text-lg font-black text-white focus:border-[#f2b90d] focus:outline-none transition-all text-center"
+                                    />
+                                </div>
+                            </div>
+
+                            {productToEdit && (
+                                <div className="mt-5 bg-white/5 border border-white/5 p-4 rounded-xl">
+                                    <p className="text-[10px] font-black text-white uppercase tracking-widest text-center italic opacity-90 leading-relaxed">
+                                        * Edições manuais geram uma movimentação <br />automática de acerto no histórico
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex justify-end pt-2">
+                            <button
+                                type="submit"
+                                disabled={saving}
+                                className="w-full md:w-auto bg-[#f2b90d] text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100 shadow-xl shadow-[#f2b90d]/20 text-xs"
+                            >
+                                {saving ? 'SALVANDO...' : 'SALVAR PRODUTO'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     );
