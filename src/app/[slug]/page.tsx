@@ -322,10 +322,10 @@ Aguardo sua confirmação! 😊`;
                                             )}
                                         </div>
                                         <span
-                                            className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] hidden sm:block transition-all duration-300"
+                                            className="text-[7px] md:text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-300"
                                             style={{
                                                 color: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.3)',
-                                                fontWeight: 900
+                                                fontWeight: 800
                                             }}
                                         >
                                             {s.label}
