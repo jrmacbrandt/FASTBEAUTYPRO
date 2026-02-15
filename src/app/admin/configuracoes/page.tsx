@@ -33,36 +33,18 @@ export default function EstablishmentSettingsPage() {
         }
     }, []);
 
+    const { profile, loading: profileLoading } = require('@/hooks/useProfile').useProfile();
+
     useEffect(() => {
-        fetchTenant();
-    }, []);
-
-    const fetchTenant = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        setUserEmail(session.user.email || '');
-        setCurrentLoginEmail(session.user.email || '');
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('tenant_id')
-            .eq('id', session.user.id)
-            .single();
-
         if (profile?.tenant_id) {
-            const { data } = await supabase
-                .from('tenants')
-                .select('*')
-                .eq('id', profile.tenant_id)
-                .single();
-
-            if (data) {
-                setTenant(data);
-                if (data.logo_url) setLogoPreview(data.logo_url);
-            }
+            setTenant(profile.tenant);
+            setUserEmail(profile.email || '');
+            setCurrentLoginEmail(profile.email || '');
+            if (profile.tenant?.logo_url) setLogoPreview(profile.tenant.logo_url);
         }
-    };
+    }, [profile]);
+
+    const fetchTenant = () => { }; // Replaced by useProfile
 
     const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];

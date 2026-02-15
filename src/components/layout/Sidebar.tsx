@@ -9,6 +9,7 @@ interface SidebarProps {
     user: {
         role: string;
         full_name: string;
+        tenant_id?: string;
         tenant?: {
             subscription_plan: string;
             trial_ends_at: string | null;
@@ -48,28 +49,22 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
     const [pendingCount, setPendingCount] = React.useState(0);
 
     const fetchPending = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
-        if (!profile?.tenant_id) return;
+        if (!user?.tenant_id) return;
 
         const { count } = await supabase
             .from('profiles')
             .select('*', { count: 'exact', head: true })
-            .eq('tenant_id', profile.tenant_id)
+            .eq('tenant_id', user.tenant_id)
             .eq('status', 'pending');
 
         setPendingCount(count || 0);
     };
 
     React.useEffect(() => {
-        fetchPending();
-        // Listen only to explicit approval events to avoid loop
-        const handleUpdate = () => fetchPending();
-        window.addEventListener('professional-approved', handleUpdate);
-        return () => window.removeEventListener('professional-approved', handleUpdate);
-    }, []);
+        if (user?.tenant_id) {
+            fetchPending();
+        }
+    }, [user?.tenant_id]);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();

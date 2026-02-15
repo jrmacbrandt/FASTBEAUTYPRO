@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { processImage } from '@/lib/image-processing';
 import { maskCurrency, maskNumber } from '@/lib/masks';
 
-export const dynamic = 'force-dynamic';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function ServicesPage() {
     const [services, setServices] = useState<any[]>([]);
@@ -26,25 +26,14 @@ export default function ServicesPage() {
 
     const [tenantId, setTenantId] = useState<string | null>(null);
 
+    const { profile, loading: profileLoading } = useProfile();
+
     useEffect(() => {
-        const loadInitialData = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('tenant_id')
-                .eq('id', session.user.id)
-                .single();
-
-            if (profile?.tenant_id) {
-                setTenantId(profile.tenant_id);
-                fetchServices(profile.tenant_id);
-            }
-        };
-
-        loadInitialData();
-    }, []);
+        if (profile?.tenant_id) {
+            setTenantId(profile.tenant_id);
+            fetchServices(profile.tenant_id);
+        }
+    }, [profile]);
 
     const fetchServices = async (tid: string) => {
         setLoading(true);
@@ -144,9 +133,9 @@ export default function ServicesPage() {
                     .insert(serviceData);
             }
 
-            if (!result.error) {
+            if (!result.error && profile?.tenant_id) {
                 handleCancel();
-                fetchServices(tenantId);
+                fetchServices(profile.tenant_id);
             } else {
                 throw result.error;
             }
@@ -163,8 +152,8 @@ export default function ServicesPage() {
             .update({ active: !currentStatus })
             .eq('id', id);
 
-        if (!error && tenantId) {
-            fetchServices(tenantId);
+        if (!error && profile?.tenant_id) {
+            fetchServices(profile.tenant_id);
         }
     };
 

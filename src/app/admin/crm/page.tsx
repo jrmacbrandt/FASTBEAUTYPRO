@@ -78,25 +78,17 @@ function CRMContent() {
         }
     }, [searchParams, loading, engagementData]);
 
-    const fetchData = async () => {
+    const { profile, loading: profileLoading } = require('@/hooks/useProfile').useProfile();
+
+    useEffect(() => {
+        if (profile?.tenant_id) {
+            fetchData(profile.tenant_id);
+        }
+    }, [profile]);
+
+    const fetchData = async (tenantId: string) => {
         setLoading(true);
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('tenant_id')
-                .eq('id', session.user.id)
-                .single();
-
-            const tenantId = profile?.tenant_id || session.user.user_metadata?.tenant_id;
-
-            if (!tenantId) {
-                console.error('No tenant_id found for user');
-                setLoading(false);
-                return;
-            }
 
             // 1. Fetch Tenant Config (Loyalty)
             const { data: tenantData } = await supabase

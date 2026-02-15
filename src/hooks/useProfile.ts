@@ -22,24 +22,26 @@ export function useProfile() {
                 if (!error && data) {
                     let finalProfile = { ...data };
 
-                    // Impersonation Logic for Master Admin
-                    if (data.role === 'master' || data.email === 'jrmacbrandt@gmail.com') {
-                        const supportId = document.cookie
-                            .split('; ')
-                            .find(row => row.startsWith('support_tenant_id='))
-                            ?.split('=')[1];
+                    // 🛡️ Master Impersonation Logic (V12.0)
+                    if (data.role === 'master' || data.role === 'admin_master' || data.email === 'jrmacbrandt@gmail.com') {
+                        const cookies = document.cookie.split('; ');
+                        const supportId = cookies.find(row => row.trim().startsWith('support_tenant_id='))?.split('=')[1];
 
                         if (supportId) {
-                            console.log('🛡️ SUPPORT MODE ACTIVE: Impersonating tenant', supportId);
-                            finalProfile.tenant_id = supportId;
-                            // Optionally fetch the impersonated tenant data
-                            const { data: impersonatedTenant } = await supabase
+                            console.log('🛡️ SUPPORT MODE ACTIVE: Effective Tenant', supportId);
+                            const { data: impTenant } = await supabase
                                 .from('tenants')
                                 .select('*')
                                 .eq('id', supportId)
                                 .single();
-                            if (impersonatedTenant) {
-                                finalProfile.tenant = impersonatedTenant;
+
+                            if (impTenant) {
+                                finalProfile.tenant_id = supportId;
+                                finalProfile.tenant = impTenant;
+                                // Visual Override: Show Tenant Name even for Master
+                                finalProfile.full_name = `MODO SUPORTE: ${impTenant.name || 'Unidade'}`;
+                                // Force role to owner during impersonation for UI logic
+                                finalProfile.role = 'owner';
                             }
                         }
                     }
@@ -59,5 +61,9 @@ export function useProfile() {
         return () => subscription.unsubscribe();
     }, []);
 
-    return { profile, loading };
+    return {
+        profile,
+        loading,
+        businessType: profile?.tenant?.business_type === 'salon' ? 'salon' : 'barber'
+    };
 }

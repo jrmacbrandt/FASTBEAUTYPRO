@@ -40,43 +40,14 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         checkSupport();
     }, [pathname]);
 
+    const { profile, loading: profileLoading } = require('@/hooks/useProfile').useProfile();
+
     React.useEffect(() => {
-        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) setBusinessType(savedType);
-
-        const fetchStatus = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            const { data: profile } = await supabase.from('profiles')
-                .select('*, tenant(*)')
-                .eq('id', session.user.id)
-                .single();
-
-            if (profile) {
-                let finalUser = { ...profile };
-                const cookies = document.cookie.split('; ');
-                const supportId = cookies.find(row => row.trim().startsWith('support_tenant_id='))?.split('=')[1];
-
-                if (supportId && (profile.role === 'master' || profile.email === 'jrmacbrandt@gmail.com')) {
-                    const { data: impTenant } = await supabase.from('tenants').select('*').eq('id', supportId).single();
-                    if (impTenant) {
-                        finalUser.tenant = impTenant;
-                        setIsMaintenance(impTenant.maintenance_mode === true);
-                    }
-                } else {
-                    if (profile.role === 'master' || profile.email === 'jrmacbrandt@gmail.com') {
-                        setIsMaintenance(false);
-                    } else {
-                        setIsMaintenance(profile.tenant?.maintenance_mode === true);
-                    }
-                }
-                setUser(finalUser);
-            }
-        };
-
-        fetchStatus();
-    }, [pathname]);
+        if (profile) {
+            setUser(profile);
+            setIsMaintenance(profile.tenant?.maintenance_mode === true);
+        }
+    }, [profile]);
 
     const handleStopSupport = () => {
         window.location.href = '/admin-master?stop_impersonate=true';

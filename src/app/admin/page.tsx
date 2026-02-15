@@ -2,21 +2,13 @@
 
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function OwnerDashboardPage() {
-    const [businessType, setBusinessType] = React.useState<'barber' | 'salon'>('barber');
-
-    React.useEffect(() => {
-        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) setBusinessType(savedType);
-    }, []);
-
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', chartGrid: '#e2e8f0', chartStroke: '#94a3b8' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', chartGrid: '#27272a', chartStroke: '#52525b' };
+    const { profile, loading: profileLoading, businessType: hookBusinessType } = useProfile();
+    const businessType = hookBusinessType || 'barber';
 
     const [stats, setStats] = React.useState({
         totalDay: 0,
@@ -31,169 +23,140 @@ export default function OwnerDashboardPage() {
         },
         chartData: [] as { name: string, faturamento: number }[]
     });
+
     const [tenantInfo, setTenantInfo] = React.useState<{ name: string, slug: string } | null>(null);
     const [loadingStats, setLoadingStats] = React.useState(true);
     const [copying, setCopying] = React.useState(false);
+    const [pendingCount, setPendingCount] = React.useState(0);
 
-    const fetchDashboardData = async () => {
-        setLoadingStats(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+    const colors = businessType === 'salon'
+        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', chartGrid: '#e2e8f0', chartStroke: '#94a3b8' }
+        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', chartGrid: '#27272a', chartStroke: '#52525b' };
 
-        const { data: profile } = await supabase
+    const fetchPending = async (tid: string) => {
+        const { count } = await supabase
             .from('profiles')
-            .select('tenant_id, tenants(name, slug)')
-            .eq('id', session.user.id)
-            .single();
+            .select('*', { count: 'exact', head: true })
+            .eq('tenant_id', tid)
+            .eq('status', 'pending');
 
-        if (profile?.tenants) {
-            setTenantInfo(profile.tenants as any);
-        }
+        setPendingCount(count || 0);
+    };
 
-        if (profile?.tenant_id) {
-            // Buscamos dados de até 60 dias atrás para ter o comparador do mês passado
-            const sixtyDaysAgo = new Date();
-            sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-            sixtyDaysAgo.setHours(0, 0, 0, 0);
+    const fetchDashboardData = async (tid: string) => {
+        setLoadingStats(true);
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+        sixtyDaysAgo.setHours(0, 0, 0, 0);
 
-            const { data: orders, error } = await supabase
-                .from('orders')
-                .select('total_value, finalized_at, created_at')
-                .eq('tenant_id', profile.tenant_id)
-                .eq('status', 'paid')
-                .gte('finalized_at', sixtyDaysAgo.toISOString());
+        const { data: orders, error } = await supabase
+            .from('orders')
+            .select('total_value, finalized_at, created_at')
+            .eq('tenant_id', tid)
+            .eq('status', 'paid')
+            .gte('finalized_at', sixtyDaysAgo.toISOString());
 
-            if (!error && orders) {
-                const now = new Date();
+        if (!error && orders) {
+            const now = new Date();
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
 
-                // --- DATAS ATUAIS ---
-                const today = new Date(); today.setHours(0, 0, 0, 0);
-                const currentMonth = now.getMonth();
-                const currentYear = now.getFullYear();
+            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+            const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const lastMonth = lastMonthDate.getMonth();
+            const lastYear = lastMonthDate.getFullYear();
 
-                // --- DATAS ANTERIORES (COMPARATIVO) ---
-                const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
-                const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                const lastMonth = lastMonthDate.getMonth();
-                const lastYear = lastMonthDate.getFullYear();
+            const todayOrders = orders.filter(o => new Date(o.finalized_at || o.created_at) >= today);
+            const yesterdayOrders = orders.filter(o => {
+                const d = new Date(o.finalized_at || o.created_at);
+                return d >= yesterday && d < today;
+            });
 
-                // 1. Faturamento do Dia vs Ontem
-                const todayOrders = orders.filter(o => new Date(o.finalized_at || o.created_at) >= today);
-                const yesterdayOrders = orders.filter(o => {
-                    const d = new Date(o.finalized_at || o.created_at);
-                    return d >= yesterday && d < today;
-                });
+            const totalDay = todayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+            const totalYesterday = yesterdayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+            const dayTrend = totalYesterday > 0 ? ((totalDay - totalYesterday) / totalYesterday * 100) : 0;
 
-                const totalDay = todayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
-                const totalYesterday = yesterdayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+            const monthOrders = orders.filter(o => {
+                const d = new Date(o.finalized_at || o.created_at);
+                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+            });
+            const lastMonthOrders = orders.filter(o => {
+                const d = new Date(o.finalized_at || o.created_at);
+                return d.getMonth() === lastMonth && d.getFullYear() === lastYear;
+            });
 
-                const dayTrend = totalYesterday > 0 ? ((totalDay - totalYesterday) / totalYesterday * 100) : 0;
+            const totalMonth = monthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+            const totalLastMonth = lastMonthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+            const monthTrend = totalLastMonth > 0 ? ((totalMonth - totalLastMonth) / totalLastMonth * 100) : 0;
 
-                // 2. Faturamento Mensal vs Mês Passado
-                const monthOrders = orders.filter(o => {
-                    const d = new Date(o.finalized_at || o.created_at);
-                    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-                });
-                const lastMonthOrders = orders.filter(o => {
-                    const d = new Date(o.finalized_at || o.created_at);
-                    return d.getMonth() === lastMonth && d.getFullYear() === lastYear;
-                });
+            const ticketsDay = todayOrders.length;
+            const ticketsYesterday = yesterdayOrders.length;
+            const ticketTrend = ticketsYesterday > 0 ? ((ticketsDay - ticketsYesterday) / ticketsYesterday * 100) : 0;
 
-                const totalMonth = monthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
-                const totalLastMonth = lastMonthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+            const avgDay = ticketsDay > 0 ? totalDay / ticketsDay : 0;
+            const avgYesterday = ticketsYesterday > 0 ? totalYesterday / ticketsYesterday : 0;
+            const avgTrend = avgYesterday > 0 ? ((avgDay - avgYesterday) / avgYesterday * 100) : 0;
 
-                const monthTrend = totalLastMonth > 0 ? ((totalMonth - totalLastMonth) / totalLastMonth * 100) : 0;
+            const formatTrend = (val: number) => (val >= 0 ? '+' : '') + val.toFixed(1).replace('.', ',') + '%';
 
-                // 3. Tickets e Ticket Médio
-                const ticketsDay = todayOrders.length;
-                const ticketsYesterday = yesterdayOrders.length;
-                const ticketTrend = ticketsYesterday > 0 ? ((ticketsDay - ticketsYesterday) / ticketsYesterday * 100) : 0;
+            const daysMap = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const weekData = [];
+            for (let i = 6; i >= 0; i--) {
+                const targetDate = new Date();
+                targetDate.setDate(targetDate.getDate() - i);
+                targetDate.setHours(0, 0, 0, 0);
 
-                const avgDay = ticketsDay > 0 ? totalDay / ticketsDay : 0;
-                const avgYesterday = ticketsYesterday > 0 ? totalYesterday / ticketsYesterday : 0;
-                const avgTrend = avgYesterday > 0 ? ((avgDay - avgYesterday) / avgYesterday * 100) : 0;
+                const dayRev = orders
+                    .filter(o => {
+                        const d = new Date(o.finalized_at || o.created_at);
+                        d.setHours(0, 0, 0, 0);
+                        return d.getTime() === targetDate.getTime();
+                    })
+                    .reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
 
-                // Formatação de Trends
-                const formatTrend = (val: number) => (val >= 0 ? '+' : '') + val.toFixed(1).replace('.', ',') + '%';
-
-                // Gráfico 7 dias
-                const daysMap = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                const weekData = [];
-                for (let i = 6; i >= 0; i--) {
-                    const targetDate = new Date();
-                    targetDate.setDate(targetDate.getDate() - i);
-                    targetDate.setHours(0, 0, 0, 0);
-
-                    const dayRev = orders
-                        .filter(o => {
-                            const d = new Date(o.finalized_at || o.created_at);
-                            d.setHours(0, 0, 0, 0);
-                            return d.getTime() === targetDate.getTime();
-                        })
-                        .reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
-
-                    weekData.push({
-                        name: daysMap[targetDate.getDay()],
-                        faturamento: dayRev
-                    });
-                }
-
-                setStats({
-                    totalDay,
-                    totalMonth,
-                    ticketsDay,
-                    avgTicketDay: avgDay,
-                    trends: {
-                        day: formatTrend(dayTrend),
-                        month: formatTrend(monthTrend),
-                        tickets: formatTrend(ticketTrend),
-                        avg: formatTrend(avgTrend)
-                    },
-                    chartData: weekData
+                weekData.push({
+                    name: daysMap[targetDate.getDay()],
+                    faturamento: dayRev
                 });
             }
+
+            setStats({
+                totalDay, totalMonth, ticketsDay, avgTicketDay: avgDay,
+                trends: {
+                    day: formatTrend(dayTrend),
+                    month: formatTrend(monthTrend),
+                    tickets: formatTrend(ticketTrend),
+                    avg: formatTrend(avgTrend)
+                },
+                chartData: weekData
+            });
         }
         setLoadingStats(false);
     };
 
-    const [pendingCount, setPendingCount] = React.useState(0);
-
-    const fetchPending = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const { data: userProfile } = await supabase
-            .from('profiles')
-            .select('tenant_id')
-            .eq('id', session.user.id)
-            .single();
-
-        if (userProfile?.tenant_id) {
-            const { count } = await supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', userProfile.tenant_id)
-                .eq('status', 'pending');
-
-            setPendingCount(count || 0);
+    React.useEffect(() => {
+        if (profile?.tenant_id) {
+            setTenantInfo(profile.tenant);
+            fetchDashboardData(profile.tenant_id);
+            fetchPending(profile.tenant_id);
         }
-    };
+    }, [profile]);
 
     React.useEffect(() => {
-        fetchPending();
-        fetchDashboardData();
-        // Listen for updates from other components
         const handleUpdate = () => {
-            fetchPending();
-            fetchDashboardData();
+            if (profile?.tenant_id) {
+                fetchPending(profile.tenant_id);
+                fetchDashboardData(profile.tenant_id);
+            }
         };
         window.addEventListener('professional-approved', handleUpdate);
-        window.addEventListener('order-paid', handleUpdate); // Evento customizado para quando uma comanda é paga
+        window.addEventListener('order-paid', handleUpdate);
         return () => {
             window.removeEventListener('professional-approved', handleUpdate);
             window.removeEventListener('order-paid', handleUpdate);
         };
-    }, []);
+    }, [profile]);
 
     const formatBRL = (val: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);
@@ -221,9 +184,10 @@ export default function OwnerDashboardPage() {
         setTimeout(() => setCopying(false), 2000);
     };
 
+    if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando painel...</div>;
+
     return (
         <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500 pb-10">
-            {/* Header de Identidade da Loja */}
             {tenantInfo && (
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 rounded-[2rem] border transition-all gap-4 mb-4" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                     <div className="flex items-center gap-4">

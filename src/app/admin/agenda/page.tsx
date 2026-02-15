@@ -3,8 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
-
-export const dynamic = 'force-dynamic';
+import { useProfile } from '@/hooks/useProfile';
 
 interface Professional {
     id: string;
@@ -28,79 +27,61 @@ interface Appointment {
 }
 
 export default function AdminAgendaPage() {
-    const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
+    const { profile, loading: profileLoading, businessType: hookBusinessType } = useProfile();
+    const businessType = hookBusinessType || 'barber';
     const [professionals, setProfessionals] = useState<Professional[]>([]);
     const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>('all');
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) setBusinessType(savedType);
-        fetchSidebarData();
-    }, []);
-
-    useEffect(() => {
-        fetchAgenda();
-    }, [selectedProfessionalId]);
-
     const colors = businessType === 'salon'
         ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', border: '#e2e8f0' }
         : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', border: '#27272a' };
 
-    const fetchSidebarData = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const { data: profile } = await supabase
+    const fetchSidebarData = async (tid: string) => {
+        const { data } = await supabase
             .from('profiles')
-            .select('tenant_id')
-            .eq('id', session.user.id)
-            .single();
+            .select('id, full_name, avatar_url')
+            .eq('tenant_id', tid)
+            .eq('role', 'barber')
+            .eq('status', 'active');
 
-        if (profile?.tenant_id) {
-            const { data } = await supabase
-                .from('profiles')
-                .select('id, full_name, avatar_url')
-                .eq('tenant_id', profile.tenant_id)
-                .eq('role', 'barber')
-                .eq('status', 'active');
-
-            if (data) setProfessionals(data);
-        }
+        if (data) setProfessionals(data);
     };
 
-    const fetchAgenda = async () => {
+    const fetchAgenda = async (tid: string) => {
         setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        let query = supabase
+            .from('appointments')
+            .select('*, services(name, price), profiles!appointments_barber_id_fkey(full_name)')
+            .eq('tenant_id', tid)
+            .gte('scheduled_at', new Date().toISOString().split('T')[0] + 'T00:00:00')
+            .order('scheduled_at', { ascending: true });
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('tenant_id')
-            .eq('id', session.user.id)
-            .single();
+        if (selectedProfessionalId !== 'all') {
+            query = query.eq('barber_id', selectedProfessionalId);
+        }
 
-        if (profile?.tenant_id) {
-            let query = supabase
-                .from('appointments')
-                .select('*, services(name, price), profiles!appointments_barber_id_fkey(full_name)')
-                .eq('tenant_id', profile.tenant_id)
-                .gte('scheduled_at', new Date().toISOString().split('T')[0] + 'T00:00:00')
-                .order('scheduled_at', { ascending: true });
-
-            if (selectedProfessionalId !== 'all') {
-                query = query.eq('barber_id', selectedProfessionalId);
-            }
-
-            const { data, error } = await query;
-
-            if (!error && data) {
-                setAppointments(data as any);
-            }
+        const { data, error } = await query;
+        if (!error && data) {
+            setAppointments(data as any);
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (profile?.tenant_id) {
+            fetchSidebarData(profile.tenant_id);
+        }
+    }, [profile]);
+
+    useEffect(() => {
+        if (profile?.tenant_id) {
+            fetchAgenda(profile.tenant_id);
+        }
+    }, [profile, selectedProfessionalId]);
+
+    if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando agenda...</div>;
 
     return (
         <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-10">

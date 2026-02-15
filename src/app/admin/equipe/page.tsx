@@ -5,9 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { processImage } from '@/lib/image-processing';
 import { maskCPF, maskPhone, maskPercent } from '@/lib/masks';
 
-export const dynamic = 'force-dynamic';
-
 import { Profile, UserStatus } from '@/types';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function TeamManagementPage() {
     const [barbers, setBarbers] = useState<Profile[]>([]);
@@ -65,34 +64,28 @@ export default function TeamManagementPage() {
                 setActiveTab('pending');
             }
         }
-        fetchTeam();
     }, []);
 
-    const fetchTeam = async () => {
+    const { profile: currentUser, loading: profileLoading } = useProfile();
+
+    const fetchTeam = async (tid: string) => {
         setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        // Fetch current user's profile to get tenant_id
-        const { data: currentUser } = await supabase
+        const { data, error } = await supabase
             .from('profiles')
-            .select('tenant_id')
-            .eq('id', session.user.id)
-            .single();
+            .select('*')
+            .eq('tenant_id', tid);
 
-        if (currentUser?.tenant_id) {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('tenant_id', currentUser.tenant_id);
-
-            if (!error && data) {
-                // Filter out owners to prevent them from appearing in the team list
-                setBarbers(data.filter((p: any) => p.role !== 'owner'));
-            }
+        if (!error && data) {
+            setBarbers(data.filter((p: any) => p.role !== 'owner'));
         }
         setLoading(false);
     };
+
+    useEffect(() => {
+        if (currentUser?.tenant_id) {
+            fetchTeam(currentUser.tenant_id);
+        }
+    }, [currentUser]);
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -135,7 +128,7 @@ export default function TeamManagementPage() {
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error);
 
-                fetchTeam();
+                if (currentUser?.tenant_id) fetchTeam(currentUser.tenant_id);
                 window.dispatchEvent(new Event('professional-approved'));
                 window.dispatchEvent(new Event('team-updated'));
             } catch (error: any) {
@@ -211,9 +204,7 @@ export default function TeamManagementPage() {
 
                 if (error) throw error;
 
-                setEditingBarber(null);
-                setIsRegistrationModalOpen(false);
-                fetchTeam();
+                if (currentUser?.tenant_id) fetchTeam(currentUser.tenant_id);
                 window.dispatchEvent(new Event('team-updated'));
             } else {
                 // Only allow edits or approvals here as per previous logic, but if opened for new:

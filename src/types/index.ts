@@ -47,6 +47,7 @@ export interface Profile {
   service_commission: number;
   product_commission: number;
   phone?: string;
+  tenant?: any;
 }
 
 export interface Service {

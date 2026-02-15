@@ -2,35 +2,55 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-
-export const dynamic = 'force-dynamic';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function CashierCheckoutPage() {
+    const { profile, loading: profileLoading } = useProfile();
     const [orders, setOrders] = useState<any[]>([]);
     const [selected, setSelected] = useState<any>(null);
     const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetchPendingOrders();
-    }, []);
-
     const [voucher, setVoucher] = useState<any>(null);
 
-    // Fetch voucher when selected changes
-    useEffect(() => {
-        if (selected?.appointment_id && selected?.appointment_id.length > 0) { // Using formatted object structure
-            // The formatted object has 'appointment_id', but we need client_id which is not in formatted object.
-            // We need to fetch client_id from appointment or pass it down.
-            // The query at line 37 fetches appointments!appointment_id.
-            // Let's check line 37-43. It fetches profiles(full_name), services(name).
-            // It does NOT fetch client_id directly?
-            // Actually appointments table usually has client_id.
-            // Let's fetch client_id in the main query first to be safe.
-        }
-    }, [selected]);
+    const fetchPendingOrders = async (tid: string) => {
+        setLoading(true);
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+                id, 
+                total_value, 
+                commission_amount,
+                status, 
+                finalized_at,
+                appointments!appointment_id (
+                    id, 
+                    customer_name,
+                    scheduled_at, 
+                    client_id,
+                    profiles(full_name),
+                    services(name)
+                )
+            `)
+            .eq('tenant_id', tid)
+            .eq('status', 'pending_payment')
+            .order('finalized_at', { ascending: true });
 
-    // Changing strategy: calculate logic inside effect based on 'raw' data if needed, or update fetch.
-    // Let's just put the state here and I will update the fetchPendingOrders to include client_id.
+        if (!error && data) {
+            const formatted = data.map((o: any) => ({
+                id: o.id,
+                appointment_id: o.appointments?.id,
+                customer_name: o.appointments?.customer_name,
+                barber_name: o.appointments?.profiles?.full_name,
+                service_name: o.appointments?.services?.name,
+                time: o.appointments?.scheduled_at,
+                total_price: o.total_value,
+                commission: o.commission_amount,
+                client_id: o.appointments?.client_id,
+                raw: o
+            }));
+            setOrders(formatted);
+        }
+        setLoading(false);
+    };
 
     const checkLoyaltyVoucher = async (clientId: string) => {
         if (!clientId) return;
@@ -48,6 +68,12 @@ export default function CashierCheckoutPage() {
     };
 
     useEffect(() => {
+        if (profile?.tenant_id) {
+            fetchPendingOrders(profile.tenant_id);
+        }
+    }, [profile]);
+
+    useEffect(() => {
         if (selected?.client_id) {
             checkLoyaltyVoucher(selected.client_id);
         } else {
@@ -55,64 +81,9 @@ export default function CashierCheckoutPage() {
         }
     }, [selected]);
 
-    const fetchPendingOrders = async () => {
-        setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('tenant_id')
-            .eq('id', session.user.id)
-            .single();
-
-        if (profile?.tenant_id) {
-            // Fetch ORDERS that are pending (Waiting for Payment)
-            const { data, error } = await supabase
-                .from('orders')
-                .select(`
-                    id, 
-                    total_value, 
-                    commission_amount,
-                    status, 
-                    finalized_at,
-                    appointments!appointment_id (
-                        id, 
-                        customer_name,
-                        scheduled_at, 
-                        client_id,
-                        profiles(full_name),
-                        services(name)
-                    )
-                `)
-                .eq('tenant_id', profile.tenant_id)
-                .eq('status', 'pending_payment')
-                .order('finalized_at', { ascending: true });
-
-            if (!error && data) {
-                // Formatting for UI
-                const formatted = data.map((o: any) => ({
-                    id: o.id, // Order ID
-                    appointment_id: o.appointments?.id,
-                    customer_name: o.appointments?.customer_name,
-                    barber_name: o.appointments?.profiles?.full_name,
-                    service_name: o.appointments?.services?.name,
-                    time: o.appointments?.scheduled_at,
-                    total_price: o.total_value,
-                    commission: o.commission_amount,
-                    client_id: o.appointments?.client_id, // Expose client_id for voucher check
-                    raw: o
-                }));
-                setOrders(formatted);
-            }
-        }
-        setLoading(false);
-    };
-
     const handleConfirmPayment = async () => {
         if (!selected) return;
 
-        // 1. Update ORDER to 'paid' (Triggers Stock Deduction)
         const { error: orderError } = await supabase
             .from('orders')
             .update({ status: 'paid' })
@@ -123,7 +94,6 @@ export default function CashierCheckoutPage() {
             return;
         }
 
-        // 2. Update APPOINTMENT to 'paid' (Close the loop)
         await supabase
             .from('appointments')
             .update({ status: 'paid' })
@@ -131,8 +101,10 @@ export default function CashierCheckoutPage() {
 
         alert(`Pagamento de R$ ${selected.total_price.toFixed(2)} confirmado!\nEstoque atualizado.`);
         setSelected(null);
-        fetchPendingOrders();
+        if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
     };
+
+    if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando caixa...</div>;
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-500 pb-10">
@@ -192,7 +164,6 @@ export default function CashierCheckoutPage() {
                         </div>
 
                         <div className="space-y-3 md:space-y-4 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
-                            {/* Ideally fetch items here too, but for speed just showing service */}
                             <div className="flex justify-between items-center text-xs font-bold border-b border-white/5 pb-2">
                                 <span className="text-slate-400 italic font-black uppercase tracking-widest text-[9px] truncate mr-4">{selected.service_name} + Extras</span>
                             </div>
@@ -208,7 +179,6 @@ export default function CashierCheckoutPage() {
                                 ))}
                             </div>
 
-                            {/* Loyalty Voucher Alert */}
                             {voucher && (
                                 <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between animate-in fade-in">
                                     <div className="flex items-center gap-3">
@@ -222,11 +192,8 @@ export default function CashierCheckoutPage() {
                                         onClick={async () => {
                                             if (!selected) return;
                                             if (confirm('Confirmar uso do Voucher? O total será zerado.')) {
-                                                // 1. Update Order Value
                                                 await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
-                                                // 2. Mark Voucher Used
                                                 await supabase.from('loyalty_vouchers').update({ status: 'used', used_at: new Date().toISOString() }).eq('id', voucher.id);
-                                                // 3. UI Update
                                                 setSelected({ ...selected, total_price: 0 });
                                                 setVoucher(null);
                                                 alert('Voucher aplicado com sucesso!');

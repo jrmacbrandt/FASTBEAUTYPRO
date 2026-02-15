@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<any[]>([]);
@@ -11,15 +12,20 @@ export default function ProductsPage() {
     const [isMovementOpen, setIsMovementOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    const { profile, loading: profileLoading } = useProfile();
 
-    const fetchProducts = async () => {
+    useEffect(() => {
+        if (profile?.tenant_id) {
+            fetchProducts(profile.tenant_id);
+        }
+    }, [profile]);
+
+    const fetchProducts = async (tid: string) => {
         setLoading(true);
         const { data, error } = await supabase
             .from('products')
             .select('*')
+            .eq('tenant_id', tid)
             .order('name', { ascending: true });
 
         if (error) {
@@ -43,13 +49,13 @@ export default function ProductsPage() {
     const handleCloseForm = () => {
         setIsFormOpen(false);
         setSelectedProduct(null);
-        fetchProducts();
+        if (profile?.tenant_id) fetchProducts(profile.tenant_id);
     };
 
     const handleCloseMovement = () => {
         setIsMovementOpen(false);
         setSelectedProduct(null);
-        fetchProducts();
+        if (profile?.tenant_id) fetchProducts(profile.tenant_id);
     };
 
     const filteredProducts = products.filter(p =>
@@ -97,8 +103,8 @@ export default function ProductsPage() {
                                     🧴
                                 </div>
                                 <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${product.current_stock <= product.min_threshold
-                                        ? 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'
-                                        : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                    ? 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'
+                                    : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                     }`}>
                                     {product.current_stock} {product.unit_type}
                                 </div>
