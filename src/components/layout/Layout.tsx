@@ -55,8 +55,13 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         if (profile) {
             setUser(profile);
 
-            // THEME SYNC (Fix V13.0)
-            const bType = profile.tenant?.business_type || 'barber';
+            // THEME SYNC (Fix V13.1 - Priority to Local Preference)
+            // Se o usuário já está navegando com um tema (ex: login claro), respeitamos isso sobre o DB.
+            const storedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
+            const dbType = profile.tenant?.business_type;
+
+            const bType = storedType || dbType || 'barber';
+
             setBusinessType(bType);
 
             // Apply global CSS variables class
