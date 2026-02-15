@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 
 export default function ProfessionalSettingsPage() {
     const router = useRouter();
+    const [activeTab, setActiveTab] = useState<'schedule' | 'security'>('schedule');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [schedule, setSchedule] = useState<any>({});
@@ -149,185 +150,219 @@ export default function ProfessionalSettingsPage() {
     }
 
     if (loading) {
-        return <div className="p-8 text-center text-slate-500">Carregando configurações...</div>;
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="size-12 border-4 border-[#f2b90d]/20 border-t-[#f2b90d] rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">Configurando seu Acesso...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 duration-500 pb-20 px-4 md:px-0">
-            <div className="bg-[#121214] p-6 md:p-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 md:mb-10">
-                    <div>
-                        <h3 className="text-xl text-white font-black italic uppercase tracking-tight leading-none mb-1">Disponibilidade</h3>
-                        <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Seu horário de atendimento</p>
-                    </div>
+        <div className="space-y-6 md:space-y-8 max-w-4xl mx-auto pb-24 animate-in fade-in duration-500 px-4 md:px-0">
+            <header className="mb-4">
+                <h1 className="text-3xl font-black italic tracking-tighter text-white uppercase leading-none">
+                    Minhas <span className="text-[#f2b90d]">Configurações</span>
+                </h1>
+                <p className="text-[9px] text-slate-500 font-black uppercase tracking-[0.3em] mt-2 flex items-center gap-2">
+                    <span className="size-1.5 rounded-full bg-[#f2b90d] animate-pulse"></span>
+                    Gestão de Agenda & Segurança
+                </p>
+            </header>
+
+            <div className="flex p-1.5 rounded-2xl bg-[#121214] border border-white/5 gap-1.5 mb-2">
+                {[
+                    { id: 'schedule', label: 'Horário de Trabalho', icon: 'schedule' },
+                    { id: 'security', label: 'Segurança & Acesso', icon: 'lock' }
+                ].map(tab => (
                     <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        className="w-full sm:w-auto bg-[#f2b90d] text-black px-8 py-3.5 rounded-xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50"
+                        key={tab.id}
+                        onClick={() => setActiveTab(tab.id as any)}
+                        className={`flex items-center gap-2 px-6 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all italic flex-1 justify-center ${activeTab === tab.id ? 'bg-[#f2b90d] text-black shadow-lg shadow-[#f2b90d]/20 scale-[1.02]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}
                     >
-                        {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                        <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+                        {tab.label}
                     </button>
-                </div>
-
-                <div className="space-y-3">
-                    {daysOfWeek.map((day, index) => {
-                        const dayKey = dayKeys[index];
-                        const currentDay = schedule[dayKey] || { open: '09:00', close: '19:00', isOpen: true };
-
-                        return (
-                            <div key={dayKey} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-2xl border ${currentDay.isOpen ? 'border-white/10 bg-black/20' : 'border-white/5 bg-white/[0.02]'} gap-4 transition-all duration-300`}>
-                                <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
-                                    <div className="flex items-center gap-3">
-                                        <div onClick={() => updateDay(dayKey, 'isOpen', !currentDay.isOpen)} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${currentDay.isOpen ? 'bg-[#f2b90d]/20' : 'bg-slate-700/50'}`}>
-                                            <div className={`absolute top-1 size-4 rounded-full shadow-md transition-all duration-300 ${currentDay.isOpen ? 'right-1 bg-[#f2b90d]' : 'left-1 bg-slate-500'}`} />
-                                        </div>
-                                        <span className={`text-[10px] font-black uppercase tracking-widest w-20 transition-colors ${currentDay.isOpen ? 'text-white' : 'text-slate-600'}`}>{day}</span>
-                                    </div>
-                                    <span className={`text-[9px] font-bold uppercase tracking-widest md:hidden ${currentDay.isOpen ? 'text-emerald-500' : 'text-slate-600'}`}>
-                                        {currentDay.isOpen ? 'ABERTO' : 'FECHADO'}
-                                    </span>
-                                </div>
-
-                                <div className={`flex items-center gap-2 w-full md:w-auto justify-end transition-opacity duration-300 ${currentDay.isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-30 pointer-events-none'}`}>
-                                    <div className="relative group">
-                                        <select
-                                            value={currentDay.open}
-                                            onChange={(e) => updateDay(dayKey, 'open', e.target.value)}
-                                            disabled={!currentDay.isOpen}
-                                            className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
-                                        >
-                                            {timeOptions.map(t => <option key={`open-${t}`} value={t}>{t}</option>)}
-                                        </select>
-                                        <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
-                                    </div>
-                                    <span className="text-white/20 text-[10px] font-black uppercase">ATÉ</span>
-                                    <div className="relative group">
-                                        <select
-                                            value={currentDay.close}
-                                            onChange={(e) => updateDay(dayKey, 'close', e.target.value)}
-                                            disabled={!currentDay.isOpen}
-                                            className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
-                                        >
-                                            {timeOptions.map(t => <option key={`close-${t}`} value={t}>{t}</option>)}
-                                        </select>
-                                        <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                ))}
             </div>
 
-            {/* SEGURANÇA & ACESSO */}
-            <div className="bg-[#121214] p-6 md:p-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
-                <form onSubmit={handleUpdateAuth} className="space-y-8 md:space-y-10">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {activeTab === 'schedule' && (
+                <div className="bg-[#121214] p-6 md:p-10 rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 md:mb-10">
                         <div>
-                            <h3 className="text-xl text-white font-black italic uppercase tracking-tight leading-none mb-1">Segurança & Acesso</h3>
-                            <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Gerencie suas credenciais</p>
+                            <h3 className="text-xl text-white font-black italic uppercase tracking-tight leading-none mb-1">Disponibilidade</h3>
+                            <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Seu horário de atendimento semanal</p>
                         </div>
-                        <div className="flex flex-wrap gap-3">
-                            <div className="bg-white/5 border border-white/10 px-5 py-3 rounded-2xl min-w-[140px] group/info">
-                                <p className="text-[8px] font-black uppercase text-slate-500 mb-1 group-hover/info:text-[#f2b90d] transition-colors">Login Atual</p>
-                                <p className="text-[10px] font-bold text-[#f2b90d]">{currentLoginEmail}</p>
-                            </div>
-                            <div className="bg-white/5 border border-white/10 px-5 py-3 rounded-2xl min-w-[120px] group/info relative overflow-hidden">
-                                <p className="text-[8px] font-black uppercase text-slate-500 mb-1 group-hover/info:text-[#f2b90d] transition-colors">Senha Atual</p>
-                                <p className={`text-[11px] font-bold text-[#f2b90d] transition-all ${showCurrentPassword ? 'tracking-normal' : 'tracking-[0.2em]'}`}>
-                                    {showCurrentPassword ? 'FBP-PROTEGIDA' : '••••••••'}
-                                </p>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                                    className="absolute right-2 top-2 text-white/20 hover:text-[#f2b90d] transition-colors"
-                                    title={showCurrentPassword ? "Ocultar" : "Visualizar (Apenas indicador)"}
-                                >
-                                    <span className="material-symbols-outlined text-[12px]">
-                                        {showCurrentPassword ? 'visibility_off' : 'visibility'}
-                                    </span>
-                                </button>
-                                {showCurrentPassword && (
-                                    <div className="absolute inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-2 text-center">
-                                        <p className="text-[6px] font-black uppercase text-white leading-tight">
-                                            Criptografia <br />Ativa
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Novo E-mail</label>
-                            <input
-                                type="email"
-                                value={userEmail}
-                                onChange={e => setUserEmail(e.target.value)}
-                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
-                                placeholder="seu@email.com"
-                            />
-                        </div>
-
-                        <div className="md:col-start-1 space-y-3">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nova Senha</label>
-                            <div className="relative">
-                                <input
-                                    type={showNewPassword ? "text" : "password"}
-                                    value={newPassword}
-                                    onChange={e => setNewPassword(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
-                                    placeholder="Min. 6 caracteres"
-                                    autoComplete="new-password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewPassword(!showNewPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">
-                                        {showNewPassword ? 'visibility_off' : 'visibility'}
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Confirmar Nova Senha</label>
-                            <div className="relative">
-                                <input
-                                    type={showConfirmPassword ? "text" : "password"}
-                                    value={confirmPassword}
-                                    onChange={e => setConfirmPassword(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
-                                    placeholder="Repita a nova senha"
-                                    autoComplete="new-password"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
-                                >
-                                    <span className="material-symbols-outlined text-[18px]">
-                                        {showConfirmPassword ? 'visibility_off' : 'visibility'}
-                                    </span>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-white/5">
                         <button
-                            type="submit"
-                            disabled={isUpdatingAuth}
-                            className="w-full sm:w-auto bg-[#f2b90d] text-black px-12 py-3.5 rounded-xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50"
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="w-full sm:w-auto bg-[#f2b90d] text-black px-8 py-3.5 rounded-xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            {isUpdatingAuth ? 'SINCRONIZANDO...' : 'ATUALIZAR ACESSO'}
+                            <span className="material-symbols-outlined text-[18px]">{saving ? 'sync' : 'save'}</span>
+                            {saving ? 'SALVANDO...' : 'SALVAR HORÁRIOS'}
                         </button>
                     </div>
-                </form>
-            </div>
+
+                    <div className="space-y-3">
+                        {daysOfWeek.map((day, index) => {
+                            const dayKey = dayKeys[index];
+                            const currentDay = schedule[dayKey] || { open: '09:00', close: '19:00', isOpen: true };
+
+                            return (
+                                <div key={dayKey} className={`flex flex-col md:flex-row items-start md:items-center justify-between p-4 rounded-2xl border ${currentDay.isOpen ? 'border-white/10 bg-black/20' : 'border-white/5 bg-white/[0.02]'} gap-4 transition-all duration-300`}>
+                                    <div className="flex items-center gap-4 w-full md:w-auto justify-between md:justify-start">
+                                        <div className="flex items-center gap-3">
+                                            <div onClick={() => updateDay(dayKey, 'isOpen', !currentDay.isOpen)} className={`w-10 h-6 rounded-full relative cursor-pointer transition-colors ${currentDay.isOpen ? 'bg-[#f2b90d]/20' : 'bg-slate-700/50'}`}>
+                                                <div className={`absolute top-1 size-4 rounded-full shadow-md transition-all duration-300 ${currentDay.isOpen ? 'right-1 bg-[#f2b90d]' : 'left-1 bg-slate-500'}`} />
+                                            </div>
+                                            <span className={`text-[10px] font-black uppercase tracking-widest w-20 transition-colors ${currentDay.isOpen ? 'text-white' : 'text-slate-600'}`}>{day}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className={`flex items-center gap-2 w-full md:w-auto justify-end transition-opacity duration-300 ${currentDay.isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-30 pointer-events-none'}`}>
+                                        <div className="relative group">
+                                            <select
+                                                value={currentDay.open}
+                                                onChange={(e) => updateDay(dayKey, 'open', e.target.value)}
+                                                disabled={!currentDay.isOpen}
+                                                className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
+                                            >
+                                                {timeOptions.map(t => <option key={`open-${t}`} value={t}>{t}</option>)}
+                                            </select>
+                                            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
+                                        </div>
+                                        <span className="text-white/20 text-[10px] font-black uppercase">ATÉ</span>
+                                        <div className="relative group">
+                                            <select
+                                                value={currentDay.close}
+                                                onChange={(e) => updateDay(dayKey, 'close', e.target.value)}
+                                                disabled={!currentDay.isOpen}
+                                                className="bg-black border border-white/10 rounded-xl pl-3 pr-8 py-2 text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:border-[#f2b90d]/50 focus:border-[#f2b90d] transition-all w-24 text-center disabled:cursor-not-allowed"
+                                            >
+                                                {timeOptions.map(t => <option key={`close-${t}`} value={t}>{t}</option>)}
+                                            </select>
+                                            <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-[16px] text-slate-500 pointer-events-none group-hover:text-[#f2b90d]">expand_more</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {activeTab === 'security' && (
+                <div className="bg-[#121214] p-6 md:p-10 rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <form onSubmit={handleUpdateAuth} className="space-y-8 md:space-y-10">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-xl text-white font-black italic uppercase tracking-tight leading-none mb-1">Segurança & Acesso</h3>
+                                <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Gerencie suas credenciais</p>
+                            </div>
+                            <div className="flex flex-wrap gap-3">
+                                <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-2xl min-w-[160px] group/info">
+                                    <p className="text-[9px] font-black uppercase text-slate-500 mb-1.5 tracking-tighter opacity-70 group-hover/info:text-[#f2b90d] transition-colors">Login Atual</p>
+                                    <p className="text-[11px] font-bold text-[#f2b90d] tracking-tight">{currentLoginEmail}</p>
+                                </div>
+                                <div className="bg-white/5 border border-white/10 px-6 py-4 rounded-2xl min-w-[140px] shadow-inner group/info relative overflow-hidden">
+                                    <p className="text-[9px] font-black uppercase text-slate-500 mb-1.5 tracking-tighter opacity-70 group-hover/info:text-[#f2b90d] transition-colors">Senha Atual</p>
+                                    <p className={`text-[11px] font-bold text-[#f2b90d] transition-all ${showCurrentPassword ? 'tracking-normal' : 'tracking-[0.3em]'}`}>
+                                        {showCurrentPassword ? 'FBP-PROTEGIDA' : '••••••••'}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                                        className="absolute right-3 top-3 text-white/20 hover:text-[#f2b90d] transition-colors"
+                                        title={showCurrentPassword ? "Ocultar" : "Visualizar (Apenas indicador)"}
+                                    >
+                                        <span className="material-symbols-outlined text-[14px]">
+                                            {showCurrentPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                    {showCurrentPassword && (
+                                        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 text-center">
+                                            <p className="text-[7px] font-black uppercase text-white leading-tight">
+                                                Criptografia <br />Ativa
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Novo E-mail</label>
+                                <input
+                                    type="email"
+                                    value={userEmail}
+                                    onChange={e => setUserEmail(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                    placeholder="seu@email.com"
+                                />
+                            </div>
+
+                            <div className="md:col-start-1 space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nova Senha</label>
+                                <div className="relative">
+                                    <input
+                                        type={showNewPassword ? "text" : "password"}
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                        placeholder="Min. 6 caracteres"
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowNewPassword(!showNewPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">
+                                            {showNewPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Confirmar Nova Senha</label>
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? "text" : "password"}
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                        placeholder="Repita a nova senha"
+                                        autoComplete="new-password"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                                    >
+                                        <span className="material-symbols-outlined text-[18px]">
+                                            {showConfirmPassword ? 'visibility_off' : 'visibility'}
+                                        </span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/5">
+                            <button
+                                type="submit"
+                                disabled={isUpdatingAuth}
+                                className="w-full sm:w-auto bg-[#f2b90d] text-black px-12 py-4 rounded-xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {isUpdatingAuth ? 'SINCRONIZANDO...' : 'ATUALIZAR ACESSO'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
         </div>
     );
 }
