@@ -261,9 +261,13 @@ Aguardo sua confirmação! 😊`;
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                         {/* Store ID */}
                         <div className="flex items-center gap-5 shrink-0 justify-center md:justify-start">
-                            {tenant.logo_url && (
-                                <img src={tenant.logo_url} alt={tenant.name} className="size-14 md:size-16 rounded-full object-cover border-2 border-white/10 shadow-2xl" />
-                            )}
+                            <div className="size-14 md:size-16 rounded-full bg-white/5 border-2 border-white/10 shadow-2xl overflow-hidden flex items-center justify-center shrink-0">
+                                {tenant.logo_url ? (
+                                    <img src={tenant.logo_url} alt={tenant.name} className="size-full object-cover" />
+                                ) : (
+                                    <span className="text-white/20 font-black text-xl italic">{tenant.name?.substring(0, 2).toUpperCase()}</span>
+                                )}
+                            </div>
                             <div className="text-center md:text-left">
                                 <h1 className="text-white text-2xl md:text-4xl font-black italic tracking-tighter leading-none uppercase mb-1">{tenant.name}</h1>
                                 <p className="text-[#f2b90d] text-[10px] md:text-xs font-black uppercase tracking-[0.3em] opacity-80">Premium Excellence</p>
@@ -318,8 +322,11 @@ Aguardo sua confirmação! 😊`;
                                             )}
                                         </div>
                                         <span
-                                            className="text-[8px] md:text-[9px] font-black uppercase tracking-wider hidden sm:block transition-all duration-300"
-                                            style={{ color: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.3)' }}
+                                            className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] hidden sm:block transition-all duration-300"
+                                            style={{
+                                                color: (step >= s.num || step === 6) ? theme.primary : 'rgba(255,255,255,0.3)',
+                                                fontWeight: 900
+                                            }}
                                         >
                                             {s.label}
                                         </span>
