@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ title, theme, onMenuToggle }) => {
                 )}
                 <div className="flex flex-col">
                     <h2 className="text-lg md:text-2xl font-black tracking-tighter uppercase italic leading-none" style={{ color: theme.text }}>{title}</h2>
-                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest mt-0.5 md:mt-1 opacity-60" style={{ color: theme.primary === '#f2b90d' ? '#64748b' : '#6b6b6b' }}>Painel de Gestão</p>
+                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest mt-0.5 md:mt-1 opacity-60" style={{ color: theme.textMuted }}>Painel de Gestão</p>
                 </div>
             </div>
 
@@ -44,8 +44,18 @@ const Header: React.FC<HeaderProps> = ({ title, theme, onMenuToggle }) => {
                     <button className="size-8 md:size-10 rounded-full flex items-center justify-center transition-all" style={{ color: theme.primary }} title="Acessibilidade">
                         <span className="material-symbols-outlined text-[16px] md:text-[20px] font-bold">format_size</span>
                     </button>
-                    <button className="size-8 md:size-10 rounded-full flex items-center justify-center opacity-40 hover:opacity-100 transition-all md:flex hidden" style={{ color: theme.text }}>
-                        <span className="material-symbols-outlined text-[18px] md:text-[22px]">dark_mode</span>
+                    <button
+                        onClick={() => {
+                            const newMode = (theme as any).mode === 'dark' ? 'light' : 'dark';
+                            localStorage.setItem('fastbeauty_theme_mode', newMode);
+                            window.location.reload();
+                        }}
+                        className="size-8 md:size-10 rounded-full flex items-center justify-center opacity-40 hover:opacity-100 transition-all md:flex hidden"
+                        style={{ color: theme.text }}
+                    >
+                        <span className="material-symbols-outlined text-[18px] md:text-[22px]">
+                            {(theme as any).mode === 'dark' ? 'light_mode' : 'dark_mode'}
+                        </span>
                     </button>
                 </div>
                 <button className="size-9 md:size-11 rounded-full border flex items-center justify-center hover:scale-105 transition-all shadow-md" style={{ backgroundColor: `${theme.primary}1a`, borderColor: `${theme.primary}4d`, color: theme.primary }}>

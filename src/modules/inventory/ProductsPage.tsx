@@ -5,14 +5,13 @@ import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
 
 export default function ProductsPage() {
+    const { profile, loading: profileLoading, theme: colors } = useProfile();
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isMovementOpen, setIsMovementOpen] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState<any>(null);
-
-    const { profile, loading: profileLoading } = useProfile();
 
     useEffect(() => {
         if (profile?.tenant_id) {
@@ -63,46 +62,53 @@ export default function ProductsPage() {
         (p.barcode && p.barcode.includes(searchTerm))
     );
 
+    if (profileLoading) return null;
+
+    const isSalon = profile?.tenant?.business_type === 'salon';
+
     return (
-        <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center">
+        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-black italic uppercase tracking-tighter text-white">Gestão de Estoque</h2>
-                    <p className="text-zinc-400 font-medium">Controle de produtos e insumos.</p>
+                    <h2 className="text-3xl font-black italic uppercase tracking-tighter" style={{ color: colors.text }}>Gestão de <span style={{ color: colors.primary }}>Estoque</span></h2>
+                    <p className="font-black uppercase text-[10px] tracking-widest mt-1" style={{ color: colors.textMuted }}>Controle de produtos e insumos.</p>
                 </div>
                 <button
                     onClick={() => setIsFormOpen(true)}
-                    className="bg-[#f2b90d] text-black font-black py-3 px-6 rounded-xl uppercase tracking-widest text-xs hover:scale-105 transition-all shadow-lg flex items-center gap-2"
+                    className="font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2"
+                    style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
                 >
-                    <span className="material-symbols-outlined text-lg">add</span>
+                    <span className="material-symbols-outlined">add</span>
                     Novo Produto
                 </button>
             </div>
 
             {/* Search Bar */}
-            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-4">
-                <span className="material-symbols-outlined text-zinc-500">search</span>
+            <div className="border p-4 flex items-center gap-4 rounded-3xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <span className="material-symbols-outlined" style={{ color: colors.textMuted }}>search</span>
                 <input
                     type="text"
                     placeholder="Buscar por nome ou código de barras..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="bg-transparent border-none text-white font-bold w-full focus:outline-none placeholder:text-zinc-600"
+                    className="bg-transparent border-none font-bold w-full focus:outline-none"
+                    style={{ color: colors.text }}
                 />
             </div>
 
             {/* Product List */}
             {loading ? (
-                <div className="text-center py-20 text-zinc-500">Carregando estoque...</div>
-            ) : (
+                <div className="text-center py-20 font-bold uppercase tracking-widest" style={{ color: colors.textMuted }}>Carregando estoque...</div>
+            ) : filteredProducts.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredProducts.map(product => (
-                        <div key={product.id} className="bg-[#121214] border border-white/5 rounded-3xl p-6 relative group hover:border-[#f2b90d]/30 transition-all">
-                            <div className="flex justify-between items-start mb-4">
-                                <div className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-2xl">
-                                    🧴
+                        <div key={product.id} className="border p-6 relative group transition-all rounded-[2.5rem]"
+                            style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                            <div className="flex justify-between items-start mb-6">
+                                <div className="size-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner" style={{ backgroundColor: `${colors.text}08` }}>
+                                    {product.category === 'drink' ? '🥤' : product.category === 'shampoo' ? '🧴' : '📦'}
                                 </div>
-                                <div className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${product.current_stock <= product.min_threshold
+                                <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${product.current_stock <= product.min_threshold
                                     ? 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'
                                     : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
                                     }`}>
@@ -110,34 +116,40 @@ export default function ProductsPage() {
                                 </div>
                             </div>
 
-                            <h3 className="text-xl font-black italic text-white uppercase tracking-tight mb-1">{product.name}</h3>
-                            <p className="text-xs text-zinc-500 font-bold mb-4 line-clamp-2">{product.description || 'Sem descrição'}</p>
+                            <h3 className="text-xl font-black italic uppercase tracking-tight mb-1" style={{ color: colors.text }}>{product.name}</h3>
+                            <p className="text-[10px] font-bold mb-6 line-clamp-2 uppercase tracking-widest" style={{ color: colors.textMuted }}>{product.description || 'Sem descrição'}</p>
 
-                            <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-                                <span className="text-[#f2b90d] font-black text-lg">R$ {product.sale_price || '0.00'}</span>
+                            <div className="flex items-center justify-between mt-auto pt-6 border-t" style={{ borderColor: colors.border }}>
+                                <span className="font-black text-2xl italic tracking-tighter" style={{ color: colors.primary }}>R$ {product.sale_price?.toFixed(2) || '0.00'}</span>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleMovement(product)}
-                                        className="size-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all"
+                                        className="size-10 rounded-xl flex items-center justify-center transition-all border"
+                                        style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border, color: colors.textMuted }}
                                         title="Movimentar Estoque"
                                     >
-                                        <span className="material-symbols-outlined text-sm">swap_vert</span>
+                                        <span className="material-symbols-outlined text-xl">swap_vert</span>
                                     </button>
                                     <button
                                         onClick={() => handleEdit(product)}
-                                        className="size-8 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center text-zinc-400 hover:text-white transition-all"
+                                        className="size-10 rounded-xl flex items-center justify-center transition-all border"
+                                        style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border, color: colors.textMuted }}
                                         title="Editar Produto"
                                     >
-                                        <span className="material-symbols-outlined text-sm">edit</span>
+                                        <span className="material-symbols-outlined text-xl">edit</span>
                                     </button>
                                 </div>
                             </div>
                         </div>
                     ))}
                 </div>
+            ) : (
+                <div className="py-20 border border-dashed rounded-[3rem] text-center opacity-40" style={{ borderColor: colors.border }}>
+                    <span className="material-symbols-outlined text-4xl mb-4" style={{ color: colors.text }}>inventory_2</span>
+                    <p className="font-black uppercase text-[10px] tracking-[0.4em]" style={{ color: colors.text }}>Nenhum produto encontrado</p>
+                </div>
             )}
 
-            {/* Modals imports would go here, managed by state */}
             {isFormOpen && <ProductForm onClose={handleCloseForm} productToEdit={selectedProduct} />}
             {isMovementOpen && selectedProduct && <StockMovementModal onClose={handleCloseMovement} product={selectedProduct} />}
         </div>

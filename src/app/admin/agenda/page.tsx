@@ -27,16 +27,12 @@ interface Appointment {
 }
 
 export default function AdminAgendaPage() {
-    const { profile, loading: profileLoading, businessType: hookBusinessType } = useProfile();
+    const { profile, loading: profileLoading, businessType: hookBusinessType, theme: colors } = useProfile();
     const businessType = hookBusinessType || 'barber';
     const [professionals, setProfessionals] = useState<Professional[]>([]);
     const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>('all');
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [loading, setLoading] = useState(true);
-
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', border: '#e2e8f0' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', border: '#27272a' };
 
     const fetchSidebarData = async (tid: string) => {
         const { data } = await supabase

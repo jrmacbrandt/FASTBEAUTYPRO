@@ -115,15 +115,42 @@ export function useProfile() {
         return () => subscription.unsubscribe();
     }, []);
 
-    // THEME SYNC FIX: Priority to LocalStorage
+    // THEME SYNC FIX: Independent Mode and Type
     const storedType = typeof window !== 'undefined' ? localStorage.getItem('elite_business_type') : null;
-    const computedType = storedType === 'salon' || storedType === 'barber'
+    const storedMode = typeof window !== 'undefined' ? localStorage.getItem('fastbeauty_theme_mode') : null;
+
+    const businessType = (storedType === 'salon' || storedType === 'barber'
         ? storedType
-        : (profile?.tenant?.business_type === 'salon' ? 'salon' : 'barber');
+        : (profile?.tenant?.business_type === 'salon' ? 'salon' : 'barber')) as 'barber' | 'salon';
+
+    // Default to dark for Barber and light for Salon if not specified
+    const themeMode = (storedMode === 'light' || storedMode === 'dark'
+        ? storedMode
+        : (businessType === 'salon' ? 'light' : 'dark')) as 'light' | 'dark';
+
+    const isDark = themeMode === 'dark';
+    const isSalon = businessType === 'salon';
+
+    const theme = {
+        primary: isSalon ? '#7b438e' : '#f2b90d',
+        bg: isDark ? '#000000' : '#faf8f5',
+        text: isDark ? '#f8fafc' : '#1e1e1e',
+        textMuted: isDark ? '#64748b' : '#6b6b6b',
+        cardBg: isDark ? '#121214' : '#ffffff',
+        border: isDark ? '#ffffff0d' : '#7b438e33',
+        secondaryBg: isDark ? '#18181b' : '#decad4',
+        chartGrid: isDark ? '#27272a' : '#e2e8f0',
+        chartStroke: isDark ? '#52525b' : '#94a3b8',
+        sidebarBg: isDark ? '#121214' : '#ffffff',
+        headerBg: isDark ? '#121214' : '#faf8f5',
+        mode: themeMode
+    };
 
     return {
         profile,
         loading,
-        businessType: computedType
+        businessType,
+        themeMode,
+        theme
     };
 }

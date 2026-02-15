@@ -9,6 +9,9 @@ import { Profile, UserStatus } from '@/types';
 import { useProfile } from '@/hooks/useProfile';
 
 export default function TeamManagementPage() {
+    const { profile: currentUser, businessType: hookBusinessType, theme: colors } = useProfile();
+    const businessType = hookBusinessType || 'barber';
+
     const [barbers, setBarbers] = useState<Profile[]>([]);
     const [loading, setLoading] = useState(true);
     const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
@@ -55,8 +58,6 @@ export default function TeamManagementPage() {
         setAvatarFile(null);
     }, [editingBarber, isRegistrationModalOpen]);
 
-    const { profile: currentUser } = useProfile();
-
     const fetchTeam = async (tid: string) => {
         setLoading(true);
         const { data, error } = await supabase
@@ -98,14 +99,8 @@ export default function TeamManagementPage() {
             if (!confirm('Deseja excluir DEFINITIVAMENTE este profissional? Esta ação não pode ser desfeita.')) return;
             setBarbers(prev => prev.filter(b => b.id !== id));
             try {
-                // Tenta deletar. Se falhar por Auth, avisa.
                 const { error } = await supabase.from('profiles').delete().eq('id', id);
-                if (error) {
-                    // Fallback: Tenta chamar endpoint se existir, ou orienta deleção via Master.
-                    // Mas profiles geralmente tem cascade no Auth. Se deletar Auth, deleta profile.
-                    // Aqui estamos tentando deletar profile.
-                    throw error;
-                }
+                if (error) throw error;
                 if (currentUser?.tenant_id) fetchTeam(currentUser.tenant_id);
             } catch (error: any) {
                 setBarbers(previousBarbers);
@@ -162,20 +157,7 @@ export default function TeamManagementPage() {
                 const { error } = await supabase.from('profiles').update(profileData).eq('id', editingBarber.id);
                 if (error) throw error;
             } else {
-                // CRIAÇÃO DIRETA
-                // IMPORTANTE: Como não temos acesso à tabela auth.users pelo client,
-                // não podemos criar um usuário que faça login.
-                // Mas podemos criar um perfil "Fantasma" se o banco permitir, ou avisar o user.
-
-                // Opção Segura: Avisar que a criação completa requer convite.
-                // Opção Pragmática (se o usuário quer gerenciar comanda): Criar perfil.
-                // Mas profiles.id é FK de auth.users.id. Insert falhará.
-
-                // Solução: Alertar o usuário sobre a limitação técnica atual do Frontend Only.
-                // "Para criar um login funcional, usar a função de convite (futura)."
-
-                // Vou manter o comportamento de alerta para evitar erro de SQL visível.
-                alert("A criação de novos usuários com login requer acesso ao servidor de autenticação. Por favor, entre em contato com o suporte para adicionar novos membros, ou aguarde a atualização do módulo de Convites.");
+                alert("A criação de novos usuários com login requer acesso ao servidor de autenticação. Por favor, use a função de convite.");
                 setUploading(false);
                 return;
             }
@@ -195,16 +177,13 @@ export default function TeamManagementPage() {
         <div className="space-y-8 pb-20">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                    <h1 className="text-xl font-black italic uppercase tracking-tighter text-white">Gestão de Equipe</h1>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">Gerencie seus profissionais ativos</p>
+                    <h1 className="text-xl font-black italic uppercase tracking-tighter" style={{ color: colors.text }}>Gestão de Equipe</h1>
+                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: colors.textMuted }}>Gerencie seus profissionais ativos</p>
                 </div>
-                {/* Botão de Adicionar removido temporariamente da UI principal se não funcionar, 
-                    mas mantido aqui caso o usuário queira tentar editar existentes ou tenhamos backend pronto.
-                    Vou deixá-lo visível mas ciente da limitação do insert.
-                */}
                 <button
                     onClick={() => { setEditingBarber(null); setIsRegistrationModalOpen(true); }}
-                    className="flex items-center gap-2 bg-[#f2b90d] text-black px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-[#f2b90d]/20 hover:scale-105 transition-all"
+                    className="flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg transition-all hover:scale-105 active:scale-95"
+                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black', boxShadow: `0 10px 15px -3px ${colors.primary}33` }}
                 >
                     <span className="material-symbols-outlined text-[18px]">add</span>
                     Novo Profissional
@@ -214,13 +193,17 @@ export default function TeamManagementPage() {
             <div className="grid grid-cols-1 gap-4">
                 {loading ? (
                     <div className="text-center py-20 opacity-40">
-                        <span className="material-symbols-outlined text-4xl animate-spin text-[#f2b90d]">progress_activity</span>
+                        <span className="material-symbols-outlined text-4xl animate-spin" style={{ color: colors.primary }}>progress_activity</span>
                     </div>
                 ) : barbers.length > 0 ? (
                     barbers.map(barber => (
-                        <div key={barber.id} className="bg-[#121214] border border-white/5 p-4 md:p-6 rounded-3xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 group hover:border-[#f2b90d]/20 transition-all">
+                        <div key={barber.id} className="border p-4 md:p-6 rounded-3xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6 group transition-all"
+                            style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}
+                        >
                             <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
-                                <div className="size-12 md:size-16 rounded-xl md:rounded-2xl bg-[#f2b90d]/10 flex items-center justify-center text-[#f2b90d] border border-[#f2b90d]/20 shadow-inner shrink-0 overflow-hidden">
+                                <div className="size-12 md:size-16 rounded-xl md:rounded-2xl flex items-center justify-center border shadow-inner shrink-0 overflow-hidden"
+                                    style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}20` }}
+                                >
                                     {barber.avatar_url ? (
                                         <img src={barber.avatar_url} alt={barber.full_name} className="w-full h-full object-cover" />
                                     ) : (
@@ -228,8 +211,8 @@ export default function TeamManagementPage() {
                                     )}
                                 </div>
                                 <div className="min-w-0">
-                                    <h4 className="font-bold text-base md:text-lg text-white truncate">{barber.full_name}</h4>
-                                    <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">{barber.email}</p>
+                                    <h4 className="font-bold text-base md:text-lg truncate" style={{ color: colors.text }}>{barber.full_name}</h4>
+                                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate" style={{ color: colors.textMuted }}>{barber.email}</p>
                                     <span className={`mt-2 inline-block text-[8px] md:text-[9px] font-black uppercase px-2 md:px-3 py-1 rounded-full border ${barber.status === UserStatus.ACTIVE ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20'}`}>
                                         {barber.status}
                                     </span>
@@ -239,23 +222,23 @@ export default function TeamManagementPage() {
                             <div className="flex flex-col md:items-end gap-1 md:gap-2 w-full md:w-auto">
                                 <div className="flex gap-4 mb-2">
                                     <div className="text-right">
-                                        <p className="text-[8px] uppercase font-black text-slate-500">Serviços</p>
-                                        <p className="text-lg font-black text-[#f2b90d]">{barber.service_commission}%</p>
+                                        <p className="text-[8px] uppercase font-black" style={{ color: colors.textMuted }}>Serviços</p>
+                                        <p className="text-lg font-black" style={{ color: colors.primary }}>{barber.service_commission}%</p>
                                     </div>
                                     <div className="text-right">
-                                        <p className="text-[8px] uppercase font-black text-slate-500">Produtos</p>
+                                        <p className="text-[8px] uppercase font-black" style={{ color: colors.textMuted }}>Produtos</p>
                                         <p className="text-lg font-black text-emerald-500">{barber.product_commission || 0}%</p>
                                     </div>
                                 </div>
 
                                 <div className="flex items-center gap-2 w-full md:w-auto">
-                                    <button onClick={() => setEditingBarber(barber)} className="flex-1 md:flex-none p-2 text-slate-400 hover:text-[#f2b90d] transition-colors bg-white/5 rounded-xl">
+                                    <button onClick={() => setEditingBarber(barber)} className="flex-1 md:flex-none p-2 transition-colors rounded-xl" style={{ backgroundColor: `${colors.text}0d`, color: colors.textMuted }}>
                                         <span className="material-symbols-outlined text-[20px]">edit</span>
                                     </button>
                                     <button onClick={() => handleAction(barber.id, 'suspend')} className={`flex-[2] md:flex-none px-4 py-2 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest ${barber.status === UserStatus.ACTIVE ? 'bg-amber-500/10 text-amber-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
                                         {barber.status === UserStatus.ACTIVE ? 'SUSPENDER' : 'REATIVAR'}
                                     </button>
-                                    <button onClick={() => handleAction(barber.id, 'delete')} className="flex-1 md:flex-none p-2 text-slate-400 hover:text-red-500 transition-colors bg-white/5 rounded-xl">
+                                    <button onClick={() => handleAction(barber.id, 'delete')} className="flex-1 md:flex-none p-2 transition-colors rounded-xl" style={{ backgroundColor: `${colors.text}0d`, color: colors.textMuted }}>
                                         <span className="material-symbols-outlined text-[20px]">delete</span>
                                     </button>
                                 </div>
@@ -264,8 +247,8 @@ export default function TeamManagementPage() {
                     ))
                 ) : (
                     <div className="text-center py-20 opacity-40">
-                        <span className="material-symbols-outlined text-6xl mb-4 italic">groups</span>
-                        <p className="font-black uppercase text-xs tracking-[0.4em]">Nenhum profissional cadastrado</p>
+                        <span className="material-symbols-outlined text-6xl mb-4 italic" style={{ color: colors.textMuted }}>groups</span>
+                        <p className="font-black uppercase text-xs tracking-[0.4em]" style={{ color: colors.textMuted }}>Nenhum profissional cadastrado</p>
                     </div>
                 )}
             </div>
@@ -273,12 +256,14 @@ export default function TeamManagementPage() {
             {/* Modal de Edição/Criação Simplificado */}
             {(isRegistrationModalOpen || editingBarber) && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-[#121214] w-full max-w-2xl rounded-[2.5rem] border border-white/5 shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-300">
-                        <div className="p-8 border-b border-white/5 flex justify-between items-center sticky top-0 bg-[#121214] z-10">
-                            <h3 className="text-xl text-white font-black italic uppercase italic tracking-tight">
+                    <div className="w-full max-w-2xl rounded-[2.5rem] border shadow-2xl overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-300"
+                        style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}
+                    >
+                        <div className="p-8 border-b flex justify-between items-center sticky top-0 z-10" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                            <h3 className="text-xl font-black italic uppercase tracking-tight" style={{ color: colors.text }}>
                                 {editingBarber ? 'Editar Profissional' : 'Novo Profissional'}
                             </h3>
-                            <button onClick={() => { setIsRegistrationModalOpen(false); setEditingBarber(null); }} className="size-10 flex items-center justify-center rounded-full hover:bg-white/5 text-slate-400">
+                            <button onClick={() => { setIsRegistrationModalOpen(false); setEditingBarber(null); }} className="size-10 flex items-center justify-center rounded-full transition-all" style={{ backgroundColor: `${colors.text}0d`, color: colors.textMuted }}>
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
@@ -286,49 +271,51 @@ export default function TeamManagementPage() {
                             {/* Avatar Config */}
                             <div className="flex flex-col items-center gap-4 py-4">
                                 <div className="relative group cursor-pointer">
-                                    <div className="size-24 rounded-full border-2 border-dashed border-[#f2b90d]/30 flex items-center justify-center overflow-hidden bg-[#f2b90d]/5">
+                                    <div className="size-24 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden" style={{ borderColor: `${colors.primary}4d`, backgroundColor: `${colors.primary}0d` }}>
                                         {avatarPreview ? (
                                             <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
                                         ) : (
-                                            <span className="material-symbols-outlined text-[#f2b90d] text-4xl">add_a_photo</span>
+                                            <span className="material-symbols-outlined text-4xl" style={{ color: colors.primary }}>add_a_photo</span>
                                         )}
                                     </div>
                                     <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleImageChange} />
                                 </div>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Foto de Perfil</p>
+                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.textMuted }}>Foto de Perfil</p>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Nome Completo</label>
-                                    <input type="text" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs" value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} placeholder="Ex: João da Silva" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>Nome Completo</label>
+                                    <input type="text" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.full_name} onChange={(e) => setFormData({ ...formData, full_name: e.target.value })} placeholder="Ex: João da Silva" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Email (Acesso)</label>
-                                    <input type="email" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="joao@exemplo.com" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>Email (Acesso)</label>
+                                    <input type="email" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="joao@exemplo.com" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">CPF</label>
-                                    <input type="text" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs" value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })} maxLength={14} placeholder="000.000.000-00" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>CPF</label>
+                                    <input type="text" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })} maxLength={14} placeholder="000.000.000-00" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">WhatsApp</label>
-                                    <input type="tel" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: maskPhone(e.target.value) })} maxLength={15} placeholder="(00) 00000-0000" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>WhatsApp</label>
+                                    <input type="tel" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: maskPhone(e.target.value) })} maxLength={15} placeholder="(00) 00000-0000" />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6 pt-4 border-t border-white/5">
+                            <div className="grid grid-cols-2 gap-6 pt-4 border-t" style={{ borderColor: `${colors.text}0d` }}>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão Serviços (%)</label>
-                                    <input type="text" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs" value={formData.service_commission} onChange={(e) => setFormData({ ...formData, service_commission: maskPercent(e.target.value) })} placeholder="0" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>Comissão Serviços (%)</label>
+                                    <input type="text" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.service_commission} onChange={(e) => setFormData({ ...formData, service_commission: maskPercent(e.target.value) })} placeholder="0" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest italic ml-2">Comissão Produtos (%)</label>
-                                    <input type="text" className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white outline-none focus:border-[#f2b90d]/50 text-xs" value={formData.product_commission} onChange={(e) => setFormData({ ...formData, product_commission: maskPercent(e.target.value) })} placeholder="0" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>Comissão Produtos (%)</label>
+                                    <input type="text" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.product_commission} onChange={(e) => setFormData({ ...formData, product_commission: maskPercent(e.target.value) })} placeholder="0" />
                                 </div>
                             </div>
 
-                            <button onClick={handleSave} disabled={uploading} className="w-full bg-[#f2b90d] text-black font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50">
+                            <button onClick={handleSave} disabled={uploading} className="w-full font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl transition-all disabled:opacity-50"
+                                style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}66` }}
+                            >
                                 {uploading ? 'SALVANDO COM MÍDIA...' : (editingBarber ? 'SALVAR ALTERAÇÕES' : 'CONFIRMAR CADASTRO')}
                             </button>
                         </div>

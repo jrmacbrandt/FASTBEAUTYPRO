@@ -112,12 +112,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                         <h1 className="text-xl font-black italic tracking-tighter uppercase leading-none" style={{ color: theme.text }}>
                             FASTBEAUTY <span style={{ color: theme.primary }}>PRO</span>
                         </h1>
-                        <p className="font-black tracking-[0.3em] text-[8px] uppercase opacity-80 mt-1" style={{ color: theme.primary }}>
+                        <p className="font-black tracking-[0.3em] text-[8px] uppercase mt-1" style={{ color: theme.primary, opacity: 0.8 }}>
                             PLATAFORMA SAAS
                         </p>
                     </div>
                     {onClose && (
-                        <button onClick={onClose} className="md:hidden p-2 rounded-lg opacity-60 hover:opacity-100" style={{ color: theme.text }}>
+                        <button onClick={onClose} className="md:hidden p-2 rounded-lg" style={{ color: theme.text, opacity: 0.6 }}>
                             <span className="material-symbols-outlined text-[20px]">close</span>
                         </button>
                     )}
@@ -168,7 +168,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
                     {/* STATUS ASSINATURA - VISÍVEL APENAS PARA DONOS (NÃO MASTERS) */}
                     {user?.tenant && user?.role === 'owner' && (
-                        <div className="mb-4 px-3 py-3 rounded-xl border border-dashed border-white/20 bg-white/5 opacity-80 hover:opacity-100 transition-opacity">
+                        <div className="mb-4 px-3 py-3 rounded-xl border border-dashed transition-all"
+                            style={{
+                                backgroundColor: isSalon ? '#00000005' : '#ffffff05',
+                                borderColor: isSalon ? '#7b438e33' : '#ffffff1a'
+                            }}
+                        >
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-[10px] uppercase font-black tracking-wider" style={{ color: theme.text }}>Plano Ativo</span>
                                 <span className="font-black uppercase px-2 py-0.5 rounded text-[9px]"
@@ -198,7 +203,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                     <button
                         onClick={handleLogout}
                         className="flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.2em] transition-all w-full px-2 py-2.5 border border-transparent hover:border-red-400/10 rounded-xl cursor-pointer"
-                        style={{ color: isSalon ? '#64748b' : '#94a3b8' }}
+                        style={{ color: theme.text, opacity: 0.6 }}
                     >
                         <span className="material-symbols-outlined text-[16px]">logout</span>
                         SAIR DO SISTEMA

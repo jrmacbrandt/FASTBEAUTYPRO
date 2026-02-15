@@ -8,11 +8,7 @@ import { getSegmentedClients } from '@/lib/crm';
 import { useProfile } from '@/hooks/useProfile';
 
 function CRMContent() {
-    const { profile, loading: profileLoading, businessType } = useProfile();
-
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', border: '#e2e8f0', secondaryBg: '#f5f3f0' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', border: '#27272a', secondaryBg: '#18181b' };
+    const { profile, loading: profileLoading, businessType, theme: colors } = useProfile();
 
     const [loading, setLoading] = useState(true);
     const [tenant, setTenant] = useState<any>(null);

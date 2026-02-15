@@ -7,7 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
 
 export default function OwnerDashboardPage() {
-    const { profile, loading: profileLoading, businessType: hookBusinessType } = useProfile();
+    const { profile, loading: profileLoading, businessType: hookBusinessType, theme } = useProfile();
     const businessType = hookBusinessType || 'barber';
 
     const [stats, setStats] = React.useState({
@@ -28,10 +28,6 @@ export default function OwnerDashboardPage() {
     const [loadingStats, setLoadingStats] = React.useState(true);
     const [copying, setCopying] = React.useState(false);
     const [pendingCount, setPendingCount] = React.useState(0);
-
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', chartGrid: '#e2e8f0', chartStroke: '#94a3b8' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', chartGrid: '#27272a', chartStroke: '#52525b' };
 
     const fetchPending = async (tid: string) => {
         const { count } = await supabase
@@ -189,16 +185,16 @@ export default function OwnerDashboardPage() {
     return (
         <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500 pb-10">
             {tenantInfo && (
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 rounded-[2rem] border transition-all gap-4 mb-4" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 rounded-[2rem] border transition-all gap-4 mb-4" style={{ backgroundColor: theme.cardBg, borderColor: theme.border }}>
                     <div className="flex items-center gap-4">
-                        <div className="size-12 md:size-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0" style={{ backgroundColor: `${colors.primary}1a`, border: `1px solid ${colors.primary}30` }}>
-                            <span className="material-symbols-outlined text-2xl md:text-3xl font-bold" style={{ color: colors.primary }}>storefront</span>
+                        <div className="size-12 md:size-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0" style={{ backgroundColor: `${theme.primary}1a`, border: `1px solid ${theme.primary}30` }}>
+                            <span className="material-symbols-outlined text-2xl md:text-3xl font-bold" style={{ color: theme.primary }}>storefront</span>
                         </div>
                         <div>
-                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter" style={{ color: colors.text }}>{tenantInfo.name}</h2>
+                            <h2 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter" style={{ color: theme.text }}>{tenantInfo.name}</h2>
                             <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 italic" style={{ color: colors.textMuted }}>Link da Unidade:</span>
-                                <span className="text-[10px] font-mono font-black border-b border-dashed" style={{ color: colors.primary, borderColor: `${colors.primary}40` }}>/{tenantInfo.slug}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-widest opacity-40 italic" style={{ color: theme.textMuted }}>Link da Unidade:</span>
+                                <span className="text-[10px] font-mono font-black border-b border-dashed" style={{ color: theme.primary, borderColor: `${theme.primary}40` }}>/{tenantInfo.slug}</span>
                             </div>
                         </div>
                     </div>
@@ -207,7 +203,7 @@ export default function OwnerDashboardPage() {
                         <button
                             onClick={handleCopyLink}
                             className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${copying ? 'bg-emerald-500 text-white' : 'hover:scale-105 active:scale-95'}`}
-                            style={!copying ? { backgroundColor: `${colors.text}0d`, color: colors.text } : {}}
+                            style={!copying ? { backgroundColor: `${theme.text}0d`, color: theme.text } : {}}
                         >
                             <span className="material-symbols-outlined text-[16px]">{copying ? 'done' : 'content_copy'}</span>
                             {copying ? 'COPIADO!' : 'COPIAR LINK'}
@@ -217,7 +213,7 @@ export default function OwnerDashboardPage() {
                             href={`/${tenantInfo.slug}`}
                             target="_blank"
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95"
-                            style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}
+                            style={{ backgroundColor: theme.primary, color: businessType === 'salon' ? 'white' : 'black' }}
                         >
                             <span className="material-symbols-outlined text-[16px]">open_in_new</span>
                             ABRIR LOJA
@@ -228,38 +224,38 @@ export default function OwnerDashboardPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {kpis.map((kpi, idx) => (
-                    <div key={idx} className="border p-4 md:p-6 rounded-3xl md:rounded-[2rem] group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                    <div key={idx} className="border p-4 md:p-6 rounded-3xl md:rounded-[2rem] group transition-all" style={{ backgroundColor: theme.cardBg, borderColor: theme.border }}>
                         <div className="flex justify-between items-start mb-2 md:mb-4">
-                            <div className="size-8 md:size-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary }}>
+                            <div className="size-8 md:size-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: `${theme.primary}1a`, color: theme.primary }}>
                                 <span className="material-symbols-outlined text-[18px] md:text-[24px]">{kpi.icon}</span>
                             </div>
                             {loadingStats ? (
-                                <div className="h-4 w-12 bg-white/5 animate-pulse rounded"></div>
+                                <div className="h-4 w-12 animate-pulse rounded" style={{ backgroundColor: `${theme.text}0d` }}></div>
                             ) : (
                                 <span className={`text-[9px] md:text-[10px] font-black ${kpi.color}`}>{kpi.trend}</span>
                             )}
                         </div>
-                        <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest italic opacity-70" style={{ color: colors.textMuted }}>{kpi.label}</p>
+                        <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest italic opacity-70" style={{ color: theme.textMuted }}>{kpi.label}</p>
                         {loadingStats ? (
-                            <div className="h-8 w-24 bg-white/5 animate-pulse rounded mt-1"></div>
+                            <div className="h-8 w-24 animate-pulse rounded mt-1" style={{ backgroundColor: `${theme.text}0d` }}></div>
                         ) : (
-                            <h4 className="text-xl md:text-2xl font-black mt-0.5 italic tracking-tight" style={{ color: colors.text }}>{kpi.val}</h4>
+                            <h4 className="text-xl md:text-2xl font-black mt-0.5 italic tracking-tight" style={{ color: theme.text }}>{kpi.val}</h4>
                         )}
                     </div>
                 ))}
             </div>
 
-            <div className="border p-5 md:p-8 rounded-3xl md:rounded-[2.5rem]" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+            <div className="border p-5 md:p-8 rounded-3xl md:rounded-[2.5rem]" style={{ backgroundColor: theme.cardBg, borderColor: theme.border }}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-2 md:gap-4">
                     <div>
-                        <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight" style={{ color: colors.text }}>Evolução do Faturamento</h3>
-                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>Comparativo de performance semanal</p>
+                        <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight" style={{ color: theme.text }}>Evolução do Faturamento</h3>
+                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest opacity-60" style={{ color: theme.textMuted }}>Comparativo de performance semanal</p>
                     </div>
                 </div>
                 <div className="h-48 sm:h-64 md:h-80 w-full relative">
                     {loadingStats && (
                         <div className="absolute inset-0 z-10 bg-black/20 backdrop-blur-[2px] flex items-center justify-center rounded-2xl">
-                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2" style={{ borderColor: colors.primary }}></div>
+                            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2" style={{ borderColor: theme.primary }}></div>
                         </div>
                     )}
                     <ResponsiveContainer width="100%" height="100%">
@@ -274,19 +270,19 @@ export default function OwnerDashboardPage() {
                         ]}>
                             <defs>
                                 <linearGradient id="colorFat" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor={colors.primary} stopOpacity={0.3} />
-                                    <stop offset="95%" stopColor={colors.primary} stopOpacity={0} />
+                                    <stop offset="5%" stopColor={theme.primary} stopOpacity={0.3} />
+                                    <stop offset="95%" stopColor={theme.primary} stopOpacity={0} />
                                 </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={colors.chartGrid} />
-                            <XAxis dataKey="name" fontSize={9} tickLine={false} axisLine={false} stroke={colors.chartStroke} />
-                            <YAxis fontSize={9} tickLine={false} axisLine={false} stroke={colors.chartStroke} tickFormatter={(val) => `R$${val}`} />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.chartGrid} />
+                            <XAxis dataKey="name" fontSize={9} tickLine={false} axisLine={false} stroke={theme.chartStroke} />
+                            <YAxis fontSize={9} tickLine={false} axisLine={false} stroke={theme.chartStroke} tickFormatter={(val) => `R$${val}`} />
                             <Tooltip
-                                contentStyle={{ backgroundColor: colors.cardBg, borderRadius: '12px', border: `1px solid ${colors.text}1a`, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold', color: colors.text }}
-                                itemStyle={{ color: colors.primary }}
+                                contentStyle={{ backgroundColor: theme.cardBg, borderRadius: '12px', border: `1px solid ${theme.border}`, boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontSize: '10px', fontWeight: 'bold', color: theme.text }}
+                                itemStyle={{ color: theme.primary }}
                                 formatter={(value: any) => [formatBRL(Number(value) || 0), 'Faturamento']}
                             />
-                            <Area type="monotone" dataKey="faturamento" stroke={colors.primary} strokeWidth={3} fillOpacity={1} fill="url(#colorFat)" />
+                            <Area type="monotone" dataKey="faturamento" stroke={theme.primary} strokeWidth={3} fillOpacity={1} fill="url(#colorFat)" />
                         </AreaChart>
                     </ResponsiveContainer>
                 </div>

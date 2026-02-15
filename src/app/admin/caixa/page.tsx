@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useProfile } from '@/hooks/useProfile';
 
 export default function CashierCheckoutPage() {
-    const { profile, loading: profileLoading } = useProfile();
+    const { profile, loading: profileLoading, theme: colors } = useProfile();
     const [orders, setOrders] = useState<any[]>([]);
     const [selected, setSelected] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -106,12 +106,15 @@ export default function CashierCheckoutPage() {
 
     if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando caixa...</div>;
 
+    const isSalon = profile?.tenant?.business_type === 'salon';
+
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-500 pb-10">
             <div className="lg:col-span-2 space-y-4 md:space-y-6">
                 <div className="flex items-center justify-between px-2 md:px-0">
-                    <h3 className="text-white text-lg md:text-xl font-black italic uppercase">Comandas Pendentes</h3>
-                    <span className="bg-[#f2b90d]/10 text-[#f2b90d] text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full border border-[#f2b90d]/20 uppercase">
+                    <h3 className="text-lg md:text-xl font-black italic uppercase" style={{ color: colors.text }}>Comandas Pendentes</h3>
+                    <span className="text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full border uppercase"
+                        style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
                         {orders.length} FILA
                     </span>
                 </div>
@@ -119,37 +122,41 @@ export default function CashierCheckoutPage() {
                 <div className="grid gap-3 md:gap-4">
                     {loading ? (
                         <div className="text-center py-20 opacity-40">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#f2b90d] mx-auto"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
                         </div>
                     ) : orders.length > 0 ? (
                         orders.map(cmd => (
                             <button
                                 key={cmd.id}
                                 onClick={() => setSelected(cmd)}
-                                className={`w-full p-4 md:p-6 rounded-3xl border text-left transition-all flex items-center justify-between group ${selected?.id === cmd.id ? 'bg-[#f2b90d]/5 border-[#f2b90d] shadow-xl scale-[1.01]' : 'bg-[#121214] border-white/5 hover:border-white/20'
-                                    }`}
+                                className={`w-full p-4 md:p-6 rounded-3xl border text-left transition-all flex items-center justify-between group ${selected?.id === cmd.id ? 'shadow-xl scale-[1.01]' : 'hover:border-white/20'}`}
+                                style={{
+                                    backgroundColor: selected?.id === cmd.id ? `${colors.primary}1a` : colors.cardBg,
+                                    borderColor: selected?.id === cmd.id ? colors.primary : colors.border
+                                }}
                             >
                                 <div className="flex items-center gap-3 md:gap-4 w-full">
-                                    <div className={`size-10 md:size-12 rounded-xl flex items-center justify-center transition-colors shrink-0 ${selected?.id === cmd.id ? 'bg-[#f2b90d] text-black' : 'bg-white/5 text-[#f2b90d]'}`}>
+                                    <div className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-colors shrink-0"
+                                        style={{ backgroundColor: selected?.id === cmd.id ? colors.primary : `${colors.primary}1a`, color: selected?.id === cmd.id ? (isSalon ? 'white' : 'black') : colors.primary }}>
                                         <span className="material-symbols-outlined text-[20px] md:text-[24px]">receipt</span>
                                     </div>
                                     <div className="min-w-0">
-                                        <h4 className="text-white font-bold text-base md:text-lg italic tracking-tight truncate">{cmd.customer_name}</h4>
-                                        <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate">Prof: {cmd.barber_name}</p>
+                                        <h4 className="font-bold text-base md:text-lg italic tracking-tight truncate" style={{ color: colors.text }}>{cmd.customer_name}</h4>
+                                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate" style={{ color: colors.textMuted }}>Prof: {cmd.barber_name}</p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-[#f2b90d] text-xl md:text-2xl font-black italic tracking-tighter">R$ {(cmd.total_price || 0).toFixed(2)}</p>
-                                    <p className="text-slate-500 text-[8px] md:text-[10px] font-black uppercase">
+                                    <p className="text-xl md:text-2xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {(cmd.total_price || 0).toFixed(2)}</p>
+                                    <p className="text-[8px] md:text-[10px] font-black uppercase" style={{ color: colors.textMuted }}>
                                         {cmd.time ? new Date(cmd.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
                                     </p>
                                 </div>
                             </button>
                         ))
                     ) : (
-                        <div className="py-16 md:py-20 bg-white/5 border border-dashed border-white/10 rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center opacity-40">
-                            <span className="material-symbols-outlined text-4xl md:text-6xl mb-4 text-white italic">check_circle</span>
-                            <p className="font-black uppercase text-[10px] md:text-xs tracking-[0.4em] text-white">Tudo em dia</p>
+                        <div className="py-16 md:py-20 border border-dashed rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center opacity-40" style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border }}>
+                            <span className="material-symbols-outlined text-4xl md:text-6xl mb-4 italic" style={{ color: colors.text }}>check_circle</span>
+                            <p className="font-black uppercase text-[10px] md:text-xs tracking-[0.4em]" style={{ color: colors.text }}>Tudo em dia</p>
                         </div>
                     )}
                 </div>
@@ -157,23 +164,25 @@ export default function CashierCheckoutPage() {
 
             <aside className="w-full">
                 {selected ? (
-                    <div className="bg-[#121214] border border-[#f2b90d]/30 p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 shadow-2xl sticky top-4 md:top-10">
+                    <div className="border p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 shadow-2xl sticky top-4 md:top-10"
+                        style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}4d` }}>
                         <div className="text-center">
-                            <h3 className="text-white text-xl md:text-2xl font-black italic tracking-tight mb-1 md:mb-2 uppercase">Recebimento</h3>
-                            <p className="text-slate-500 text-[9px] md:text-[10px] font-black uppercase tracking-widest italic">{selected.customer_name}</p>
+                            <h3 className="text-xl md:text-2xl font-black italic tracking-tight mb-1 md:mb-2 uppercase" style={{ color: colors.text }}>Recebimento</h3>
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>{selected.customer_name}</p>
                         </div>
 
                         <div className="space-y-3 md:space-y-4 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
-                            <div className="flex justify-between items-center text-xs font-bold border-b border-white/5 pb-2">
-                                <span className="text-slate-400 italic font-black uppercase tracking-widest text-[9px] truncate mr-4">{selected.service_name} + Extras</span>
+                            <div className="flex justify-between items-center text-xs font-bold border-b pb-2" style={{ borderColor: colors.border }}>
+                                <span className="italic font-black uppercase tracking-widest text-[9px] truncate mr-4" style={{ color: colors.textMuted }}>{selected.service_name} + Extras</span>
                             </div>
                         </div>
 
                         <div className="space-y-3">
-                            <p className="text-slate-500 text-[9px] md:text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60">Escolha o Método</p>
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60" style={{ color: colors.textMuted }}>Escolha o Método</p>
                             <div className="grid grid-cols-2 gap-2">
                                 {['PIX', 'CARTÃO', 'DINHEIRO', 'DÉBITO'].map(m => (
-                                    <button key={m} className="bg-black/40 border border-white/10 text-white font-black py-3 md:py-4 rounded-xl hover:border-[#f2b90d] hover:text-[#f2b90d] transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95">
+                                    <button key={m} className="bg-black/40 border text-white font-black py-3 md:py-4 rounded-xl hover:text-white transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95"
+                                        style={{ borderColor: colors.border, backgroundColor: `${colors.text}0d`, color: colors.text }}>
                                         {m}
                                     </button>
                                 ))}
@@ -207,14 +216,15 @@ export default function CashierCheckoutPage() {
                             )}
                         </div>
 
-                        <div className="pt-5 md:pt-6 border-t border-white/5">
+                        <div className="pt-5 md:pt-6 border-t" style={{ borderColor: colors.border }}>
                             <div className="flex justify-between items-end mb-5 md:mb-6">
-                                <span className="text-slate-500 font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50">Total</span>
-                                <span className="text-[#f2b90d] text-3xl md:text-4xl font-black italic tracking-tighter">R$ {(selected.total_price || 0).toFixed(2)}</span>
+                                <span className="font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total</span>
+                                <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {(selected.total_price || 0).toFixed(2)}</span>
                             </div>
                             <button
                                 onClick={handleConfirmPayment}
-                                className="w-full bg-[#f2b90d] hover:bg-[#d9a50c] text-black font-black py-4 md:py-5 rounded-xl md:rounded-2xl text-base md:text-lg shadow-2xl shadow-[#f2b90d]/20 transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95"
+                                className="w-full font-black py-4 md:py-5 rounded-xl md:rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95"
+                                style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
                             >
                                 CONFIRMAR
                                 <span className="material-symbols-outlined text-xl md:text-2xl">check_circle</span>
@@ -222,11 +232,12 @@ export default function CashierCheckoutPage() {
                         </div>
                     </div>
                 ) : (
-                    <div className="h-full min-h-[300px] md:min-h-[400px] bg-[#121214]/40 border border-dashed border-white/10 rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center p-6 md:p-8 text-center sticky top-4 md:top-10">
-                        <div className="size-16 md:size-20 bg-white/5 rounded-full flex items-center justify-center mb-4 md:mb-6 text-slate-700">
+                    <div className="h-full min-h-[300px] md:min-h-[400px] border border-dashed rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center p-6 md:p-8 text-center sticky top-4 md:top-10"
+                        style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border }}>
+                        <div className="size-16 md:size-20 rounded-full flex items-center justify-center mb-4 md:mb-6" style={{ backgroundColor: `${colors.text}0d`, color: colors.textMuted }}>
                             <span className="material-symbols-outlined text-4xl md:text-5xl">point_of_sale</span>
                         </div>
-                        <p className="text-slate-500 font-bold uppercase text-[10px] md:text-xs tracking-widest leading-relaxed">
+                        <p className="font-bold uppercase text-[10px] md:text-xs tracking-widest leading-relaxed" style={{ color: colors.textMuted }}>
                             Selecione uma comanda <br className="hidden md:block" /> para processar
                         </p>
                     </div>

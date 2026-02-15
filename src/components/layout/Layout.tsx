@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { supabase } from '@/lib/supabase';
 import { usePathname } from 'next/navigation';
+import { useProfile } from '@/hooks/useProfile';
 
 interface LayoutProps {
     children: React.ReactNode;
@@ -14,19 +15,11 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     const pathname = usePathname();
     const [user, setUser] = React.useState<any>(null);
-    const [businessType, setBusinessType] = React.useState<'barber' | 'salon'>('barber');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
     const [isSupportMode, setIsSupportMode] = React.useState(false);
     const [isMaintenance, setIsMaintenance] = React.useState(false);
 
-    // 1. Initial Theme Check (LocalStorage) - Garante continuidade visual do Login
-    React.useEffect(() => {
-        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) {
-            setBusinessType(savedType);
-            document.body.className = savedType === 'salon' ? 'theme-salon' : 'theme-barber';
-        }
-    }, []);
+    const { profile, loading: profileLoading, theme, businessType } = useProfile();
 
     React.useEffect(() => {
         const checkSupport = () => {
@@ -40,55 +33,31 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             const cookies = document.cookie.split('; ');
             const supportCookie = cookies.find(row => row.trim().startsWith('support_tenant_id='));
             const supportId = supportCookie?.split('=')[1];
-
-            console.log('[Layout] Pathname change detected:', pathname);
-            console.log('[Layout] support_tenant_id cookie:', supportId);
-
             setIsSupportMode(!!supportId);
         };
         checkSupport();
     }, [pathname]);
 
-    const { profile, loading: profileLoading } = require('@/hooks/useProfile').useProfile();
-
     React.useEffect(() => {
         if (profile) {
             setUser(profile);
-
-            // THEME SYNC (Fix V13.1 - Priority to Local Preference)
-            // Se o usuário já está navegando com um tema (ex: login claro), respeitamos isso sobre o DB.
-            const storedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-            const dbType = profile.tenant?.business_type;
-
-            const bType = storedType || dbType || 'barber';
-
-            setBusinessType(bType);
-
-            // Apply global CSS variables class
-            document.body.className = bType === 'salon' ? 'theme-salon' : 'theme-barber';
+            document.body.className = businessType === 'salon' ? 'theme-salon' : 'theme-barber';
 
             const maintenanceActive = profile.tenant?.maintenance_mode === true;
             setIsMaintenance(maintenanceActive);
 
-            // 🛡️ CLIENT-SIDE GUARD (Segurança Redundante)
-            // Se o middleware falhar por cache, o cliente garante a expulsão.
             if (maintenanceActive) {
-                // Verificar se é Master ou se estamos em impersonation (Master com cookie)
                 const isMasterUser = profile.email === 'jrmacbrandt@gmail.com' || profile.role === 'master';
                 const hasSupportCookie = document.cookie.includes('support_tenant_id=');
 
-                // Se NÃO for Master real e NÃO tiver cookie de suporte, expulsa.
-                // O dono real (Simone) não tem o cookie support_tenant_id e não é master.
                 if (!isMasterUser && !hasSupportCookie && !pathname.includes('/manutencao')) {
-                    console.warn('⛔ BLOCK: Manutenção detectada pelo cliente. Redirecionando...');
                     window.location.href = '/manutencao';
                 }
             }
         }
-    }, [profile, pathname]);
+    }, [profile, pathname, businessType]);
 
     const handleStopSupport = async () => {
-        // Obter ID do suporte atual
         const cookies = document.cookie.split('; ');
         const supportId = cookies.find(row => row.trim().startsWith('support_tenant_id='))?.split('=')[1];
 
@@ -98,35 +67,24 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         }
 
         try {
-            // 1. Tentar desbloquear via RPC
             const { error: rpcError } = await supabase.rpc('master_toggle_maintenance', {
                 target_tenant_id: supportId,
                 enable_maintenance: false
             });
 
             if (rpcError) {
-                // 2. Fallback
-                const { error } = await supabase
+                await supabase
                     .from('tenants')
                     .update({ maintenance_mode: false })
                     .eq('id', supportId);
-
-                if (error) throw error;
             }
-
-            // 3. Sucesso: Redirecionar para limpeza de cookies
             window.location.href = '/admin-master?stop_impersonate=true';
-
         } catch (err: any) {
-            console.error('Erro ao sair do suporte:', err);
-            // Redireciona mesmo com erro para liberar o Master, mas loga.
             window.location.href = '/admin-master?stop_impersonate=true';
         }
     };
 
-    const theme = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#decad4', text: '#1e1e1e', cardBg: '#ffffff', sidebarBg: '#ffffff', headerBg: '#decad4', border: '#7b438e33' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', cardBg: '#121214', sidebarBg: '#121214', headerBg: '#121214', border: '#ffffff0d' };
+    if (profileLoading) return null;
 
     return (
         <div className="flex min-h-screen transition-colors duration-500 overflow-x-hidden" style={{ backgroundColor: theme.bg }}>
@@ -138,8 +96,6 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 onClose={() => setIsMobileMenuOpen(false)}
             />
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                {/* Master Support / Maintenance Banner (V12.0) */}
-                {/* Rule: Show SEMPRE que o Support Cookie existir (inclusive no Master Admin) */}
                 {isSupportMode && (
                     <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
                         <div className="flex items-center gap-3">

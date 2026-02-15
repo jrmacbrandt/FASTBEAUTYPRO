@@ -8,6 +8,7 @@ import { maskCurrency, maskNumber } from '@/lib/masks';
 import { useProfile } from '@/hooks/useProfile';
 
 export default function ServicesPage() {
+    const { profile, loading: profileLoading, theme: colors, businessType } = useProfile();
     const [services, setServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
@@ -25,8 +26,6 @@ export default function ServicesPage() {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
 
     const [tenantId, setTenantId] = useState<string | null>(null);
-
-    const { profile, loading: profileLoading } = useProfile();
 
     useEffect(() => {
         if (profile?.tenant_id) {
@@ -51,8 +50,8 @@ export default function ServicesPage() {
         setEditingService(service);
         setNewService({
             name: service.name,
-            price: service.price.toString().replace('.', ','),
-            duration_minutes: service.duration_minutes.toString(),
+            price: service.price?.toString().replace('.', ',') || '',
+            duration_minutes: service.duration_minutes?.toString() || '',
             image_url: service.image_url || ''
         });
         setImagePreview(service.image_url || null);
@@ -62,27 +61,22 @@ export default function ServicesPage() {
     };
 
     const handleCancel = () => {
-        setShowForm(false);
         setEditingService(null);
         setNewService({ name: '', price: '', duration_minutes: '', image_url: '' });
         setImageFile(null);
         setImagePreview(null);
+        setShowForm(false);
     };
 
     const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            try {
-                // Resize to 400x400 and convert to WebP
-                const processedBlob = await processImage(file, 400, 400, 0.8);
-                const processedFile = new File([processedBlob], 'service.webp', { type: 'image/webp' });
-
-                setImageFile(processedFile);
-                setImagePreview(URL.createObjectURL(processedBlob));
-            } catch (error) {
-                console.error('Error processing image:', error);
-                alert('Erro ao processar imagem. Tente novamente.');
-            }
+            setImageFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setImagePreview(reader.result as string);
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -91,56 +85,47 @@ export default function ServicesPage() {
         if (!tenantId) return;
 
         setIsSaving(true);
-        let imageUrl = editingService?.image_url || '';
-
         try {
+            let finalImageUrl = newService.image_url;
+
             if (imageFile) {
-                const fileName = `service-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-                const { error: uploadError } = await supabase.storage
-                    .from('services')
-                    .upload(fileName, imageFile, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (uploadError) throw uploadError;
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('services')
-                    .getPublicUrl(fileName);
-
-                imageUrl = publicUrl;
+                const processed = await processImage(imageFile, 400, 400, 0.8);
+                const reader = new FileReader();
+                reader.readAsDataURL(processed);
+                await new Promise(resolve => {
+                    reader.onloadend = () => {
+                        finalImageUrl = reader.result as string;
+                        resolve(null);
+                    };
+                });
             }
 
-            const serviceData = {
+            const payload = {
                 tenant_id: tenantId,
                 name: newService.name,
                 price: parseFloat(newService.price.replace(',', '.')),
-                duration_minutes: parseInt(newService.duration_minutes || '0'),
-                active: true,
-                image_url: imageUrl
+                duration_minutes: parseInt(newService.duration_minutes),
+                image_url: finalImageUrl,
+                active: true
             };
 
-            let result;
             if (editingService) {
-                result = await supabase
+                const { error } = await supabase
                     .from('services')
-                    .update(serviceData)
+                    .update(payload)
                     .eq('id', editingService.id);
+                if (error) throw error;
             } else {
-                result = await supabase
+                const { error } = await supabase
                     .from('services')
-                    .insert(serviceData);
+                    .insert([payload]);
+                if (error) throw error;
             }
 
-            if (!result.error && profile?.tenant_id) {
-                handleCancel();
-                fetchServices(profile.tenant_id);
-            } else {
-                throw result.error;
-            }
-        } catch (error: any) {
-            alert('Erro ao salvar serviço: ' + error.message);
+            fetchServices(tenantId);
+            handleCancel();
+        } catch (err: any) {
+            alert('Erro ao salvar: ' + err.message);
         } finally {
             setIsSaving(false);
         }
@@ -174,21 +159,24 @@ export default function ServicesPage() {
         }
     };
 
+    if (profileLoading) return null;
+
     return (
         <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 pb-20">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter text-white">
-                        Gestão de <span className="text-[#f2b90d]">Serviços</span>
+                    <h2 className="text-3xl md:text-4xl font-black italic uppercase tracking-tighter" style={{ color: colors.text }}>
+                        Gestão de <span style={{ color: colors.primary }}>Serviços</span>
                     </h2>
-                    <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.3em] mt-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.3em] mt-1" style={{ color: colors.textMuted }}>
                         Configure seu catálogo de atendimento
                     </p>
                 </div>
 
                 <button
                     onClick={() => { if (showForm) handleCancel(); else setShowForm(true); }}
-                    className="flex items-center gap-3 bg-[#f2b90d] text-black px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[#f2b90d]/20"
+                    className="flex items-center gap-3 px-8 py-4 rounded-2xl font-black uppercase tracking-widest text-[11px] hover:scale-105 active:scale-95 transition-all shadow-xl"
+                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
                 >
                     <span className="material-symbols-outlined">{showForm ? 'close' : 'add'}</span>
                     {showForm ? 'FECHAR FORMULÁRIO' : 'NOVO SERVIÇO'}
@@ -196,20 +184,22 @@ export default function ServicesPage() {
             </div>
 
             {showForm && (
-                <div className="bg-[#121214] border border-[#f2b90d]/20 p-8 md:p-12 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-500 shadow-2xl relative">
-                    <h3 className="text-white font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3">
-                        <span className="material-symbols-outlined text-[#f2b90d]">{editingService ? 'edit_note' : 'add_circle'}</span>
+                <div className="border p-8 md:p-12 rounded-[2.5rem] animate-in slide-in-from-top-4 duration-500 shadow-2xl relative"
+                    style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}>
+                    <h3 className="font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3" style={{ color: colors.text }}>
+                        <span className="material-symbols-outlined" style={{ color: colors.primary }}>{editingService ? 'edit_note' : 'add_circle'}</span>
                         {editingService ? `Editando: ${editingService.name}` : 'Cadastrar Novo Serviço'}
                     </h3>
                     <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Image Upload */}
-                        <div className="md:col-span-3 flex flex-col items-center gap-4 py-4 border-b border-white/5 mb-4">
+                        <div className="md:col-span-3 flex flex-col items-center gap-4 py-4 border-b mb-4" style={{ borderColor: colors.border }}>
                             <div className="relative group cursor-pointer">
-                                <div className="size-32 rounded-2xl border-2 border-dashed border-[#f2b90d]/30 flex items-center justify-center overflow-hidden bg-[#f2b90d]/5">
+                                <div className="size-32 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden"
+                                    style={{ borderColor: `${colors.primary}4d`, backgroundColor: `${colors.primary}0d` }}>
                                     {imagePreview ? (
                                         <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                                     ) : (
-                                        <div className="flex flex-col items-center gap-2 text-[#f2b90d]/50">
+                                        <div className="flex flex-col items-center gap-2" style={{ color: `${colors.primary}80` }}>
                                             <span className="material-symbols-outlined text-4xl">add_photo_alternate</span>
                                             <span className="text-[9px] font-black uppercase">Foto do Serviço</span>
                                         </div>
@@ -223,34 +213,37 @@ export default function ServicesPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Nome do Serviço</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: colors.textMuted }}>Nome do Serviço</label>
                             <input
                                 required
                                 type="text"
                                 placeholder="ex: Corte Degradê"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner"
+                                className="w-full rounded-2xl p-4 font-bold outline-none transition-all shadow-inner"
+                                style={{ backgroundColor: `${colors.text}0d`, border: `1px solid ${colors.border}`, color: colors.text }}
                                 value={newService.name}
                                 onChange={e => setNewService({ ...newService, name: e.target.value })}
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Preço (R$)</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: colors.textMuted }}>Preço (R$)</label>
                             <input
                                 required
                                 type="text"
                                 placeholder="0,00"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner placeholder:text-white/20"
+                                className="w-full rounded-2xl p-4 font-bold outline-none transition-all shadow-inner"
+                                style={{ backgroundColor: `${colors.text}0d`, border: `1px solid ${colors.border}`, color: colors.text }}
                                 value={newService.price}
                                 onChange={e => setNewService({ ...newService, price: maskCurrency(e.target.value) })}
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Tempo (minutos)</label>
+                            <label className="text-[10px] font-black uppercase tracking-widest ml-1" style={{ color: colors.textMuted }}>Tempo (minutos)</label>
                             <input
                                 required
                                 type="text"
                                 placeholder="0"
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 font-bold text-white focus:border-[#f2b90d]/50 outline-none transition-all shadow-inner placeholder:text-white/20"
+                                className="w-full rounded-2xl p-4 font-bold outline-none transition-all shadow-inner"
+                                style={{ backgroundColor: `${colors.text}0d`, border: `1px solid ${colors.border}`, color: colors.text }}
                                 value={newService.duration_minutes}
                                 onChange={e => setNewService({ ...newService, duration_minutes: maskNumber(e.target.value) })}
                             />
@@ -278,48 +271,48 @@ export default function ServicesPage() {
                 </div>
             )}
 
-            <div className="bg-[#121214] border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl">
+            <div className="border rounded-[3rem] overflow-hidden shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
                 <div className="overflow-x-auto">
                     <table className="w-full border-collapse">
                         <thead>
-                            <tr className="bg-white/5">
-                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Serviço</th>
-                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Preço</th>
-                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Duração</th>
-                                <th className="text-right px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-400">Ações</th>
+                            <tr style={{ backgroundColor: `${colors.text}08` }}>
+                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest" style={{ color: colors.textMuted }}>Serviço</th>
+                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest" style={{ color: colors.textMuted }}>Preço</th>
+                                <th className="text-left px-8 py-6 text-[10px] font-black uppercase tracking-widest" style={{ color: colors.textMuted }}>Duração</th>
+                                <th className="text-right px-8 py-6 text-[10px] font-black uppercase tracking-widest" style={{ color: colors.textMuted }}>Ações</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="divide-y" style={{ borderColor: colors.border }}>
                             {loading ? (
                                 <tr>
-                                    <td colSpan={4} className="px-8 py-10 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">
+                                    <td colSpan={4} className="px-8 py-10 text-center font-bold uppercase tracking-widest text-xs" style={{ color: colors.textMuted }}>
                                         Carregando lista...
                                     </td>
                                 </tr>
                             ) : services.length === 0 ? (
                                 <tr>
                                     <td colSpan={4} className="px-8 py-20 text-center">
-                                        <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">Nenhum serviço cadastrado.</p>
+                                        <p className="font-bold uppercase tracking-widest text-xs" style={{ color: colors.textMuted }}>Nenhum serviço cadastrado.</p>
                                     </td>
                                 </tr>
                             ) : (
                                 services.map(service => (
-                                    <tr key={service.id} className="group hover:bg-white/[0.02] transition-colors">
+                                    <tr key={service.id} className="group transition-colors" style={{ backgroundColor: 'transparent' }}>
                                         <td className="px-8 py-6 flex items-center gap-4">
-                                            <div className="size-10 rounded-lg bg-white/5 flex items-center justify-center overflow-hidden shrink-0">
+                                            <div className="size-10 rounded-lg flex items-center justify-center overflow-hidden shrink-0" style={{ backgroundColor: `${colors.text}0d` }}>
                                                 {service.image_url ? (
                                                     <img src={service.image_url} alt={service.name} className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="material-symbols-outlined text-slate-600 text-[18px]">content_cut</span>
+                                                    <span className="material-symbols-outlined text-[18px]" style={{ color: colors.textMuted }}>content_cut</span>
                                                 )}
                                             </div>
-                                            <span className="text-white font-black italic uppercase tracking-tight">{service.name}</span>
+                                            <span className="font-black italic uppercase tracking-tight" style={{ color: colors.text }}>{service.name}</span>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <span className="text-[#f2b90d] font-black italic">R$ {service.price?.toFixed(2).replace('.', ',')}</span>
+                                            <span className="font-black italic" style={{ color: colors.primary }}>R$ {service.price?.toFixed(2).replace('.', ',')}</span>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <div className="flex items-center gap-2 text-slate-400">
+                                            <div className="flex items-center gap-2" style={{ color: colors.textMuted }}>
                                                 <span className="material-symbols-outlined text-[16px]">schedule</span>
                                                 <span className="font-bold text-xs uppercase tracking-widest">{service.duration_minutes} min</span>
                                             </div>
@@ -328,21 +321,23 @@ export default function ServicesPage() {
                                             <div className="flex items-center justify-end gap-3">
                                                 <button
                                                     onClick={() => handleEdit(service)}
-                                                    className="size-10 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-[#f2b90d] hover:border-[#f2b90d]/30 transition-all flex items-center justify-center group/btn"
+                                                    className="size-10 rounded-xl border transition-all flex items-center justify-center group/btn"
+                                                    style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border, color: colors.textMuted }}
                                                     title="Editar serviço"
                                                 >
-                                                    <span className="material-symbols-outlined text-[20px] group-hover/btn:rotate-90 transition-transform duration-500">settings</span>
+                                                    <span className="material-symbols-outlined text-[20px] group-hover/btn:rotate-90 transition-transform duration-500" style={{ color: colors.textMuted }}>settings</span>
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(service.id, service.name)}
-                                                    className="size-10 rounded-xl bg-white/5 border border-white/5 text-slate-400 hover:text-red-500 hover:border-red-500/30 transition-all flex items-center justify-center group/btn"
+                                                    className="size-10 rounded-xl border transition-all flex items-center justify-center group/btn"
+                                                    style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border, color: colors.textMuted }}
                                                     title="Excluir serviço"
                                                 >
                                                     <span className="material-symbols-outlined text-[20px] group-hover/btn:scale-110 transition-transform">delete</span>
                                                 </button>
                                                 <button
                                                     onClick={() => toggleStatus(service.id, service.active)}
-                                                    className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all ${service.active ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 opacity-50'}`}
+                                                    className={`px-4 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest transition-all border ${service.active ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-red-500/10 text-red-500 border-red-500/20 opacity-50'}`}
                                                 >
                                                     {service.active ? 'ATIVO' : 'PAUSADO'}
                                                 </button>
@@ -357,7 +352,7 @@ export default function ServicesPage() {
             </div>
 
             <div className="pt-4 text-center">
-                <p className="text-[8px] font-black uppercase tracking-[0.5em] text-white/10 italic">Gerenciamento de Ativos • FastBeauty Pro v4.0</p>
+                <p className="text-[8px] font-black uppercase tracking-[0.5em] italic opacity-20" style={{ color: colors.text }}>Gerenciamento de Ativos • FastBeauty Pro v4.0</p>
             </div>
         </div>
     );
