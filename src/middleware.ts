@@ -147,8 +147,8 @@ export async function middleware(request: NextRequest) {
     // ----------------------------------------------------------------
 
     // 🚀 CRITICAL MAINTENANCE LOCKOUT (V10.0)
-    // Rule: Every non-master is blocked if tenant is in maintenance.
-    if (role !== 'master' && (isAdminPage || isProPage || isMaintenancePage)) {
+    // Rule: Every non-master and non-owner is blocked if tenant is in maintenance.
+    if (role !== 'master' && role !== 'owner' && (isAdminPage || isProPage || isMaintenancePage)) {
         const tid = profile?.tenant_id;
         if (tid) {
             const { data: dbTenant } = await supabase
