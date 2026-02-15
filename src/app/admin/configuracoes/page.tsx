@@ -8,12 +8,18 @@ import { processImage } from '@/lib/image-processing';
 export const dynamic = 'force-dynamic';
 
 export default function EstablishmentSettingsPage() {
-    const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'hours' | 'automation' | 'branding'>('general');
+    const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'hours' | 'automation' | 'branding' | 'security'>('general');
     const [isSaving, setIsSaving] = useState(false);
     const [tenant, setTenant] = useState<any>(null);
     const [origin, setOrigin] = useState('');
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+    // Auth State
+    const [userEmail, setUserEmail] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isUpdatingAuth, setIsUpdatingAuth] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -28,6 +34,8 @@ export default function EstablishmentSettingsPage() {
     const fetchTenant = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
+
+        setUserEmail(session.user.email || '');
 
         const { data: profile } = await supabase
             .from('profiles')
@@ -130,6 +138,32 @@ export default function EstablishmentSettingsPage() {
         setIsSaving(false);
     };
 
+    const handleUpdateAuth = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsUpdatingAuth(true);
+
+        try {
+            if (newPassword && newPassword !== confirmPassword) {
+                throw new Error('As senhas não coincidem.');
+            }
+
+            const updates: any = {};
+            if (userEmail) updates.email = userEmail;
+            if (newPassword) updates.password = newPassword;
+
+            const { error } = await supabase.auth.updateUser(updates);
+            if (error) throw error;
+
+            alert('Dados de acesso atualizados com sucesso! Se você alterou o e-mail, verifique sua caixa de entrada para confirmar.');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            alert('Erro ao atualizar dados: ' + error.message);
+        } finally {
+            setIsUpdatingAuth(false);
+        }
+    };
+
     const handleCepLookup = async (cep: string) => {
         const cleanCep = cep.replace(/\D/g, '');
         if (cleanCep.length === 8) {
@@ -174,7 +208,14 @@ export default function EstablishmentSettingsPage() {
             </header>
 
             <div className="flex flex-wrap p-1.5 md:p-2 rounded-2xl md:rounded-[2rem] bg-[#121214] border border-white/5 gap-1.5 md:gap-2">
-                {[{ id: 'general', label: 'Estabelecimento', icon: 'storefront' }, { id: 'finance', label: 'Pagamentos', icon: 'payments' }, { id: 'hours', label: 'Horários', icon: 'schedule' }, { id: 'branding', label: 'Página de Agendamento', icon: 'palette' }, { id: 'automation', label: 'Agendamento Direto', icon: 'bolt' }].map(tab => (
+                {[
+                    { id: 'general', label: 'Estabelecimento', icon: 'storefront' },
+                    { id: 'finance', label: 'Pagamentos', icon: 'payments' },
+                    { id: 'hours', label: 'Horários', icon: 'schedule' },
+                    { id: 'branding', label: 'Página de Agendamento', icon: 'palette' },
+                    { id: 'automation', label: 'Agendamento Direto', icon: 'bolt' },
+                    { id: 'security', label: 'Segurança & Acesso', icon: 'lock' }
+                ].map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-all italic flex-1 sm:flex-none justify-center ${activeTab === tab.id ? 'bg-[#f2b90d] text-black shadow-lg shadow-[#f2b90d]/20 scale-[1.02]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
                         <span className="material-symbols-outlined text-[16px] md:text-[18px]">{tab.icon}</span>{tab.label}
                     </button>
@@ -596,10 +637,68 @@ export default function EstablishmentSettingsPage() {
                 </div>
             )}
 
+            {activeTab === 'security' && (
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <form onSubmit={handleUpdateAuth} className="bg-[#121214] p-8 md:p-10 rounded-[2.5rem] border border-white/5 space-y-10 shadow-2xl">
+                        <div>
+                            <h4 className="text-xl font-black italic uppercase text-white mb-2">Segurança & Acesso</h4>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Altere seu e-mail de login e sua senha de acesso</p>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">E-mail de Login</label>
+                                <input
+                                    type="email"
+                                    value={userEmail}
+                                    onChange={e => setUserEmail(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                    placeholder="seu@email.com"
+                                />
+                            </div>
+
+                            <div className="md:col-start-1 space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nova Senha</label>
+                                <input
+                                    type="password"
+                                    value={newPassword}
+                                    onChange={e => setNewPassword(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Confirmar Nova Senha</label>
+                                <input
+                                    type="password"
+                                    value={confirmPassword}
+                                    onChange={e => setConfirmPassword(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="pt-4 border-t border-white/5">
+                            <button
+                                type="submit"
+                                disabled={isUpdatingAuth}
+                                className="w-full md:w-auto bg-[#f2b90d] text-black px-12 py-4 rounded-2xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/10 active:scale-95 transition-all disabled:opacity-50"
+                            >
+                                {isUpdatingAuth ? 'Sincronizando...' : 'ATUALIZAR DADOS DE ACESSO'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
             <div className="flex justify-center pt-6 md:pt-10">
-                <button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white px-10 md:px-16 py-4 md:py-6 rounded-2xl md:rounded-[1.8rem] text-[13px] md:text-[15px] font-black uppercase tracking-widest italic shadow-xl md:shadow-2xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 md:gap-4 disabled:opacity-50">
-                    <span className="material-symbols-outlined text-[20px] md:text-[24px]">save</span>{isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
-                </button>
+                {activeTab !== 'security' && (
+                    <button onClick={handleSave} disabled={isSaving} className="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-600 text-white px-10 md:px-16 py-4 md:py-6 rounded-2xl md:rounded-[1.8rem] text-[13px] md:text-[15px] font-black uppercase tracking-widest italic shadow-xl md:shadow-2xl shadow-emerald-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 md:gap-4 disabled:opacity-50">
+                        <span className="material-symbols-outlined text-[20px] md:text-[24px]">save</span>{isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                    </button>
+                )}
             </div>
         </div>
     );

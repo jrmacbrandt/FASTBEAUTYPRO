@@ -8,6 +8,10 @@ export default function ProfessionalSettingsPage() {
     const [saving, setSaving] = useState(false);
     const [schedule, setSchedule] = useState<any>({});
     const [profileId, setProfileId] = useState<string | null>(null);
+    const [userEmail, setUserEmail] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [isUpdatingAuth, setIsUpdatingAuth] = useState(false);
 
     const daysOfWeek = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
     const dayKeys = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
@@ -22,6 +26,7 @@ export default function ProfessionalSettingsPage() {
             if (!session) return;
 
             setProfileId(session.user.id);
+            setUserEmail(session.user.email || '');
 
             const { data: profile, error } = await supabase
                 .from('profiles')
@@ -70,6 +75,32 @@ export default function ProfessionalSettingsPage() {
         }
     };
 
+    const handleUpdateAuth = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsUpdatingAuth(true);
+
+        try {
+            if (newPassword && newPassword !== confirmPassword) {
+                throw new Error('As senhas não coincidem.');
+            }
+
+            const updates: any = {};
+            if (userEmail) updates.email = userEmail;
+            if (newPassword) updates.password = newPassword;
+
+            const { error } = await supabase.auth.updateUser(updates);
+            if (error) throw error;
+
+            alert('Dados de acesso atualizados com sucesso! Se você alterou o e-mail, verifique sua caixa de entrada para confirmar.');
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error: any) {
+            alert('Erro ao atualizar dados: ' + error.message);
+        } finally {
+            setIsUpdatingAuth(false);
+        }
+    };
+
     const updateDay = (dayKey: string, field: string, value: any) => {
         setSchedule((prev: any) => {
             const currentDay = prev[dayKey] || { open: '09:00', close: '19:00', isOpen: true };
@@ -81,7 +112,7 @@ export default function ProfessionalSettingsPage() {
     };
 
     // Generate time options
-    const timeOptions = [];
+    const timeOptions: string[] = [];
     for (let h = 6; h <= 23; h++) {
         for (let m = 0; m < 60; m += 30) {
             const time = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
@@ -158,6 +189,61 @@ export default function ProfessionalSettingsPage() {
                         );
                     })}
                 </div>
+            </div>
+
+            {/* SEGURANÇA & ACESSO */}
+            <div className="bg-[#121214] p-6 md:p-10 rounded-[2.5rem] border border-white/5 shadow-2xl">
+                <form onSubmit={handleUpdateAuth} className="space-y-8 md:space-y-10">
+                    <div>
+                        <h3 className="text-xl text-white font-black italic uppercase tracking-tight leading-none mb-1">Segurança & Acesso</h3>
+                        <p className="text-slate-500 text-[9px] md:text-[10px] font-bold uppercase tracking-widest italic opacity-60">Altere seus dados de login</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Novo E-mail</label>
+                            <input
+                                type="email"
+                                value={userEmail}
+                                onChange={e => setUserEmail(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                placeholder="seu@email.com"
+                            />
+                        </div>
+
+                        <div className="md:col-start-1 space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nova Senha</label>
+                            <input
+                                type="password"
+                                value={newPassword}
+                                onChange={e => setNewPassword(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                placeholder="••••••••"
+                            />
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Confirmar Nova Senha</label>
+                            <input
+                                type="password"
+                                value={confirmPassword}
+                                onChange={e => setConfirmPassword(e.target.value)}
+                                className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-3.5 text-xs font-bold text-white outline-none focus:border-[#f2b90d] transition-all"
+                                placeholder="••••••••"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-white/5">
+                        <button
+                            type="submit"
+                            disabled={isUpdatingAuth}
+                            className="w-full sm:w-auto bg-[#f2b90d] text-black px-12 py-3.5 rounded-xl font-black text-xs uppercase italic shadow-lg shadow-[#f2b90d]/20 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                            {isUpdatingAuth ? 'SINCRONIZANDO...' : 'ATUALIZAR ACESSO'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     );
