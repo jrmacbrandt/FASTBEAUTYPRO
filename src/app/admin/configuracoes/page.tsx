@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 import { maskPhone, maskCPF, maskCEP } from '@/lib/masks';
 import { processImage } from '@/lib/image-processing';
 
 export const dynamic = 'force-dynamic';
 
 export default function EstablishmentSettingsPage() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState<'general' | 'finance' | 'hours' | 'automation' | 'branding' | 'security'>('general');
     const [isSaving, setIsSaving] = useState(false);
     const [tenant, setTenant] = useState<any>(null);
@@ -175,13 +177,14 @@ export default function EstablishmentSettingsPage() {
                         .update({ email: updates.email })
                         .eq('id', user.id);
                 }
-                alert('E-mail alterado! Verique sua caixa de entrada (e a nova) para confirmar a alteração antes de logar novamente com o novo e-mail.');
+                alert('E-mail alterado com sucesso! Por segurança, você será deslogado. Verifique sua caixa de entrada para confirmar a alteração antes de entrar novamente.');
             } else {
-                alert('Senha atualizada com sucesso!');
+                alert('Senha atualizada com sucesso! Por segurança, você será deslogado.');
             }
 
-            setNewPassword('');
-            setConfirmPassword('');
+            // Deslogar e redirecionar
+            await supabase.auth.signOut();
+            router.push('/');
         } catch (error: any) {
             alert('Erro ao atualizar dados: ' + error.message);
         } finally {

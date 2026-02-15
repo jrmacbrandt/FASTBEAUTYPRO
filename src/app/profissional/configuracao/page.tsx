@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
 export default function ProfessionalSettingsPage() {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [schedule, setSchedule] = useState<any>({});
@@ -112,13 +114,14 @@ export default function ProfessionalSettingsPage() {
                         .update({ email: updates.email })
                         .eq('id', user.id);
                 }
-                alert('E-mail alterado! Verifique sua caixa de entrada para confirmar a alteração.');
+                alert('E-mail alterado com sucesso! Por segurança, você será deslogado. Verifique sua caixa de entrada para confirmar a alteração.');
             } else {
-                alert('Senha atualizada com sucesso!');
+                alert('Senha atualizada com sucesso! Por segurança, você será deslogado.');
             }
 
-            setNewPassword('');
-            setConfirmPassword('');
+            // Deslogar e redirecionar
+            await supabase.auth.signOut();
+            router.push('/');
         } catch (error: any) {
             alert('Erro ao atualizar dados: ' + error.message);
         } finally {
