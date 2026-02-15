@@ -243,7 +243,7 @@ Até lá! 👋`;
             <header className="px-6 md:px-10 py-5 md:py-8 border-b border-white/5 flex justify-between items-center bg-black/60 backdrop-blur-3xl sticky top-0 z-50">
                 <button onClick={() => router.push(`/${slug}`)} className="flex items-center gap-4 group transition-all">
                     {tenant.logo_url && (
-                        <img src={tenant.logo_url} alt={tenant.name} className="size-10 md:size-12 rounded-xl object-cover border border-white/10 group-hover:scale-105 transition-transform" />
+                        <img src={tenant.logo_url} alt={tenant.name} className="size-10 md:size-12 rounded-full object-cover border border-white/10 group-hover:scale-105 transition-transform" />
                     )}
                     <div className="text-left">
                         <h1 className="text-xl md:text-3xl font-black italic tracking-tighter uppercase leading-none">
