@@ -532,33 +532,29 @@ Aguardo sua confirmação! 😊`;
                                     Caso precise alterar algo ou queira confirmar agora mesmo, entre em contato direto:
                                 </p>
 
-                                {(tenant.phone || selection.barber?.phone) && (
-                                    <div className="space-y-4">
-                                        {tenant.phone && (
-                                            <div className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/5 border border-white/5 group">
-                                                <div className="min-w-0 pr-4">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Loja: {tenant.name}</p>
-                                                    <p className="text-white font-black italic uppercase text-xl select-all">{tenant.phone}</p>
-                                                </div>
-                                                <a href={`tel:${tenant.phone}`} className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:bg-amber-500 hover:text-black transition-all">
-                                                    <span className="material-symbols-outlined">call</span>
-                                                </a>
-                                            </div>
-                                        )}
-
-                                        {selection.barber?.phone && (
-                                            <div className="w-full flex items-center justify-between p-6 rounded-2xl bg-white/5 border border-white/5 group">
-                                                <div className="min-w-0 pr-4">
-                                                    <p className="text-[10px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Profissional: {selection.barber?.full_name}</p>
-                                                    <p className="text-white font-black italic uppercase text-xl select-all">{selection.barber?.phone}</p>
-                                                </div>
-                                                <a href={`tel:${selection.barber?.phone}`} className="size-12 rounded-xl bg-white/5 flex items-center justify-center text-white/40 hover:bg-amber-500 hover:text-black transition-all">
-                                                    <span className="material-symbols-outlined">call</span>
-                                                </a>
-                                            </div>
+                                <div className="space-y-4">
+                                    {/* Store Contact - Always show name */}
+                                    <div className="w-full p-6 rounded-2xl bg-white/5 border border-white/5">
+                                        <p className="text-[12px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Loja: {tenant.name}</p>
+                                        {tenant.phone ? (
+                                            <p className="text-white font-black italic uppercase text-2xl select-all tracking-tighter">{tenant.phone}</p>
+                                        ) : (
+                                            <p className="text-white/20 font-black italic uppercase text-xs uppercase tracking-widest">Telefone não cadastrado</p>
                                         )}
                                     </div>
-                                )}
+
+                                    {/* Professional Contact - Show only if barber is selected */}
+                                    {selection.barber && (
+                                        <div className="w-full p-6 rounded-2xl bg-white/5 border border-white/5">
+                                            <p className="text-[12px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Profissional: {selection.barber?.full_name}</p>
+                                            {selection.barber?.phone ? (
+                                                <p className="text-white font-black italic uppercase text-2xl select-all tracking-tighter">{selection.barber?.phone}</p>
+                                            ) : (
+                                                <p className="text-white/20 font-black italic uppercase text-xs uppercase tracking-widest">WhatsApp não cadastrado</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <button
