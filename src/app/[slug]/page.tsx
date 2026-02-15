@@ -262,7 +262,7 @@ Aguardo sua confirmação! 😊`;
                         {/* Store ID */}
                         <div className="flex items-center gap-5 shrink-0 justify-center md:justify-start">
                             {tenant.logo_url && (
-                                <img src={tenant.logo_url} alt={tenant.name} className="size-14 md:size-16 rounded-[1.2rem] object-cover border-2 border-white/10 shadow-2xl" />
+                                <img src={tenant.logo_url} alt={tenant.name} className="size-14 md:size-16 rounded-full object-cover border-2 border-white/10 shadow-2xl" />
                             )}
                             <div className="text-center md:text-left">
                                 <h1 className="text-white text-2xl md:text-4xl font-black italic tracking-tighter leading-none uppercase mb-1">{tenant.name}</h1>
