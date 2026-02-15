@@ -119,8 +119,8 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
     };
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-[#18181b] border border-white/10 w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] flex justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto pt-10 md:pt-20">
+            <div className="bg-[#18181b] border border-white/10 w-full max-w-2xl rounded-3xl p-8 relative shadow-2xl animate-in zoom-in-95 duration-200 mb-20">
                 <div className="flex justify-between items-center mb-6">
                     <h3 className="text-2xl font-black italic uppercase text-white">
                         {productToEdit ? 'Editar Produto' : 'Novo Produto'}
