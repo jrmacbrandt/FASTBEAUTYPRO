@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { maskPhone, maskCPF, maskCEP } from '@/lib/masks';
 
