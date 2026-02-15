@@ -425,50 +425,53 @@ Até lá! 👋`;
                     )}
                     {/* Step 5: Success */}
                     {step === 5 && (
-                        <div className="animate-in fade-in zoom-in duration-700 max-w-lg mx-auto text-center py-4">
-                            <div className="size-20 bg-emerald-500/10 rounded-[2rem] flex items-center justify-center text-emerald-500 mx-auto mb-8 border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">
-                                <span className="material-symbols-outlined text-4xl">check_circle</span>
+                        <div className="animate-in fade-in zoom-in duration-700 max-w-2xl mx-auto text-center py-4">
+                            <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-10 text-left">
+                                <span className="material-symbols-outlined text-6xl md:text-7xl text-emerald-500 bg-emerald-500/10 p-3 rounded-[1.5rem] border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">check_circle</span>
+                                <div>
+                                    <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-2">
+                                        AGENDAMENTO <br /><span style={{ color: primaryColor }}>REALIZADO COM SUCESSO!</span>
+                                    </h2>
+                                    <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">
+                                        Sua solicitação foi enviada para o WhatsApp do profissional.
+                                    </p>
+                                </div>
                             </div>
 
-                            <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-white leading-none mb-4">
-                                AGENDAMENTO <br /><span style={{ color: primaryColor }}>REALIZADO COM SUCESSO!</span>
-                            </h2>
+                            <div className="bg-white/[0.03] border border-white/5 rounded-[2rem] p-6 mb-10 text-left relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl rounded-full"></div>
 
-                            <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mb-10">
-                                Sua solicitação foi enviada para o WhatsApp do profissional.
-                            </p>
-
-                            <div className="bg-white/[0.03] border border-white/5 rounded-[2rem] p-6 space-y-5 mb-10 text-left">
-                                <p className="text-white/60 text-[11px] font-bold uppercase tracking-widest leading-relaxed">
-                                    Caso precise alterar algo ou queira confirmar agora mesmo, entre em contato direto:
-                                </p>
+                                <div className="flex items-start gap-4 mb-6 p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
+                                    <span className="material-symbols-outlined text-amber-500 text-sm">warning</span>
+                                    <p className="text-white/80 text-[10px] font-bold uppercase tracking-wider leading-relaxed">
+                                        IMPORTANTE: Caso não receba a confirmação do agendamento por parte do profissional em breve, favor entrar em contato diretamente através dos números abaixo:
+                                    </p>
+                                </div>
 
                                 {(tenant.phone || selection.barber?.phone) && (
                                     <div className="space-y-3">
                                         {tenant.phone && (
-                                            <a
-                                                href={`tel:${tenant.phone}`}
-                                                className="w-full flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
-                                            >
+                                            <div className="w-full flex items-center justify-between p-4 px-5 rounded-xl bg-white/5 border border-white/5 group">
                                                 <div className="min-w-0 pr-4">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Ligar para a Loja</p>
-                                                    <p className="text-white font-black italic uppercase text-sm truncate">{tenant.name}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Loja: {tenant.name}</p>
+                                                    <p className="text-white font-black italic uppercase text-lg select-all">{tenant.phone}</p>
                                                 </div>
-                                                <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors shrink-0">call</span>
-                                            </a>
+                                                <a href={`tel:${tenant.phone}`} className="size-10 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:bg-amber-500 hover:text-black transition-all">
+                                                    <span className="material-symbols-outlined text-base">call</span>
+                                                </a>
+                                            </div>
                                         )}
 
                                         {selection.barber?.phone && (
-                                            <a
-                                                href={`tel:${selection.barber?.phone}`}
-                                                className="w-full flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 hover:border-white/20 transition-all group"
-                                            >
+                                            <div className="w-full flex items-center justify-between p-4 px-5 rounded-xl bg-white/5 border border-white/5 group">
                                                 <div className="min-w-0 pr-4">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-40 mb-1">Falar com o Profissional</p>
-                                                    <p className="text-white font-black italic uppercase text-sm truncate">{selection.barber?.full_name}</p>
+                                                    <p className="text-[9px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Profissional: {selection.barber?.full_name}</p>
+                                                    <p className="text-white font-black italic uppercase text-lg select-all">{selection.barber?.phone}</p>
                                                 </div>
-                                                <span className="material-symbols-outlined text-white/20 group-hover:text-white transition-colors shrink-0">call</span>
-                                            </a>
+                                                <a href={`tel:${selection.barber?.phone}`} className="size-10 rounded-lg bg-white/5 flex items-center justify-center text-white/40 hover:bg-amber-500 hover:text-black transition-all">
+                                                    <span className="material-symbols-outlined text-base">call</span>
+                                                </a>
+                                            </div>
                                         )}
                                     </div>
                                 )}
