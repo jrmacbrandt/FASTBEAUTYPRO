@@ -22,6 +22,7 @@ export default function ProductsPage() {
 
     const fetchProducts = async (tid: string, tab: 'sale' | 'supply') => {
         setLoading(true);
+        setProducts([]); // Clear list for visual feedback of change
         const table = tab === 'sale' ? 'products' : 'supplies';
         const { data, error } = await supabase
             .from(table)
