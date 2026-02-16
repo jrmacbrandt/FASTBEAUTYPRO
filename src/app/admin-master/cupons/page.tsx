@@ -14,13 +14,28 @@ export default function MasterCuponsPage() {
 
     const fetchCoupons = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('coupons')
-            .select('*')
-            .order('created_at', { ascending: false });
 
-        if (error) console.error(error);
-        else setCoupons(data || []);
+        // 1. Tenta via RPC Seguro (Ignora RLS bugado)
+        let { data, error } = await supabase.rpc('get_admin_coupons');
+
+        // 2. Fallback para Select padrão se a função ainda não existir
+        if (error) {
+            console.warn('[AdminMaster] RPC get_admin_coupons falhou, tentando SELECT direto:', error.message);
+            const response = await supabase
+                .from('coupons')
+                .select('*')
+                .order('created_at', { ascending: false });
+            data = response.data;
+            error = response.error;
+        }
+
+        if (error) {
+            console.error('[AdminMaster] Erro crítico:', error);
+            // Não alertamos para não travar a UI, mas logamos
+        } else {
+            console.log('[AdminMaster] Cupons carregados:', data?.length);
+            setCoupons(data || []);
+        }
         setLoading(false);
     };
 
