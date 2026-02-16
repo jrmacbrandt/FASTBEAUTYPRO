@@ -90,45 +90,34 @@ function CRMContent() {
         }
     }, [profile]);
 
-    const fetchData = async (tenantId: string) => {
+    const fetchData = async (tid: string) => {
+        if (!tid) return;
         setLoading(true);
         try {
-
-            // 1. Fetch Tenant Config (Loyalty)
-            const { data: tenantData } = await supabase
-                .from('tenants')
-                .select('id, loyalty_target, name, business_type, phone')
-                .eq('id', tenantId)
-                .single();
+            // optimized fetchData using Promise.all for parallel performance
+            const [
+                { data: tenantData },
+                { count: total },
+                churnClients,
+                vipClients,
+                bdayClients,
+                { data: appointments },
+                { data: allClients }
+            ] = await Promise.all([
+                supabase.from('tenants').select('id, loyalty_target, name, business_type, phone').eq('id', tid).single(),
+                supabase.from('clients').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+                getSegmentedClients(tid, { days_inactive: 45 }),
+                getSegmentedClients(tid, { min_spent: 500 }),
+                getSegmentedClients(tid, { birth_month: new Date().getMonth() + 1 }),
+                supabase.from('appointments').select('client_id').eq('tenant_id', tid).eq('status', 'paid'),
+                supabase.from('clients').select('*').eq('tenant_id', tid).order('name')
+            ]);
 
             const currentTarget = tenantData?.loyalty_target || 5;
             if (tenantData) {
                 setTenant(tenantData);
                 setSelectedLoyaltyTarget(currentTarget);
             }
-
-            // 2. Total Clientes (Real)
-            const { count: total } = await supabase
-                .from('clients')
-                .select('*', { count: 'exact', head: true })
-                .eq('tenant_id', tenantId);
-
-            // 3. Churn Risk (Real - uses last_visit)
-            const churnClients = await getSegmentedClients(tenantId, { days_inactive: 45 });
-
-            // 4. VIP (Real - uses total_spent > 500)
-            const vipClients = await getSegmentedClients(tenantId, { min_spent: 500 });
-
-            // 5. Aniversariantes (Real)
-            const currentMonth = new Date().getMonth() + 1;
-            const bdayClients = await getSegmentedClients(tenantId, { birth_month: currentMonth });
-
-            // 6. Loyalty Intelligence (REAL DATA calculation)
-            const { data: appointments } = await supabase
-                .from('appointments')
-                .select('client_id')
-                .eq('tenant_id', tenantId)
-                .eq('status', 'paid');
 
             const countsMap: Record<string, number> = {};
             if (appointments) {
@@ -138,13 +127,6 @@ function CRMContent() {
                     }
                 });
             }
-
-            // 7. Fetch All Clients to build segmented lists for engagement
-            const { data: allClients } = await supabase
-                .from('clients')
-                .select('*')
-                .eq('tenant_id', tenantId)
-                .order('name');
 
             const threshold = Math.ceil(currentTarget * 0.7);
             const loyaltyClientsList: any[] = [];
@@ -178,7 +160,7 @@ function CRMContent() {
                     *,
                     campaign_items!campaign_id (count)
                 `)
-                .eq('tenant_id', tenantId)
+                .eq('tenant_id', tid)
                 .order('created_at', { ascending: false });
 
             setCampaigns(campaignData || []);
@@ -204,7 +186,7 @@ function CRMContent() {
                 setTenant((prev: any) => ({ ...prev, loyalty_target: selectedLoyaltyTarget }));
                 alert('Configurações de fidelidade salvas com sucesso!');
                 // Re-fetch to update the pending rewards based on new target
-                fetchData();
+                fetchData(tenant.id);
             } else {
                 throw error;
             }
@@ -231,7 +213,7 @@ function CRMContent() {
 
             alert('Clientes excluídos com sucesso.');
             setSelectedClients([]);
-            fetchData(); // Refresh counts
+            if (profile?.tenant_id) fetchData(profile.tenant_id); // Refresh counts
             if (isClientModalOpen) {
                 // Refresh list if modal still open
                 const { data } = await supabase
