@@ -45,7 +45,6 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
             const user = (await supabase.auth.getUser()).data.user;
             if (!user) throw new Error('Not authenticated');
 
-            // Get Tenant ID (Assuming standard profile setup)
             const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single();
             if (!profile?.tenant_id) throw new Error('No tenant found');
 
@@ -68,7 +67,6 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
             let productId;
 
             if (productToEdit) {
-                // Auditoria de Acerto de Estoque: Se a quantidade mudou, registramos a movimentação
                 const oldStock = parseInt(productToEdit.current_stock?.toString() || '0');
                 const newStock = parseInt(formData.current_stock || '0');
 
@@ -76,7 +74,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                     const diff = newStock - oldStock;
                     await supabase.from('stock_transactions').insert({
                         tenant_id: profile.tenant_id,
-                        product_id: productToEdit.id,
+                        [isSupply ? 'supply_id' : 'product_id']: productToEdit.id,
                         type: diff > 0 ? 'IN' : 'OUT',
                         quantity: Math.abs(diff),
                         reason: `Acerto manual via Admin (De ${oldStock} para ${newStock})`,
@@ -99,11 +97,10 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 error = insertError;
                 productId = newProd?.id;
 
-                // Initial Stock Transaction for Audit
                 if (!error && parseInt(formData.current_stock || '0') > 0 && productId) {
                     await supabase.from('stock_transactions').insert({
                         tenant_id: profile.tenant_id,
-                        product_id: productId,
+                        [isSupply ? 'supply_id' : 'product_id']: productId,
                         type: 'IN',
                         quantity: parseInt(formData.current_stock || '0'),
                         reason: 'Estoque Inicial',
@@ -125,7 +122,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
         <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4">
             <div className="bg-[#18181b] border border-white/10 w-full max-w-2xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
                 <div className="p-8 md:p-10">
-                    <div className="flex justify-between items-center mb-8">
+                    <div className="flex justify-between items-center mb-10">
                         <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
                             {productToEdit ? 'Editar' : 'Novo'} {mode === 'supply' ? 'Insumo' : 'Produto'}
                         </h3>
@@ -135,68 +132,69 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Nome do Produto</label>
+                                <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest">Nome do Produto</label>
                                 <input
                                     required
                                     type="text"
                                     value={formData.name}
                                     onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-white/10"
+                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-white/10"
                                     placeholder="Ex: Vaselina Premium"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Código de Barras</label>
+                                <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest">Código de Barras</label>
                                 <input
                                     type="text"
                                     value={formData.barcode}
                                     onChange={e => setFormData({ ...formData, barcode: e.target.value })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-white/10"
+                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-white/10"
                                 />
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Descrição</label>
+                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest">Descrição</label>
                             <textarea
                                 value={formData.description}
+                                placeholder="Descreva brevemente o item..."
                                 onChange={e => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all h-28 resize-none"
+                                className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all h-24 resize-none placeholder:text-white/5"
                             />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className={`grid gap-4 ${mode === 'sale' ? 'grid-cols-3' : 'grid-cols-2'}`}>
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Custo (R$)</label>
+                                <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest">Custo (R$)</label>
                                 <input
                                     type="text"
                                     placeholder="0,00"
                                     value={formData.cost_price}
                                     onChange={e => setFormData({ ...formData, cost_price: maskCurrency(e.target.value) })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                    className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
                                 />
                             </div>
                             {mode === 'sale' && (
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Venda (R$)</label>
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest">Venda (R$)</label>
                                     <input
                                         type="text"
                                         placeholder="0,00"
                                         value={formData.sale_price}
                                         onChange={e => setFormData({ ...formData, sale_price: maskCurrency(e.target.value) })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                        className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
                                     />
                                 </div>
                             )}
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Unidade</label>
+                                <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest">Unidade</label>
                                 <div className="relative">
                                     <select
                                         value={formData.unit_type}
                                         onChange={e => setFormData({ ...formData, unit_type: e.target.value })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer pr-10"
+                                        className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer pr-10"
                                     >
                                         <option value="un">Unid. (un)</option>
                                         <option value="ml">Milit. (ml)</option>
@@ -212,48 +210,42 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                             </div>
                         </div>
 
-                        <div className={`p-6 rounded-[2rem] border transition-all ${productToEdit ? 'bg-amber-500/5 border-amber-500/10' : 'bg-emerald-500/5 border-emerald-500/10'}`}>
-                            <label className={`text-[11px] font-black uppercase ml-1 mb-4 block tracking-tighter ${productToEdit ? 'text-amber-500' : 'text-emerald-500'}`}>
-                                {productToEdit ? '🛡️ CONTROLE & ACERTO DE ESTOQUE' : '📦 ESTOQUE INICIAL & ALERTA'}
-                            </label>
+                        {/* INITIAL STOCK SECTION (MOCKED DESIGN) */}
+                        <div className="p-6 rounded-[2rem] bg-emerald-500/5 border border-emerald-500/10 space-y-6">
+                            <div className="flex items-center gap-2">
+                                <span className="material-symbols-outlined text-emerald-500 text-sm">inventory_2</span>
+                                <label className="text-[10px] font-black uppercase text-emerald-500 tracking-wider">📦 Estoque Inicial & Alerta</label>
+                            </div>
 
                             <div className="grid grid-cols-2 gap-5">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Estoque Atual ({formData.unit_type})</label>
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest text-center block">Estoque Atual (un)</label>
                                     <input
                                         type="text"
                                         placeholder="0"
                                         value={formData.current_stock}
                                         onChange={e => setFormData({ ...formData, current_stock: maskNumber(e.target.value) })}
-                                        className="w-full bg-black/60 border border-white/5 rounded-2xl p-4 text-lg font-black text-white focus:border-[#f2b90d] focus:outline-none transition-all text-center"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-5 text-xl font-black text-white focus:border-[#10b981] focus:outline-none transition-all text-center"
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Alerta Mínimo</label>
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-widest text-center block">Alerta Mínimo</label>
                                     <input
                                         type="text"
                                         placeholder="0"
                                         value={formData.min_threshold}
                                         onChange={e => setFormData({ ...formData, min_threshold: maskNumber(e.target.value) })}
-                                        className="w-full bg-black/60 border border-white/5 rounded-2xl p-4 text-lg font-black text-white focus:border-[#f2b90d] focus:outline-none transition-all text-center"
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-5 text-xl font-black text-white focus:border-[#10b981] focus:outline-none transition-all text-center"
                                     />
                                 </div>
                             </div>
-
-                            {productToEdit && (
-                                <div className="mt-5 bg-white/5 border border-white/5 p-4 rounded-xl">
-                                    <p className="text-[10px] font-black text-white uppercase tracking-widest text-center italic opacity-90 leading-relaxed">
-                                        * Edições manuais geram uma movimentação <br />automática de acerto no histórico
-                                    </p>
-                                </div>
-                            )}
                         </div>
 
-                        <div className="flex justify-center pt-2">
+                        <div className="pt-4">
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="w-full bg-[#f2b90d] text-black font-black py-4 px-16 rounded-2xl uppercase tracking-widest transition-all disabled:opacity-50 text-sm"
+                                className="w-full bg-[#f2b90d] hover:bg-[#ffc82a] text-black font-black py-5 px-16 rounded-2xl uppercase tracking-[0.2em] transition-all disabled:opacity-50 text-xs shadow-xl active:scale-95"
                             >
                                 {saving ? 'SALVANDO...' : 'SALVAR PRODUTO'}
                             </button>

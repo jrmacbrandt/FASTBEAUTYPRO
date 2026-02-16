@@ -16,13 +16,13 @@ export default function ProductsPage() {
 
     useEffect(() => {
         if (profile?.tenant_id) {
-            fetchProducts(profile.tenant_id);
+            fetchProducts(profile.tenant_id, activeTab);
         }
     }, [profile, activeTab]);
 
-    const fetchProducts = async (tid: string) => {
+    const fetchProducts = async (tid: string, tab: 'sale' | 'supply') => {
         setLoading(true);
-        const table = activeTab === 'sale' ? 'products' : 'supplies';
+        const table = tab === 'sale' ? 'products' : 'supplies';
         const { data, error } = await supabase
             .from(table)
             .select('*')
@@ -50,13 +50,26 @@ export default function ProductsPage() {
     const handleCloseForm = () => {
         setIsFormOpen(false);
         setSelectedProduct(null);
-        if (profile?.tenant_id) fetchProducts(profile.tenant_id);
+        if (profile?.tenant_id) fetchProducts(profile.tenant_id, activeTab);
     };
 
     const handleCloseMovement = () => {
         setIsMovementOpen(false);
         setSelectedProduct(null);
-        if (profile?.tenant_id) fetchProducts(profile.tenant_id);
+        if (profile?.tenant_id) fetchProducts(profile.tenant_id, activeTab);
+    };
+
+    const handleDeleteProduct = async (id: string) => {
+        if (!confirm('Tem certeza que deseja excluir este item permanentemente?')) return;
+
+        const table = activeTab === 'sale' ? 'products' : 'supplies';
+        const { error } = await supabase.from(table).delete().eq('id', id);
+
+        if (error) {
+            alert('Erro ao deletar: ' + error.message);
+        } else {
+            if (profile?.tenant_id) fetchProducts(profile.tenant_id);
+        }
     };
 
     const filteredProducts = products.filter(p =>
@@ -75,14 +88,6 @@ export default function ProductsPage() {
                     <h2 className="text-3xl font-black italic uppercase tracking-tighter" style={{ color: colors.text }}>Gestão de <span style={{ color: colors.primary }}>Estoque</span></h2>
                     <p className="font-black uppercase text-[10px] tracking-widest mt-1" style={{ color: colors.textMuted }}>Controle de produtos e insumos.</p>
                 </div>
-                <button
-                    onClick={() => setIsFormOpen(true)}
-                    className="font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2"
-                    style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
-                >
-                    <span className="material-symbols-outlined">add</span>
-                    Novo Produto
-                </button>
             </div>
 
             {/* TABS SEPARATION */}
@@ -104,6 +109,15 @@ export default function ProductsPage() {
                     Insumos da Loja
                 </button>
             </div>
+
+            <button
+                onClick={() => setIsFormOpen(true)}
+                className="font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2 w-full md:w-fit"
+                style={{ backgroundColor: '#10b981', color: 'white', boxShadow: `0 10px 20px -5px #10b98144` }}
+            >
+                <span className="material-symbols-outlined">add_circle</span>
+                {activeTab === 'sale' ? '+ CRIAR PRODUTO PARA VENDA' : '+ CRIAR PRODUTO PARA A LOJA'}
+            </button>
 
             {/* Search Bar */}
             <div className="border p-4 flex items-center gap-4 rounded-3xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
@@ -159,6 +173,13 @@ export default function ProductsPage() {
                                         title="Editar Produto"
                                     >
                                         <span className="material-symbols-outlined text-xl">edit</span>
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteProduct(product.id)}
+                                        className="size-10 rounded-xl flex items-center justify-center transition-all border border-red-500/20 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white"
+                                        title="Excluir Produto"
+                                    >
+                                        <span className="material-symbols-outlined text-xl">delete</span>
                                     </button>
                                 </div>
                             </div>
