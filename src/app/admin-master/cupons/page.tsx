@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import { Trash2, PauseCircle, PlayCircle } from 'lucide-react';
 
 export default function MasterCuponsPage() {
     const [loading, setLoading] = useState(true);
@@ -65,6 +66,18 @@ export default function MasterCuponsPage() {
     const toggleStatus = async (id: string, currentStatus: boolean) => {
         await supabase.from('coupons').update({ active: !currentStatus }).eq('id', id);
         fetchCoupons();
+    };
+
+    const deleteCoupon = async (id: string) => {
+        if (!confirm('ATENÇÃO: Deseja excluir este cupom permanentemente? Esta ação não pode ser desfeita.')) return;
+
+        const { error } = await supabase.from('coupons').delete().eq('id', id);
+
+        if (error) {
+            alert('Erro ao excluir: ' + error.message);
+        } else {
+            fetchCoupons();
+        }
     };
 
     return (
@@ -139,12 +152,24 @@ export default function MasterCuponsPage() {
                                         {coupon.active ? 'Ativo' : 'Inativo'}
                                     </span>
                                 </td>
-                                <td className="p-4 text-right">
+                                <td className="p-4 text-right flex justify-end gap-2">
                                     <button
                                         onClick={() => toggleStatus(coupon.id, coupon.active)}
-                                        className="text-[10px] font-bold underline opacity-50 hover:opacity-100 uppercase"
+                                        title={coupon.active ? "Pausar Cupom" : "Reativar Cupom"}
+                                        className="p-2 rounded-lg hover:bg-white/10 transition-colors"
                                     >
-                                        {coupon.active ? 'Desativar' : 'Ativar'}
+                                        {coupon.active ? (
+                                            <PauseCircle size={18} className="text-amber-400" />
+                                        ) : (
+                                            <PlayCircle size={18} className="text-emerald-400" />
+                                        )}
+                                    </button>
+                                    <button
+                                        onClick={() => deleteCoupon(coupon.id)}
+                                        title="Excluir Permanentemente"
+                                        className="p-2 rounded-lg hover:bg-red-500/10 transition-colors group"
+                                    >
+                                        <Trash2 size={18} className="text-red-400 group-hover:text-red-500" />
                                     </button>
                                 </td>
                             </tr>
