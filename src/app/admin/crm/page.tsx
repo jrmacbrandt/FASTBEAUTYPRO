@@ -532,7 +532,7 @@ function CRMContent() {
 
     return (
         <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-1000 pb-24" style={{ color: colors?.text }}>
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-8 gap-4" style={{ borderColor: `${colors?.border || '#27272a'}40` }}>
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-8 gap-4">
                 <div className="relative">
                     <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-12 rounded-full blur-sm opacity-50" style={{ backgroundColor: colors?.primary || '#f2b90d' }}></div>
                     <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none" style={{ color: colors?.text }}>
@@ -615,8 +615,8 @@ function CRMContent() {
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
                 {/* FIDELITY CENTER - State of the Art UI */}
                 <div className="xl:col-span-5 space-y-6">
-                    <div className="border rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
-                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}40` }}
+                    <div className="rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
+                        style={{ backgroundColor: colors?.cardBg }}
                     >
                         {/* Background Decoration */}
                         <div className="absolute -top-12 -right-12 size-40 rounded-full blur-3xl pointer-events-none transition-all"
@@ -628,8 +628,8 @@ function CRMContent() {
                                     <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Cartão Fidelidade</h3>
                                     <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Configuração de Recompensa</p>
                                 </div>
-                                <div className="size-12 rounded-2xl flex items-center justify-center border group-hover:rotate-12 transition-transform"
-                                    style={{ backgroundColor: `${colors?.text}0d`, borderColor: `${colors?.border}40` }}
+                                <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
+                                    style={{ backgroundColor: `${colors?.text}0d` }}
                                 >
                                     <span className="material-symbols-outlined" style={{ color: colors?.primary }}>loyalty</span>
                                 </div>
@@ -660,7 +660,7 @@ function CRMContent() {
                             </div>
 
                             {/* Intelligence Audit Preview */}
-                            <div className="border rounded-3xl p-6 relative overflow-hidden mb-8" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}40` }}>
+                            <div className="rounded-3xl p-6 relative overflow-hidden mb-8" style={{ backgroundColor: `${colors?.secondaryBg}40` }}>
                                 <p className="text-[8px] font-black uppercase tracking-widest mb-4 opacity-70" style={{ color: colors?.textMuted }}>Visualização do App do Cliente</p>
                                 <div className="flex flex-wrap gap-2.5 justify-center py-4">
                                     {loyaltyPreviewCircles.map((_, i) => (
@@ -700,7 +700,7 @@ function CRMContent() {
                         </div>
 
                         {/* Status Footer */}
-                        <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between opacity-60">
+                        <div className="mt-8 pt-6 flex items-center justify-between opacity-60">
                             <div className="flex items-center gap-2">
                                 <span className="material-symbols-outlined text-xs text-emerald-500">lock_open</span>
                                 <span className="text-[8px] font-black uppercase tracking-widest text-white">Status: Ativo</span>
@@ -712,8 +712,8 @@ function CRMContent() {
 
                 {/* CAMPAIGN CENTER & ANNOTATIONS */}
                 <div className="xl:col-span-7 space-y-6">
-                    <div className="border rounded-[2.5rem] p-8 md:p-10 h-full flex flex-col shadow-2xl"
-                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}40` }}
+                    <div className="rounded-[2.5rem] p-8 md:p-10 h-full flex flex-col shadow-2xl"
+                        style={{ backgroundColor: colors?.cardBg }}
                     >
                         <div className="flex items-center justify-between mb-10">
                             <div className="flex items-center gap-6">
@@ -757,13 +757,13 @@ function CRMContent() {
                                         </tr>
                                     ) : (
                                         engagementData[activeFilter].slice(0, 5).map((client) => (
-                                            <tr key={client.id} className="group/row transition-all border"
-                                                style={{ backgroundColor: `${colors?.cardBg}40`, borderColor: `${colors?.border}20` }}
+                                            <tr key={client.id} className="group/row transition-all"
+                                                style={{ backgroundColor: `${colors?.cardBg}40` }}
                                             >
-                                                <td className="px-6 py-4 rounded-l-2xl border-y border-l" style={{ borderColor: `${colors?.border}20` }}>
+                                                <td className="px-6 py-4 rounded-l-2xl">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black italic border"
-                                                            style={{ backgroundColor: `${colors?.text}0d`, borderColor: `${colors?.border}40`, color: colors?.primary }}
+                                                        <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black italic"
+                                                            style={{ backgroundColor: `${colors?.text}0d`, color: colors?.primary }}
                                                         >
                                                             {client.name.charAt(0)}
                                                         </div>
@@ -773,12 +773,12 @@ function CRMContent() {
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 border-y text-center" style={{ borderColor: `${colors?.border}20` }}>
+                                                <td className="px-6 py-4 text-center">
                                                     <p className="text-[10px] font-bold" style={{ color: colors?.textMuted }}>
                                                         {client.last_visit ? new Date(client.last_visit).toLocaleDateString() : '--'}
                                                     </p>
                                                 </td>
-                                                <td className="px-6 py-4 border-y text-center" style={{ borderColor: `${colors?.border}20` }}>
+                                                <td className="px-6 py-4 text-center">
                                                     <div className="flex flex-col items-center">
                                                         <span className={`text-[8px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : ''}`} style={{ color: client.last_contact_at ? undefined : colors?.textMuted }}>
                                                             {client.last_contact_at ? 'Abordado' : 'Aguardando'}
@@ -788,7 +788,7 @@ function CRMContent() {
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 rounded-r-2xl border-y border-r text-right" style={{ borderColor: `${colors?.border}20` }}>
+                                                <td className="px-6 py-4 rounded-r-2xl text-right">
                                                     <button
                                                         onClick={() => openCampaignModal(client, (activeFilter === 'churn' ? 'recovery' : activeFilter === 'loyalty' ? 'loyalty' : 'manual'))}
                                                         disabled={updatingContact === client.id}

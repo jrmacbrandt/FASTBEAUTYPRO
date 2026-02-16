@@ -185,9 +185,9 @@ export default function OwnerDashboardPage() {
     return (
         <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500 pb-10">
             {tenantInfo && (
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 rounded-[2rem] border transition-all gap-4 mb-4" style={{ backgroundColor: theme.cardBg, borderColor: theme.border }}>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 rounded-[2rem] transition-all gap-4 mb-4" style={{ backgroundColor: theme.cardBg }}>
                     <div className="flex items-center gap-4">
-                        <div className="size-12 md:size-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0" style={{ backgroundColor: `${theme.primary}1a`, border: `1px solid ${theme.primary}30` }}>
+                        <div className="size-12 md:size-14 rounded-2xl flex items-center justify-center shadow-lg shrink-0" style={{ backgroundColor: `${theme.primary}1a` }}>
                             <span className="material-symbols-outlined text-2xl md:text-3xl font-bold" style={{ color: theme.primary }}>storefront</span>
                         </div>
                         <div>
@@ -216,7 +216,7 @@ export default function OwnerDashboardPage() {
                             style={{ backgroundColor: theme.primary, color: businessType === 'salon' ? 'white' : 'black' }}
                         >
                             <span className="material-symbols-outlined text-[16px]">open_in_new</span>
-                            ABRIR LOJA
+                            ABRIR AGENDAMENTO
                         </Link>
                     </div>
                 </div>
@@ -224,7 +224,7 @@ export default function OwnerDashboardPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {kpis.map((kpi, idx) => (
-                    <div key={idx} className="border p-4 md:p-6 rounded-3xl md:rounded-[2rem] group transition-all" style={{ backgroundColor: theme.cardBg, borderColor: theme.border }}>
+                    <div key={idx} className="p-4 md:p-6 rounded-3xl md:rounded-[2rem] group transition-all" style={{ backgroundColor: theme.cardBg }}>
                         <div className="flex justify-between items-start mb-2 md:mb-4">
                             <div className="size-8 md:size-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110" style={{ backgroundColor: `${theme.primary}1a`, color: theme.primary }}>
                                 <span className="material-symbols-outlined text-[18px] md:text-[24px]">{kpi.icon}</span>
@@ -245,7 +245,7 @@ export default function OwnerDashboardPage() {
                 ))}
             </div>
 
-            <div className="border p-5 md:p-8 rounded-3xl md:rounded-[2.5rem]" style={{ backgroundColor: theme.cardBg, borderColor: theme.border }}>
+            <div className="p-5 md:p-8 rounded-3xl md:rounded-[2.5rem]" style={{ backgroundColor: theme.cardBg }}>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-2 md:gap-4">
                     <div>
                         <h3 className="text-lg md:text-xl font-black italic uppercase tracking-tight" style={{ color: theme.text }}>Evolução do Faturamento</h3>
