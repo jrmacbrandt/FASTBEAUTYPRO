@@ -15,7 +15,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
         name: '',
         description: '',
         barcode: '',
-        category: 'sale',
+        category: mode || 'sale',
         cost_price: '',
         sale_price: '',
         current_stock: '',

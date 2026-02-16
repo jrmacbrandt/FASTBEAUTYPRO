@@ -177,8 +177,8 @@ const AdminAgendaCard = ({ item, colors, isToday, onEdit }: { item: Appointment,
         <div className="group border p-5 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
             <div className="flex items-center gap-5 w-full md:w-auto">
                 <div className="size-14 md:size-20 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg gap-0.5" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                    <span className="text-[10px] md:text-sm text-white opacity-90 uppercase tracking-widest leading-none">{isToday ? 'Hoje' : new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
-                    <span className="text-sm md:text-lg leading-none">{item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}</span>
+                    <span className="text-sm md:text-2xl text-white opacity-90 uppercase tracking-tighter leading-none">{isToday ? 'Hoje' : new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                    <span className="text-[10px] md:text-xs opacity-60 leading-none tracking-widest">{item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}</span>
                 </div>
                 <div className="min-w-0">
                     <h4 className="font-bold text-base md:text-xl truncate" style={{ color: colors.text }}>{item.customer_name}</h4>
