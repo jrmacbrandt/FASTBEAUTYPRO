@@ -182,6 +182,22 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         setError(null);
 
         try {
+            // 0. Pre-Validation: Unique Data Check (RPC)
+            // This prevents duplicate CPF/Email before processing heavy uploads
+            const { data: uniqueCheck, error: rpcError } = await supabase.rpc('check_registration_uniqueness', {
+                p_email: email,
+                p_cpf: cpf.replace(/\D/g, '')
+            });
+
+            if (rpcError) {
+                // If the function doesn't exist yet (migration pending), we log but don't block
+                // This allows development to continue, but uniqueness relies on DB constraints then.
+                console.warn('[Register] Uniqueness check skipped (RPC error):', rpcError.message);
+            } else if (uniqueCheck && uniqueCheck.status === 'error') {
+                // Stop immediately if duplicate found
+                throw new Error(uniqueCheck.message);
+            }
+
             // 1. Image Upload
             let imageUrl = '';
             if (file) {
