@@ -15,6 +15,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
         name: '',
         description: '',
         barcode: '',
+        category: 'others',
         cost_price: '',
         sale_price: '',
         current_stock: '',
@@ -29,6 +30,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 name: productToEdit.name,
                 description: productToEdit.description || '',
                 barcode: productToEdit.barcode || '',
+                category: productToEdit.category || 'others',
                 cost_price: productToEdit.cost_price?.toFixed(2).replace('.', ',') || '',
                 sale_price: productToEdit.sale_price?.toFixed(2).replace('.', ',') || '',
                 current_stock: productToEdit.current_stock?.toString() || '',
@@ -56,6 +58,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 name: formData.name,
                 description: formData.description,
                 barcode: formData.barcode,
+                category: formData.category,
                 cost_price: parseFloat(formData.cost_price.replace(',', '.')),
                 ...(isSupply ? {} : { sale_price: parseFloat(formData.sale_price.replace(',', '.')) }),
                 min_threshold: parseInt(formData.min_threshold || '0'),
@@ -132,8 +135,8 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-2 col-span-1 md:col-span-2">
                                 <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO PRODUTO</label>
                                 <input
                                     required
@@ -145,14 +148,36 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                                 />
                             </div>
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">CÓDIGO DE BARRAS</label>
-                                <input
-                                    type="text"
-                                    value={formData.barcode}
-                                    onChange={e => setFormData({ ...formData, barcode: e.target.value })}
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-zinc-800"
-                                />
+                                <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">CATEGORIA</label>
+                                <div className="relative">
+                                    <select
+                                        value={formData.category}
+                                        onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer pr-10"
+                                    >
+                                        <option value="others">Outros / Geral</option>
+                                        <option value="shampoo">Shampoos / Cremes</option>
+                                        <option value="pomade">Pomadas / Fixadores</option>
+                                        <option value="drink">Bebidas / Bar</option>
+                                        <option value="finisher">Finalizadores</option>
+                                        <option value="barba">Produtos Barba</option>
+                                    </select>
+                                    <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none text-xl">
+                                        expand_more
+                                    </span>
+                                </div>
                             </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">CÓDIGO DE BARRAS / EAN</label>
+                            <input
+                                type="text"
+                                value={formData.barcode}
+                                onChange={e => setFormData({ ...formData, barcode: e.target.value })}
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-zinc-800"
+                                placeholder="0000000000000"
+                            />
                         </div>
 
                         <div className="space-y-2">

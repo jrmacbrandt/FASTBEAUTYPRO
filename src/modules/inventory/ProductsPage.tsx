@@ -69,7 +69,7 @@ export default function ProductsPage() {
         if (error) {
             alert('Erro ao deletar: ' + error.message);
         } else {
-            if (profile?.tenant_id) fetchProducts(profile.tenant_id);
+            if (profile?.tenant_id) fetchProducts(profile.tenant_id, activeTab);
         }
     };
 
@@ -113,11 +113,18 @@ export default function ProductsPage() {
 
             <button
                 onClick={() => setIsFormOpen(true)}
-                className="font-black py-4 px-8 rounded-2xl uppercase tracking-widest text-xs hover:scale-105 active:scale-95 transition-all shadow-xl flex items-center gap-2 w-full md:w-fit"
-                style={{ backgroundColor: '#10b981', color: 'white', boxShadow: `0 10px 20px -5px #10b98144` }}
+                className="group relative overflow-hidden font-black py-4 px-10 rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all shadow-2xl active:scale-95 w-full md:w-fit flex items-center justify-center gap-3 border border-emerald-400/20"
+                style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    boxShadow: `0 10px 25px -5px rgba(16, 185, 129, 0.4)`
+                }}
             >
-                <span className="material-symbols-outlined">add_circle</span>
-                {activeTab === 'sale' ? '+ CRIAR PRODUTO PARA VENDA' : '+ CRIAR PRODUTO PARA A LOJA'}
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                <span className="material-symbols-outlined text-base relative z-10">add_circle</span>
+                <span className="relative z-10">
+                    {activeTab === 'sale' ? '+ CRIAR PRODUTO PARA VENDA' : '+ CRIAR PRODUTO PARA A LOJA'}
+                </span>
             </button>
 
             {/* Search Bar */}
@@ -142,8 +149,12 @@ export default function ProductsPage() {
                         <div key={product.id} className="border p-6 relative group transition-all rounded-[2.5rem]"
                             style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
                             <div className="flex justify-between items-start mb-6">
-                                <div className="size-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner" style={{ backgroundColor: `${colors.text}08` }}>
-                                    {product.category === 'drink' ? '🥤' : product.category === 'shampoo' ? '🧴' : '📦'}
+                                <div className="size-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner border border-white/5" style={{ backgroundColor: `${colors.text}08` }}>
+                                    {product.category === 'drink' ? '🥤' :
+                                        product.category === 'shampoo' ? '🧴' :
+                                            product.category === 'pomade' ? '💆‍♂️' :
+                                                product.category === 'finisher' ? '✨' :
+                                                    product.category === 'barba' ? '🧔' : '📦'}
                                 </div>
                                 <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${product.current_stock <= product.min_threshold
                                     ? 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'
