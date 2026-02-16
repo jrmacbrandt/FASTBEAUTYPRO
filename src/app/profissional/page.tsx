@@ -171,66 +171,58 @@ export default function ProfessionalAgendaPage() {
         });
     };
 
-    const basePrice = selectedClient?.services?.price || 0;
-    const total = cart.reduce((acc, curr) => acc + (curr.price * curr.qty), basePrice);
+    const todayDate = new Date();
+    const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
+    const todayItems = dailyAgenda.filter(p => p.scheduled_at.startsWith(todayStr));
+    const upcomingItems = dailyAgenda.filter(p => !p.scheduled_at.startsWith(todayStr));
 
     if (view === 'agenda') {
         return (
             <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-10">
-                <div className="flex items-center justify-between px-2 md:px-0">
-                    <h3 className="text-lg md:text-xl font-black italic uppercase" style={{ color: colors.text }}>Agenda de Hoje</h3>
-                    <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>{new Date().toLocaleDateString()}</span>
-                </div>
+                <div className="space-y-8">
+                    {/* TODAY SECTION */}
+                    {todayItems.length > 0 && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between px-2 md:px-0">
+                                <h3 className="text-lg md:text-xl font-black italic uppercase" style={{ color: colors.text }}>Agenda de Hoje</h3>
+                                <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>{new Date().toLocaleDateString('pt-BR')}</span>
+                            </div>
+                            <div className="grid gap-3 md:gap-4">
+                                {todayItems.map(item => (
+                                    <AgendaCard key={item.id} item={item} colors={colors} businessType={businessType} onAbsent={handleMarkAbsent} onUndo={handleUndoAbsent} onStart={handleOpenCommand} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                <div className="grid gap-3 md:gap-4">
-                    {loading ? (
-                        <div className="text-center py-20 opacity-40">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
-                        </div>
-                    ) : dailyAgenda.length > 0 ? (dailyAgenda.map(item => (
-                        <div key={item.id} className="border shadow-lg p-4 md:p-6 rounded-3xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between transition-all gap-4 group" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                            <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
-                                <div className="size-10 md:size-14 rounded-xl md:rounded-2xl flex items-center justify-center font-black shrink-0 border text-xs md:text-base" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                                    {item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="font-bold text-sm md:text-lg truncate" style={{ color: colors.text }}>{item.customer_name}</h4>
-                                    <p className="text-[9px] md:text-xs font-black uppercase tracking-widest opacity-60 truncate" style={{ color: colors.textMuted }}>{item.services?.name || 'Serviço'}</p>
-                                </div>
+                    {/* UPCOMING SECTION */}
+                    {upcomingItems.length > 0 && (
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between px-2 md:px-0">
+                                <h3 className="text-lg md:text-xl font-black italic uppercase" style={{ color: colors.text }}>Próximos Agendamentos</h3>
+                                <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest opacity-40" style={{ color: colors.textMuted }}>Futuro</span>
                             </div>
-                            <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
-                                {item.status === 'absent' ? (
-                                    <>
-                                        <span className="flex-1 md:flex-none text-center text-red-500 text-[10px] font-black uppercase border border-red-500/20 px-6 py-2.5 rounded-xl bg-red-500/5">AUSENTE</span>
-                                        <button
-                                            onClick={() => handleUndoAbsent(item.id)}
-                                            className="flex-1 md:flex-none text-emerald-500 text-[9px] md:text-[10px] font-black uppercase px-4 py-2.5 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/10 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">undo</span>
-                                            CHEGOU
-                                        </button>
-                                    </>
-                                ) : item.status === 'completed' ? (
-                                    <span className="w-full md:w-auto text-center text-emerald-500 text-[10px] font-black uppercase border border-emerald-500/20 px-6 py-2.5 rounded-xl bg-emerald-500/5">REALIZADO</span>
-                                ) : (
-                                    <>
-                                        <button onClick={() => handleMarkAbsent(item.id)} className="flex-1 md:flex-none text-red-500 text-[9px] md:text-[10px] font-black uppercase px-4 py-2.5 rounded-xl border border-red-500/20 hover:bg-red-500/10 transition-all">AUSENTE</button>
-                                        <button onClick={() => handleOpenCommand(item)} className="flex-[2] md:flex-none text-black text-[9px] md:text-[10px] font-black uppercase px-6 py-2.5 rounded-xl shadow-lg active:scale-95 transition-all italic tracking-tight" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>INICIAR</button>
-                                    </>
-                                )}
+                            <div className="grid gap-3 md:gap-4">
+                                {upcomingItems.map(item => (
+                                    <AgendaCard key={item.id} item={item} colors={colors} businessType={businessType} onAbsent={handleMarkAbsent} onUndo={handleUndoAbsent} onStart={handleOpenCommand} showDate />
+                                ))}
                             </div>
                         </div>
-                    ))
-                    ) : (
+                    )}
+
+                    {!loading && todayItems.length === 0 && upcomingItems.length === 0 && (
                         <div className="text-center py-16 md:py-20 opacity-30">
                             <span className="material-symbols-outlined text-4xl md:text-6xl italic" style={{ color: colors.textMuted }}>event_busy</span>
-                            <p className="font-black uppercase text-[10px] md:text-xs tracking-[0.4em] mt-4" style={{ color: colors.textMuted }}>Nenhum agendamento para hoje</p>
+                            <p className="font-black uppercase text-[10px] md:text-xs tracking-[0.4em] mt-4" style={{ color: colors.textMuted }}>Nenhum agendamento encontrado</p>
                         </div>
                     )}
                 </div>
             </div>
         );
     }
+
+    const basePrice = selectedClient?.services?.price || 0;
+    const total = cart.reduce((acc, curr) => acc + (curr.price * curr.qty), basePrice);
 
     return (
         <div className="flex flex-col xl:flex-row gap-6 md:gap-8 animate-in slide-in-from-right duration-500 pb-10">
@@ -294,3 +286,46 @@ export default function ProfessionalAgendaPage() {
         </div>
     );
 }
+
+// PREMIUM AGENDA CARD COMPONENT
+const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onStart, showDate }: any) => {
+    return (
+        <div className="border shadow-lg p-4 md:p-6 rounded-3xl md:rounded-[2rem] flex flex-col md:flex-row items-center justify-between transition-all gap-4 group" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+            <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
+                <div className="size-12 md:size-16 rounded-xl md:rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
+                    <span className="text-xs md:text-base">{item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}</span>
+                    {showDate ? (
+                        <span className="text-[8px] md:text-[9px] opacity-60 uppercase mt-0.5">{new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                    ) : (
+                        <span className="text-[8px] md:text-[9px] opacity-60 uppercase mt-0.5">Hoje</span>
+                    )}
+                </div>
+                <div className="min-w-0">
+                    <h4 className="font-bold text-sm md:text-lg truncate" style={{ color: colors.text }}>{item.customer_name}</h4>
+                    <p className="text-[9px] md:text-xs font-black uppercase tracking-widest opacity-60 truncate" style={{ color: colors.textMuted }}>{item.services?.name || 'Serviço'}</p>
+                </div>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
+                {item.status === 'absent' ? (
+                    <>
+                        <span className="flex-1 md:flex-none text-center text-red-500 text-[10px] font-black uppercase border border-red-500/20 px-6 py-2.5 rounded-xl bg-red-500/5">AUSENTE</span>
+                        <button
+                            onClick={() => onUndo(item.id)}
+                            className="flex-1 md:flex-none text-emerald-500 text-[9px] md:text-[10px] font-black uppercase px-4 py-2.5 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/10 transition-all flex items-center justify-center gap-2"
+                        >
+                            <span className="material-symbols-outlined text-sm">undo</span>
+                            CHEGOU
+                        </button>
+                    </>
+                ) : item.status === 'completed' ? (
+                    <span className="w-full md:w-auto text-center text-emerald-500 text-[10px] font-black uppercase border border-emerald-500/20 px-6 py-2.5 rounded-xl bg-emerald-500/5">REALIZADO</span>
+                ) : (
+                    <>
+                        {!showDate && <button onClick={() => onAbsent(item.id)} className="flex-1 md:flex-none text-red-500 text-[9px] md:text-[10px] font-black uppercase px-4 py-2.5 rounded-xl border border-red-500/20 hover:bg-red-500/10 transition-all">AUSENTE</button>}
+                        <button onClick={() => onStart(item)} className="flex-[2] md:flex-none text-black text-[9px] md:text-[10px] font-black uppercase px-6 py-2.5 rounded-xl shadow-lg active:scale-95 transition-all italic tracking-tight" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>{showDate ? 'DETALHES' : 'INICIAR'}</button>
+                    </>
+                )}
+            </div>
+        </div>
+    );
+};

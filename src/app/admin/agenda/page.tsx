@@ -79,6 +79,11 @@ export default function AdminAgendaPage() {
 
     if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando agenda...</div>;
 
+    const todayDate = new Date();
+    const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
+    const todayItems = appointments.filter(a => a.scheduled_at.startsWith(todayStr));
+    const upcomingItems = appointments.filter(a => !a.scheduled_at.startsWith(todayStr));
+
     return (
         <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-10">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
@@ -112,58 +117,85 @@ export default function AdminAgendaPage() {
                 </div>
             </header>
 
-            <div className="grid gap-4">
-                {loading ? (
-                    <div className="py-20 text-center opacity-40" style={{ color: colors.text }}>
-                        <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 mx-auto mb-4" style={{ borderColor: colors.primary }}></div>
-                        <p className="text-[10px] font-black uppercase tracking-widest">Sincronizando Agenda...</p>
-                    </div>
-                ) : appointments.length > 0 ? (
-                    appointments.map(item => (
-                        <div key={item.id} className="group border p-5 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                            <div className="flex items-center gap-5 w-full md:w-auto">
-                                <div className="size-12 md:size-16 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                                    <span className="text-xs md:text-sm">{item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}</span>
-                                    <span className="text-[8px] opacity-60 uppercase">Hoje</span>
-                                </div>
-                                <div className="min-w-0">
-                                    <h4 className="font-bold text-base md:text-xl truncate" style={{ color: colors.text }}>{item.customer_name}</h4>
-                                    <div className="flex items-center gap-2 mt-1">
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>{item.services?.name || 'Serviço'}</span>
-                                        <span className="size-1 rounded-full" style={{ backgroundColor: `${colors.text}20` }}></span>
-                                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest" style={{ color: colors.primary }}>{item.profiles?.full_name || 'Profissional'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex items-center gap-4 w-full md:w-auto">
-                                <div className="flex flex-col items-end mr-4 hidden md:flex">
-                                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40 italic" style={{ color: colors.textMuted }}>Valor</span>
-                                    <span className="text-lg font-black italic tracking-tighter" style={{ color: colors.text }}>R$ {Number(item.services?.price || 0).toFixed(2)}</span>
-                                </div>
-                                <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border text-center w-full md:w-32 ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                                    item.status === 'absent' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                                        item.status === 'paid' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                                            'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                    }`}>
-                                    {item.status === 'completed' ? 'REALIZADO' :
-                                        item.status === 'absent' ? 'AUSENTE' :
-                                            item.status === 'paid' ? 'PAGO' :
-                                                'AGENDADO'}
-                                </div>
-                                <Link href="/admin/caixa" className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all shrink-0 hover:bg-black/5" style={{ backgroundColor: `${colors.text}0d`, color: `${colors.text}60` }}>
-                                    <span className="material-symbols-outlined text-[20px]">more_vert</span>
-                                </Link>
-                            </div>
+            <div className="space-y-12">
+                {/* TODAY SECTION */}
+                {todayItems.length > 0 && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 px-2">
+                            <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <h2 className="text-sm font-black uppercase tracking-widest opacity-60" style={{ color: colors.text }}>Agenda de Hoje</h2>
                         </div>
-                    ))
-                ) : (
+                        <div className="grid gap-4">
+                            {todayItems.map(item => (
+                                <AdminAgendaCard key={item.id} item={item} colors={colors} isToday />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* UPCOMING SECTION */}
+                {upcomingItems.length > 0 && (
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-2 px-2">
+                            <span className="size-2 rounded-full bg-amber-500"></span>
+                            <h2 className="text-sm font-black uppercase tracking-widest opacity-60" style={{ color: colors.text }}>Próximos Agendamentos</h2>
+                        </div>
+                        <div className="grid gap-4">
+                            {upcomingItems.map(item => (
+                                <AdminAgendaCard key={item.id} item={item} colors={colors} />
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {!loading && appointments.length === 0 && (
                     <div className="text-center py-24 rounded-[3rem] border border-dashed" style={{ backgroundColor: `${colors.cardBg}80`, borderColor: `${colors.text}10` }}>
                         <span className="material-symbols-outlined text-6xl opacity-10 mb-4" style={{ color: colors.text }}>calendar_today</span>
                         <h3 className="text-xl font-black italic uppercase opacity-40" style={{ color: colors.textMuted }}>Nenhum compromisso</h3>
                         <p className="text-xs font-bold opacity-20 uppercase tracking-widest mt-2" style={{ color: colors.textMuted }}>Nenhum agendamento encontrado para os filtros selecionados.</p>
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
+
+const AdminAgendaCard = ({ item, colors, isToday }: { item: Appointment, colors: any, isToday?: boolean }) => {
+    return (
+        <div className="group border p-5 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+            <div className="flex items-center gap-5 w-full md:w-auto">
+                <div className="size-12 md:size-16 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
+                    <span className="text-xs md:text-sm">{item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}</span>
+                    <span className="text-[8px] opacity-60 uppercase">{isToday ? 'Hoje' : new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                </div>
+                <div className="min-w-0">
+                    <h4 className="font-bold text-base md:text-xl truncate" style={{ color: colors.text }}>{item.customer_name}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>{item.services?.name || 'Serviço'}</span>
+                        <span className="size-1 rounded-full" style={{ backgroundColor: `${colors.text}20` }}></span>
+                        <span className="text-[9px] md:text-[10px] font-black uppercase tracking-widest" style={{ color: colors.primary }}>{item.profiles?.full_name || 'Profissional'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="flex items-center gap-4 w-full md:w-auto">
+                <div className="flex flex-col items-end mr-4 hidden md:flex">
+                    <span className="text-[9px] font-black uppercase tracking-widest opacity-40 italic" style={{ color: colors.textMuted }}>Valor</span>
+                    <span className="text-lg font-black italic tracking-tighter" style={{ color: colors.text }}>R$ {Number(item.services?.price || 0).toFixed(2)}</span>
+                </div>
+                <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border text-center w-full md:w-32 ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
+                    item.status === 'absent' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
+                        item.status === 'paid' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                            'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                    }`}>
+                    {item.status === 'completed' ? 'REALIZADO' :
+                        item.status === 'absent' ? 'AUSENTE' :
+                            item.status === 'paid' ? 'PAGO' :
+                                'AGENDADO'}
+                </div>
+                <Link href="/admin/caixa" className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all shrink-0 hover:bg-black/5" style={{ backgroundColor: `${colors.text}0d`, color: `${colors.text}60` }}>
+                    <span className="material-symbols-outlined text-[20px]">more_vert</span>
+                </Link>
             </div>
         </div>
     );
