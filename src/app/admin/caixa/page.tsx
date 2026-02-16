@@ -20,6 +20,8 @@ export default function CashierCheckoutPage() {
             .select(`
                 id, 
                 total_value, 
+                service_total,
+                product_total,
                 commission_amount,
                 status, 
                 finalized_at,

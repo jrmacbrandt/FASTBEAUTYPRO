@@ -85,6 +85,26 @@ export default function ProductsPage() {
                 </button>
             </div>
 
+            {/* TABS SEPARATION */}
+            <div className="flex p-1.5 rounded-3xl bg-black/40 border border-white/5 w-fit gap-2">
+                <button
+                    onClick={() => setActiveTab('sale')}
+                    className={`flex items-center gap-2 px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'sale' ? 'bg-primary text-black italic shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+                    style={activeTab === 'sale' ? { backgroundColor: colors.primary } : {}}
+                >
+                    <span className="material-symbols-outlined text-sm">shopping_bag</span>
+                    Produtos para Venda
+                </button>
+                <button
+                    onClick={() => setActiveTab('supply')}
+                    className={`flex items-center gap-2 px-8 py-3.5 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === 'supply' ? 'bg-primary text-black italic shadow-lg' : 'text-zinc-500 hover:text-white'}`}
+                    style={activeTab === 'supply' ? { backgroundColor: colors.primary } : {}}
+                >
+                    <span className="material-symbols-outlined text-sm">inventory</span>
+                    Insumos da Loja
+                </button>
+            </div>
+
             {/* Search Bar */}
             <div className="border p-4 flex items-center gap-4 rounded-3xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
                 <span className="material-symbols-outlined" style={{ color: colors.textMuted }}>search</span>

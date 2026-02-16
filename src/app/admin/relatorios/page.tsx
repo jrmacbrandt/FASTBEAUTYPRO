@@ -22,21 +22,19 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // Premium Metric Card Component
-const MetricCard = ({ title, value, subtext, icon, theme, colorIndex = 0 }: any) => {
+const MetricCard = ({ title, value, subtext, icon, theme, colorIndex = 0, headerLabel = "(SEM DESCONTAR TAXAS)" }: any) => {
     const colors = [
-        { primary: theme.primary, bg: `${theme.primary}1a` },
-        { primary: '#10b981', bg: '#10b9811a' }, // Emerald
-        { primary: '#ef4444', bg: '#ef44441a' }, // Red
-        { primary: '#3b82f6', bg: '#3b82f61a' }, // Blue
+        { primary: '#f2b90d', bg: '#f2b90d20' },
+        { primary: '#10b981', bg: '#10b98120' },
+        { primary: '#3b82f6', bg: '#3b82f620' },
+        { primary: '#f43f5e', bg: '#f43f5e20' }
     ];
-
     const activeColor = colors[colorIndex % colors.length];
 
     return (
         <div className="rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
-            style={{ backgroundColor: theme.cardBg }}
-        >
-            <div className="absolute -top-12 -right-12 size-40 rounded-full blur-3xl pointer-events-none transition-all opacity-20 group-hover:opacity-40"
+            style={{ backgroundColor: theme.cardBg }}>
+            <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-20 pointer-events-none"
                 style={{ backgroundColor: activeColor.primary }}
             ></div>
 
@@ -44,7 +42,7 @@ const MetricCard = ({ title, value, subtext, icon, theme, colorIndex = 0 }: any)
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: theme.text }}>{title}</h3>
-                        <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: theme.textMuted }}>(SEM DESCONTAR TAXAS)</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-60" style={{ color: theme.text }}>{headerLabel}</p>
                     </div>
                     <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
                         style={{ backgroundColor: activeColor.bg }}
@@ -242,6 +240,7 @@ export default function ReportsPage() {
                     icon="trending_up"
                     theme={theme}
                     colorIndex={1}
+                    headerLabel="Resultado Final"
                     subtext={
                         <div className="space-y-1 mt-1">
                             <p className="text-[7px] text-zinc-400">TAXAS OPER. SERVIÇOS: R$ {metrics.serviceFees.toFixed(2)}</p>
