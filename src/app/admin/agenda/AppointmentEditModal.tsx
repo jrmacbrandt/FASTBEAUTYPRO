@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { maskCurrency } from '@/lib/masks';
+import CustomDatePicker from '@/components/CustomDatePicker';
 
 interface AppointmentEditModalProps {
     appointment: any;
@@ -158,11 +159,10 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DATA</label>
-                                <input
-                                    type="date"
+                                <CustomDatePicker
                                     value={formData.date}
-                                    onChange={e => setFormData({ ...formData, date: e.target.value })}
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                    onChange={val => setFormData({ ...formData, date: val })}
+                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm"
                                 />
                             </div>
                             <div className="space-y-2">

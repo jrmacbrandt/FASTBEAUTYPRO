@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import Layout from '../../components/Layout';
+import Layout from '../../components/layout/Layout';
+import CustomDatePicker from '../../components/CustomDatePicker';
 
 const BarberHistory: React.FC<{ businessType: 'barber' | 'salon' }> = ({ businessType }) => {
   const isSalon = businessType === 'salon';
@@ -28,14 +29,14 @@ const BarberHistory: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
       <div className="space-y-8 animate-in fade-in duration-500">
         {/* Resumo Rápido */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           <div className={`${isSalon ? 'bg-white shadow-sm border-slate-100' : 'bg-background-card border-white/5'} p-8 rounded-[2rem] border`}>
-              <p className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Atendimentos Filtrados</p>
-              <h4 className="text-4xl font-black italic tracking-tighter">{filteredHistory.length}</h4>
-           </div>
-           <div className={`${isSalon ? 'bg-white shadow-sm border-slate-100' : 'bg-background-card border-white/5'} p-8 rounded-[2rem] border`}>
-              <p className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-1">Valor Total Gerado</p>
-              <h4 className="text-4xl font-black italic tracking-tighter text-primary">R$ {totalValue.toFixed(2)}</h4>
-           </div>
+          <div className={`${isSalon ? 'bg-white shadow-sm border-slate-100' : 'bg-background-card border-white/5'} p-8 rounded-[2rem] border`}>
+            <p className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Atendimentos Filtrados</p>
+            <h4 className="text-4xl font-black italic tracking-tighter">{filteredHistory.length}</h4>
+          </div>
+          <div className={`${isSalon ? 'bg-white shadow-sm border-slate-100' : 'bg-background-card border-white/5'} p-8 rounded-[2rem] border`}>
+            <p className="text-text-muted text-[10px] font-black uppercase tracking-[0.2em] mb-1">Valor Total Gerado</p>
+            <h4 className="text-4xl font-black italic tracking-tighter text-primary">R$ {totalValue.toFixed(2)}</h4>
+          </div>
         </div>
 
         {/* Barra de Filtros */}
@@ -44,8 +45,8 @@ const BarberHistory: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
             <label className="text-[10px] font-black uppercase text-text-muted ml-1 tracking-widest italic">Buscar por Nome</label>
             <div className="relative">
               <span className="material-symbols-outlined absolute left-4 top-3 text-text-muted text-[20px] opacity-40">search</span>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 placeholder="Ex: Marcus Vinicius"
                 className={`w-full ${isSalon ? 'bg-slate-50 border-slate-200' : 'bg-black border-white/10'} border rounded-xl py-3 pl-12 pr-4 outline-none focus:border-primary font-bold text-sm`}
                 value={searchTerm}
@@ -55,14 +56,14 @@ const BarberHistory: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
           </div>
           <div className="w-full md:w-64 space-y-2">
             <label className="text-[10px] font-black uppercase text-text-muted ml-1 tracking-widest italic">Filtrar por Data</label>
-            <input 
-              type="date" 
-              className={`w-full ${isSalon ? 'bg-slate-50 border-slate-200' : 'bg-black border-white/10'} border rounded-xl py-3 px-4 outline-none focus:border-primary font-bold text-sm [color-scheme:dark]`}
+            <CustomDatePicker
+              isSalon={isSalon}
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+              onChange={val => setDateFilter(val)}
+              className={`w-full ${isSalon ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-black border-white/10 text-white'} border rounded-xl p-3 text-sm`}
             />
           </div>
-          <button 
+          <button
             onClick={() => { setSearchTerm(''); setDateFilter(''); }}
             className="h-[46px] px-6 bg-background-deep border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-primary transition-colors"
           >
@@ -93,15 +94,15 @@ const BarberHistory: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
                   <p className="text-text-muted text-[9px] font-black uppercase tracking-[0.2em] italic mb-1">Valor da Comanda</p>
                   <p className="text-2xl font-black italic tracking-tighter">R$ {item.total.toFixed(2)}</p>
                   <div className="flex justify-end gap-2 mt-2">
-                     <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">Realizado</span>
+                    <span className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[8px] font-black uppercase tracking-widest rounded-full border border-emerald-500/20">Realizado</span>
                   </div>
                 </div>
               </div>
             ))
           ) : (
             <div className="text-center py-20 opacity-30">
-               <span className="material-symbols-outlined text-6xl italic">manage_search</span>
-               <p className="font-black uppercase text-xs tracking-[0.4em] mt-4">Nenhum atendimento encontrado</p>
+              <span className="material-symbols-outlined text-6xl italic">manage_search</span>
+              <p className="font-black uppercase text-xs tracking-[0.4em] mt-4">Nenhum atendimento encontrado</p>
             </div>
           )}
         </div>

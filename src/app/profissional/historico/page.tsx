@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import CustomDatePicker from '@/components/CustomDatePicker';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,11 +73,10 @@ export default function ProfessionalHistoryPage() {
                 </div>
                 <div className="w-full md:w-64 space-y-1.5 md:space-y-2">
                     <label className="text-[9px] md:text-[10px] font-black uppercase text-slate-500 ml-1 tracking-widest italic opacity-60">Data</label>
-                    <input
-                        type="date"
-                        className="w-full bg-black border border-white/10 rounded-xl py-3 px-4 outline-none focus:border-[#f2b90d] font-bold text-sm text-white [color-scheme:dark]"
+                    <CustomDatePicker
                         value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value)}
+                        onChange={val => setDateFilter(val)}
+                        className="w-full bg-black border border-white/10 rounded-xl py-3 px-4 text-sm"
                     />
                 </div>
                 <button
