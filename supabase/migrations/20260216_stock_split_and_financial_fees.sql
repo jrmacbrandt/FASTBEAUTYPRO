@@ -1,6 +1,6 @@
 
 -- ================================================================
--- 📦 MIGRATION: ESTOQUE DUPLO E TAXAS FINANCEIRAS v7.0
+-- 📦 MIGRATION: ESTOQUE DUPLO E TAXAS FINANCEIRAS v7.1
 -- ================================================================
 
 -- 1. ADICIONAR CONFIGURAÇÕES DE TAXAS AOS TENANTS
@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS supplies (
     tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     description TEXT,
+    barcode TEXT,
     unit_type TEXT DEFAULT 'un',
     current_stock INTEGER DEFAULT 0,
     min_threshold INTEGER DEFAULT 0,
@@ -37,11 +38,16 @@ ALTER TABLE supplies ENABLE ROW LEVEL SECURITY;
 
 DO $$ 
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'supplies_universal_access') THEN
-        CREATE POLICY "supplies_universal_access" ON supplies FOR ALL TO authenticated
-        USING (public.is_master() OR tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()))
-        WITH CHECK (public.is_master() OR tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid()));
-    END IF;
+    DROP POLICY IF EXISTS "supplies_universal_access" ON supplies;
+    CREATE POLICY "supplies_universal_access" ON supplies FOR ALL TO authenticated
+    USING (
+        (SELECT role FROM profiles WHERE id = auth.uid()) = 'master' 
+        OR tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+    )
+    WITH CHECK (
+        (SELECT role FROM profiles WHERE id = auth.uid()) = 'master' 
+        OR tenant_id = (SELECT tenant_id FROM profiles WHERE id = auth.uid())
+    );
 END $$;
 
 -- 5. HISTÓRICO PARA INSUMOS
