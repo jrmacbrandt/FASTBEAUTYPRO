@@ -15,6 +15,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
         name: '',
         description: '',
         barcode: '',
+        category: 'sale',
         cost_price: '',
         sale_price: '',
         current_stock: '',
@@ -29,9 +30,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 name: productToEdit.name,
                 description: productToEdit.description || '',
                 barcode: productToEdit.barcode || '',
-                name: productToEdit.name,
-                description: productToEdit.description || '',
-                barcode: productToEdit.barcode || '',
+                category: productToEdit.category || (mode === 'supply' ? 'supply' : 'sale'),
                 cost_price: productToEdit.cost_price?.toFixed(2).replace('.', ',') || '',
                 sale_price: productToEdit.sale_price?.toFixed(2).replace('.', ',') || '',
                 current_stock: productToEdit.current_stock?.toString() || '',
@@ -39,7 +38,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 unit_type: productToEdit.unit_type
             });
         }
-    }, [productToEdit]);
+    }, [productToEdit, mode]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,9 +55,6 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
 
             const payload = {
                 tenant_id: profile.tenant_id,
-                name: formData.name,
-                description: formData.description,
-                barcode: formData.barcode,
                 name: formData.name,
                 description: formData.description,
                 barcode: formData.barcode,
@@ -139,17 +135,31 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-8">
-                        <div className="grid grid-cols-1 gap-6">
-                            <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO PRODUTO</label>
-                                <input
-                                    required
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={e => setFormData({ ...formData, name: e.target.value })}
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-zinc-800"
-                                    placeholder="Ex: Vaselina Premium"
-                                />
+                        <div className="space-y-2 col-span-1 md:col-span-2">
+                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO PRODUTO</label>
+                            <input
+                                required
+                                type="text"
+                                value={formData.name}
+                                onChange={e => setFormData({ ...formData, name: e.target.value })}
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all placeholder:text-zinc-800"
+                                placeholder="Ex: Vaselina Premium"
+                            />
+                        </div>
+                        <div className="space-y-2 col-span-1">
+                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">CATEGORIA</label>
+                            <div className="relative">
+                                <select
+                                    value={formData.category}
+                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer pr-10"
+                                >
+                                    <option value="sale">Produto para Venda</option>
+                                    <option value="supply">Insumo da Loja</option>
+                                </select>
+                                <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none text-xl">
+                                    expand_more
+                                </span>
                             </div>
                         </div>
 
