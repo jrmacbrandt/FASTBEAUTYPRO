@@ -10,6 +10,8 @@ export default function CashierCheckoutPage() {
     const [selected, setSelected] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [voucher, setVoucher] = useState<any>(null);
+    const [paymentMethod, setPaymentMethod] = useState<string>('DINHEIRO');
+    const [tenantFees, setTenantFees] = useState<any>({ pix: 0, cash: 0, credit: 4.99, debit: 1.99 });
 
     const fetchPendingOrders = async (tid: string) => {
         setLoading(true);
@@ -70,8 +72,21 @@ export default function CashierCheckoutPage() {
     useEffect(() => {
         if (profile?.tenant_id) {
             fetchPendingOrders(profile.tenant_id);
+            fetchTenantFees(profile.tenant_id);
         }
     }, [profile]);
+
+    const fetchTenantFees = async (tid: string) => {
+        const { data } = await supabase.from('tenants').select('fee_percent_pix, fee_percent_cash, fee_percent_credit, fee_percent_debit').eq('id', tid).single();
+        if (data) {
+            setTenantFees({
+                pix: Number(data.fee_percent_pix) || 0,
+                cash: Number(data.fee_percent_cash) || 0,
+                credit: Number(data.fee_percent_credit) || 4.99,
+                debit: Number(data.fee_percent_debit) || 1.99
+            });
+        }
+    };
 
     useEffect(() => {
         if (selected?.client_id) {
@@ -84,9 +99,23 @@ export default function CashierCheckoutPage() {
     const handleConfirmPayment = async () => {
         if (!selected) return;
 
+        const feeKey = paymentMethod === 'PIX' ? 'pix' : paymentMethod === 'CARTÃO' ? 'credit' : paymentMethod === 'DÉBITO' ? 'debit' : 'cash';
+        const feeRate = (tenantFees[feeKey] || 0) / 100;
+
+        const serviceTotal = Number(selected.raw.service_total) || Number(selected.total_price) || 0;
+        const productTotal = Number(selected.raw.product_total) || 0;
+
+        const feeAmountServices = serviceTotal * feeRate;
+        const feeAmountProducts = productTotal * feeRate;
+
         const { error: orderError } = await supabase
             .from('orders')
-            .update({ status: 'paid' })
+            .update({
+                status: 'paid',
+                payment_method: paymentMethod,
+                fee_amount_services: feeAmountServices,
+                fee_amount_products: feeAmountProducts
+            })
             .eq('id', selected.id);
 
         if (orderError) {
@@ -180,10 +209,23 @@ export default function CashierCheckoutPage() {
                         <div className="space-y-3">
                             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60" style={{ color: colors.textMuted }}>Escolha o Método</p>
                             <div className="grid grid-cols-2 gap-2">
-                                {['PIX', 'CARTÃO', 'DINHEIRO', 'DÉBITO'].map(m => (
-                                    <button key={m} className="bg-black/40 border text-white font-black py-3 md:py-4 rounded-xl hover:text-white transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95"
-                                        style={{ borderColor: colors.border, backgroundColor: `${colors.text}0d`, color: colors.text }}>
-                                        {m}
+                                {[
+                                    { label: 'PIX', val: 'PIX' },
+                                    { label: 'CRÉDITO', val: 'CARTÃO' },
+                                    { label: 'DINHEIRO', val: 'DINHEIRO' },
+                                    { label: 'DÉBITO', val: 'DÉBITO' }
+                                ].map(m => (
+                                    <button
+                                        key={m.val}
+                                        onClick={() => setPaymentMethod(m.val)}
+                                        className={`border font-black py-3 md:py-4 rounded-xl transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95 ${paymentMethod === m.val ? 'bg-primary text-black' : 'bg-black/40 text-white'}`}
+                                        style={{
+                                            borderColor: paymentMethod === m.val ? colors.primary : colors.border,
+                                            backgroundColor: paymentMethod === m.val ? colors.primary : `${colors.text}0d`,
+                                            color: paymentMethod === m.val ? (isSalon ? 'white' : 'black') : colors.text
+                                        }}
+                                    >
+                                        {m.label}
                                     </button>
                                 ))}
                             </div>

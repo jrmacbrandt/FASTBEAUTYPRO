@@ -7,9 +7,10 @@ import { maskCurrency, maskNumber } from '@/lib/masks';
 interface ProductFormProps {
     onClose: () => void;
     productToEdit?: any;
+    mode: 'sale' | 'supply';
 }
 
-export default function ProductForm({ onClose, productToEdit }: ProductFormProps) {
+export default function ProductForm({ onClose, productToEdit, mode }: ProductFormProps) {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -48,16 +49,18 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
             const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single();
             if (!profile?.tenant_id) throw new Error('No tenant found');
 
+            const isSupply = mode === 'supply';
+            const table = isSupply ? 'supplies' : 'products';
+
             const payload = {
                 tenant_id: profile.tenant_id,
                 name: formData.name,
                 description: formData.description,
                 barcode: formData.barcode,
                 cost_price: parseFloat(formData.cost_price.replace(',', '.')),
-                sale_price: parseFloat(formData.sale_price.replace(',', '.')),
+                ...(isSupply ? {} : { sale_price: parseFloat(formData.sale_price.replace(',', '.')) }),
                 min_threshold: parseInt(formData.min_threshold || '0'),
                 unit_type: formData.unit_type,
-                // Only set current_stock if creating new. If editing, stock is managed via transactions.
                 ...(productToEdit ? {} : { current_stock: parseInt(formData.current_stock || '0') })
             };
 
@@ -82,14 +85,14 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                 }
 
                 const { error: updateError } = await supabase
-                    .from('products')
+                    .from(table)
                     .update(payload)
                     .eq('id', productToEdit.id);
                 error = updateError;
                 productId = productToEdit.id;
             } else {
                 const { data: newProd, error: insertError } = await supabase
-                    .from('products')
+                    .from(table)
                     .insert(payload)
                     .select()
                     .single();
@@ -124,7 +127,7 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                 <div className="p-8 md:p-10">
                     <div className="flex justify-between items-center mb-8">
                         <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
-                            {productToEdit ? 'Editar Produto' : 'Novo Produto'}
+                            {productToEdit ? 'Editar' : 'Novo'} {mode === 'supply' ? 'Insumo' : 'Produto'}
                         </h3>
                         <button onClick={onClose} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
                             <span className="material-symbols-outlined text-zinc-400">close</span>
@@ -175,16 +178,18 @@ export default function ProductForm({ onClose, productToEdit }: ProductFormProps
                                     className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Venda (R$)</label>
-                                <input
-                                    type="text"
-                                    placeholder="0,00"
-                                    value={formData.sale_price}
-                                    onChange={e => setFormData({ ...formData, sale_price: maskCurrency(e.target.value) })}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
-                                />
-                            </div>
+                            {mode === 'sale' && (
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Venda (R$)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="0,00"
+                                        value={formData.sale_price}
+                                        onChange={e => setFormData({ ...formData, sale_price: maskCurrency(e.target.value) })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                    />
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 <label className="text-[10px] font-black uppercase text-zinc-500 ml-1">Unidade</label>
                                 <div className="relative">

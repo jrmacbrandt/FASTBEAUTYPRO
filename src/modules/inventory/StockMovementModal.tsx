@@ -6,9 +6,10 @@ import { supabase } from '@/lib/supabase';
 interface StockMovementModalProps {
     onClose: () => void;
     product: any;
+    mode: 'sale' | 'supply';
 }
 
-export default function StockMovementModal({ onClose, product }: StockMovementModalProps) {
+export default function StockMovementModal({ onClose, product, mode }: StockMovementModalProps) {
     const [type, setType] = useState<'IN' | 'OUT'>('IN');
     const [quantity, setQuantity] = useState(1);
     const [reason, setReason] = useState('');
@@ -24,17 +25,34 @@ export default function StockMovementModal({ onClose, product }: StockMovementMo
             const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single();
             if (!profile?.tenant_id) throw new Error('No tenant found');
 
-            // Insert Transaction (Trigger will update Stock)
-            const { error } = await supabase.from('stock_transactions').insert({
+            const isSupply = mode === 'supply';
+            const table = isSupply ? 'supplies' : 'products';
+
+            // Insert Transaction
+            const { error: txError } = await supabase.from('stock_transactions').insert({
                 tenant_id: profile.tenant_id,
-                product_id: product.id,
+                [isSupply ? 'supply_id' : 'product_id']: product.id,
                 type: type,
                 quantity: quantity,
                 reason: reason || (type === 'IN' ? 'Entrada Manual' : 'Saída Manual'),
                 created_by: user.id
             });
 
-            if (error) throw error;
+            if (txError) throw txError;
+
+            // Se for Insumo, fazemos a atualização manual do estoque para garantir (ou se não houver trigger na nova tabela)
+            if (isSupply) {
+                const newStock = type === 'IN'
+                    ? (product.current_stock + quantity)
+                    : (product.current_stock - quantity);
+
+                const { error: updateError } = await supabase
+                    .from('supplies')
+                    .update({ current_stock: newStock })
+                    .eq('id', product.id);
+
+                if (updateError) throw updateError;
+            }
             onClose();
         } catch (err: any) {
             alert('Erro ao movimentar: ' + err.message);

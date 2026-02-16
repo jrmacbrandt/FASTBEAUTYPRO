@@ -122,6 +122,8 @@ export default function ProfessionalAgendaPage() {
                 appointment_id: selectedClient.id,
                 barber_id: session.user.id,
                 total_value: totalValue,
+                service_total: serviceTotal,
+                product_total: productTotal,
                 commission_amount: commissionAmount,
                 status: 'pending_payment',
                 items: cart // Optional: store items if column exists, otherwise ignore

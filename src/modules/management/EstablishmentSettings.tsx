@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 import Layout from '../../components/Layout';
 
 type CouponType = 'percentage' | 'fixed';
@@ -39,19 +40,71 @@ const EstablishmentSettings: React.FC<{ businessType: 'barber' | 'salon' }> = ({
   const [coupons, setCoupons] = useState<Coupon[]>([{ id: '1', code: 'PROMO10', type: 'percentage', scope: 'both', value: '10', status: 'active', usage: 12 }]);
 
   useEffect(() => {
-    const savedTheme = localStorage.getItem('elite_tenant_theme');
-    if (savedTheme) {
-      const theme = JSON.parse(savedTheme);
-      setOwnerData(prev => ({ ...prev, bookingPrimaryColor: theme.primary, bookingSecondaryColor: theme.secondary || (isSalon ? '#f1f5f9' : '#09090b') }));
-    } else {
-      setOwnerData(prev => ({ ...prev, bookingPrimaryColor: isSalon ? '#86198f' : '#f2b90d', bookingSecondaryColor: isSalon ? '#f1f5f9' : '#09090b' }));
+    async function loadTenantData() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+      if (!profile?.tenant_id) return;
+
+      const { data: tenant } = await supabase.from('tenants').select('*').eq('id', profile.tenant_id).single();
+      if (tenant) {
+        setOwnerData({
+          ownerName: tenant.owner_name || (isSalon ? 'Helena Smith' : 'Michael Carter'),
+          ownerCpfCnpj: tenant.owner_document || '12.345.678/0001-99',
+          unitName: tenant.name,
+          whatsapp: tenant.whatsapp || '(11) 99999-9999',
+          slug: tenant.slug,
+          pixKey: tenant.pix_key || 'financeiro@fastbeauty.pro',
+          bookingPrimaryColor: tenant.primary_color || (isSalon ? '#86198f' : '#f2b90d'),
+          bookingSecondaryColor: tenant.secondary_color || (isSalon ? '#f1f5f9' : '#09090b'),
+          logoUrl: tenant.logo_url || ''
+        });
+        setPaymentFees({
+          pix: tenant.fee_percent_pix?.toString() || '0.00',
+          cash: tenant.fee_percent_cash?.toString() || '0.00',
+          credit: tenant.fee_percent_credit?.toString() || '4.99',
+          debit: tenant.fee_percent_debit?.toString() || '1.99'
+        });
+      }
     }
+    loadTenantData();
   }, [isSalon]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    localStorage.setItem('elite_tenant_theme', JSON.stringify({ primary: ownerData.bookingPrimaryColor, secondary: ownerData.bookingSecondaryColor }));
-    setTimeout(() => { setIsSaving(false); alert('Configurações salvas!'); }, 1000);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão não encontrada');
+
+      const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', session.user.id).single();
+      if (!profile?.tenant_id) throw new Error('Unidade não encontrada');
+
+      const { error } = await supabase
+        .from('tenants')
+        .update({
+          name: ownerData.unitName,
+          slug: ownerData.slug,
+          owner_name: ownerData.ownerName,
+          owner_document: ownerData.ownerCpfCnpj,
+          whatsapp: ownerData.whatsapp,
+          pix_key: ownerData.pixKey,
+          primary_color: ownerData.bookingPrimaryColor,
+          secondary_color: ownerData.bookingSecondaryColor,
+          fee_percent_pix: parseFloat(paymentFees.pix),
+          fee_percent_cash: parseFloat(paymentFees.cash),
+          fee_percent_credit: parseFloat(paymentFees.credit),
+          fee_percent_debit: parseFloat(paymentFees.debit)
+        })
+        .eq('id', profile.tenant_id);
+
+      if (error) throw error;
+      alert('Configurações salvas com sucesso!');
+    } catch (err: any) {
+      alert('Erro ao salvar: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const copyToClipboard = (text: string) => {
@@ -81,12 +134,61 @@ const EstablishmentSettings: React.FC<{ businessType: 'barber' | 'salon' }> = ({
           <div className={`${isSalon ? 'bg-white shadow-xl' : 'bg-background-card'} p-10 rounded-[3rem] border border-white/5 space-y-8 animate-in fade-in`}>
             <h4 className="text-xl font-black italic uppercase text-text-main">Dados do Estabelecimento</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <input type="text" className={`w-full ${isSalon ? 'bg-slate-50' : 'bg-black'} border border-slate-500/10 rounded-2xl p-4 font-bold`} value={ownerData.unitName} onChange={e => setOwnerData({...ownerData, unitName: e.target.value})} />
-              <div className="relative">
-                <span className="absolute left-4 top-4 text-primary font-black opacity-40">fastbeauty.pro/</span>
-                <input type="text" className={`w-full ${isSalon ? 'bg-slate-50' : 'bg-black'} border border-slate-500/10 rounded-2xl p-4 pl-[125px] font-bold`} value={ownerData.slug} onChange={e => setOwnerData({...ownerData, slug: e.target.value})} />
-                <button onClick={() => copyToClipboard(`fastbeauty.pro/${ownerData.slug}`)} className="absolute right-4 top-3.5 size-10 flex items-center justify-center text-primary"><span className="material-symbols-outlined">content_copy</span></button>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-text-muted ml-1">Nome da Unidade</label>
+                <input type="text" className={`w-full ${isSalon ? 'bg-slate-50 text-slate-900 border-slate-200' : 'bg-black text-white border-white/5'} border rounded-2xl p-4 font-bold`} value={ownerData.unitName} onChange={e => setOwnerData({ ...ownerData, unitName: e.target.value })} />
               </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-text-muted ml-1">Endereço Personalizado (SLUG)</label>
+                <div className="relative">
+                  <span className="absolute left-4 top-4 text-primary font-black opacity-40">fastbeauty.pro/</span>
+                  <input type="text" className={`w-full ${isSalon ? 'bg-slate-50 text-slate-900 border-slate-200' : 'bg-black text-white border-white/5'} border rounded-2xl p-4 pl-[125px] font-bold`} value={ownerData.slug} onChange={e => setOwnerData({ ...ownerData, slug: e.target.value })} />
+                  <button onClick={() => copyToClipboard(`fastbeauty.pro/${ownerData.slug}`)} className="absolute right-4 top-3.5 size-10 flex items-center justify-center text-primary transition-all active:scale-95"><span className="material-symbols-outlined">content_copy</span></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'finance' && (
+          <div className={`${isSalon ? 'bg-white shadow-xl' : 'bg-background-card'} p-10 rounded-[3rem] border border-white/5 space-y-8 animate-in fade-in`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="text-xl font-black italic uppercase text-text-main">Taxas Operacionais</h4>
+                <p className="text-[10px] font-bold text-text-muted uppercase tracking-widest mt-1 italic">Defina as taxas cobradas pelas operadoras.</p>
+              </div>
+              <div className="size-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
+                <span className="material-symbols-outlined text-emerald-500 text-3xl">account_balance_wallet</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { label: 'PIX (%)', key: 'pix', icon: 'qr_code_2' },
+                { label: 'Crédito (%)', key: 'credit', icon: 'credit_card' },
+                { label: 'Débito (%)', key: 'debit', icon: 'credit_card' },
+                { label: 'Dinheiro (%)', key: 'cash', icon: 'payments' }
+              ].map(field => (
+                <div key={field.key} className={`p-6 rounded-3xl border transition-all ${isSalon ? 'bg-slate-50 border-slate-100' : 'bg-black/40 border-white/5'}`}>
+                  <div className="flex items-center gap-2 mb-4 opacity-40">
+                    <span className="material-symbols-outlined text-sm">{field.icon}</span>
+                    <label className="text-[9px] font-black uppercase tracking-widest">{field.label}</label>
+                  </div>
+                  <input
+                    type="number"
+                    step="0.01"
+                    className="w-full bg-transparent border-none p-0 text-3xl font-black italic tracking-tighter focus:ring-0 text-primary"
+                    value={paymentFees[field.key as keyof typeof paymentFees]}
+                    onChange={e => setPaymentFees({ ...paymentFees, [field.key]: e.target.value })}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="p-6 rounded-2xl bg-primary/5 border border-primary/10">
+              <p className="text-[10px] font-bold text-primary uppercase tracking-widest text-center italic">
+                * Estas taxas serão descontadas automaticamente no cálculo do Lucro Líquido nos Relatórios Intelligence.
+              </p>
             </div>
           </div>
         )}

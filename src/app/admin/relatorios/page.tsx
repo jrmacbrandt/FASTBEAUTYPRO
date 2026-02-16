@@ -44,7 +44,7 @@ const MetricCard = ({ title, value, subtext, icon, theme, colorIndex = 0 }: any)
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: theme.text }}>{title}</h3>
-                        <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: theme.textMuted }}>Métrica Financeira</p>
+                        <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: theme.textMuted }}>(SEM DESCONTAR TAXAS)</p>
                     </div>
                     <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
                         style={{ backgroundColor: activeColor.bg }}
@@ -71,9 +71,12 @@ export default function ReportsPage() {
     const { profile, loading: profileLoading, theme, businessType } = useProfile();
     const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState({
-        revenue: 0,
-        cost: 0,
+        serviceRevenue: 0,
+        productRevenue: 0,
         commissions: 0,
+        serviceFees: 0,
+        productFees: 0,
+        totalFees: 0,
         profit: 0
     });
     const [chartData, setChartData] = useState<any[]>([]);
@@ -93,10 +96,10 @@ export default function ReportsPage() {
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-            // 1. Fetch Paid Orders (Revenue + Commissions)
+            // 1. Fetch Paid Orders (Full Detail)
             const { data: orders } = await supabase
                 .from('orders')
-                .select('total_value, commission_amount, finalized_at, created_at')
+                .select('total_value, commission_amount, service_total, product_total, fee_amount_services, fee_amount_products, finalized_at, created_at')
                 .eq('tenant_id', tenantId)
                 .eq('status', 'paid')
                 .gte('created_at', thirtyDaysAgo.toISOString());
@@ -116,9 +119,12 @@ export default function ReportsPage() {
                 .gte('created_at', thirtyDaysAgo.toISOString());
 
             // --- Calculation Logic ---
-            let totalRevenue = 0;
-            let totalCost = 0;
+            let totalServiceRevenue = 0;
+            let totalProductRevenue = 0;
             let totalCommissions = 0;
+            let totalServiceFees = 0;
+            let totalProductFees = 0;
+
             const dailyStats: Record<string, { revenue: number, cost: number }> = {};
 
             // Initialize last 7 days in dailyStats
@@ -129,37 +135,37 @@ export default function ReportsPage() {
                 dailyStats[dateKey] = { revenue: 0, cost: 0 };
             }
 
-            // Process Revenue and Commissions
+            // Process Orders Breakdown
             orders?.forEach(order => {
-                const val = Number(order.total_value) || 0;
+                const sRev = Number(order.service_total) || Number(order.total_value) || 0;
+                const pRev = Number(order.product_total) || 0;
                 const comm = Number(order.commission_amount) || 0;
-                totalRevenue += val;
+                const sFee = Number(order.fee_amount_services) || 0;
+                const pFee = Number(order.fee_amount_products) || 0;
+
+                totalServiceRevenue += sRev;
+                totalProductRevenue += pRev;
                 totalCommissions += comm;
+                totalServiceFees += sFee;
+                totalProductFees += pFee;
 
                 const d = new Date(order.finalized_at || order.created_at);
                 const dateKey = d.toLocaleDateString('pt-BR');
                 if (dailyStats[dateKey]) {
-                    dailyStats[dateKey].revenue += val;
+                    dailyStats[dateKey].revenue += (sRev + pRev);
                 }
             });
 
-            // Process Costs
-            transactions?.forEach((tx: any) => {
-                const cost = (tx.quantity || 0) * (tx.products?.cost_price || 0);
-                totalCost += cost;
-                const d = new Date(tx.created_at);
-                const dateKey = d.toLocaleDateString('pt-BR');
-                if (dailyStats[dateKey]) {
-                    dailyStats[dateKey].cost += cost;
-                }
-            });
-
-            const netProfit = totalRevenue - totalCost - totalCommissions;
+            const totalFees = totalServiceFees + totalProductFees;
+            const netProfit = (totalServiceRevenue + totalProductRevenue) - totalCommissions - totalFees;
 
             setMetrics({
-                revenue: totalRevenue,
-                cost: totalCost,
+                serviceRevenue: totalServiceRevenue,
+                productRevenue: totalProductRevenue,
                 commissions: totalCommissions,
+                serviceFees: totalServiceFees,
+                productFees: totalProductFees,
+                totalFees: totalFees,
                 profit: netProfit
             });
 
@@ -210,20 +216,18 @@ export default function ReportsPage() {
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard
-                    title="Receita Bruta"
-                    value={`R$ ${metrics.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                    title="Receita Bruta Serviços"
+                    value={`R$ ${metrics.serviceRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     icon="payments"
                     theme={theme}
                     colorIndex={0}
-                    subtext="Vendas finalizadas"
                 />
                 <MetricCard
-                    title="Custo de Vendas"
-                    value={`R$ ${metrics.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                    title="Receita Bruta Vendas"
+                    value={`R$ ${metrics.productRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     icon="inventory_2"
                     theme={theme}
                     colorIndex={2}
-                    subtext="Saída de estoque"
                 />
                 <MetricCard
                     title="Comissões Pagas"
@@ -231,7 +235,6 @@ export default function ReportsPage() {
                     icon="handshake"
                     theme={theme}
                     colorIndex={3}
-                    subtext="Rateio com equipe"
                 />
                 <MetricCard
                     title="Lucro Líquido"
@@ -239,7 +242,13 @@ export default function ReportsPage() {
                     icon="trending_up"
                     theme={theme}
                     colorIndex={1}
-                    subtext="Faturamento - (Custos + Comissões)"
+                    subtext={
+                        <div className="space-y-1 mt-1">
+                            <p className="text-[7px] text-zinc-400">TAXAS OPER. SERVIÇOS: R$ {metrics.serviceFees.toFixed(2)}</p>
+                            <p className="text-[7px] text-zinc-400">TAXAS OPER. PRODUTOS: R$ {metrics.productFees.toFixed(2)}</p>
+                            <p className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">TOTAL DE TAXAS OPER.: R$ {metrics.totalFees.toFixed(2)}</p>
+                        </div>
+                    }
                 />
             </div>
 

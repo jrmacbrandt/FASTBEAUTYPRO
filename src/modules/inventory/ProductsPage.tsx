@@ -6,6 +6,7 @@ import { useProfile } from '@/hooks/useProfile';
 
 export default function ProductsPage() {
     const { profile, loading: profileLoading, theme: colors } = useProfile();
+    const [activeTab, setActiveTab] = useState<'sale' | 'supply'>('sale');
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,18 +18,19 @@ export default function ProductsPage() {
         if (profile?.tenant_id) {
             fetchProducts(profile.tenant_id);
         }
-    }, [profile]);
+    }, [profile, activeTab]);
 
     const fetchProducts = async (tid: string) => {
         setLoading(true);
+        const table = activeTab === 'sale' ? 'products' : 'supplies';
         const { data, error } = await supabase
-            .from('products')
+            .from(table)
             .select('*')
             .eq('tenant_id', tid)
             .order('name', { ascending: true });
 
         if (error) {
-            console.error('Error fetching products:', error);
+            console.error(`Error fetching ${table}:`, error);
         } else {
             setProducts(data || []);
         }
@@ -150,8 +152,20 @@ export default function ProductsPage() {
                 </div>
             )}
 
-            {isFormOpen && <ProductForm onClose={handleCloseForm} productToEdit={selectedProduct} />}
-            {isMovementOpen && selectedProduct && <StockMovementModal onClose={handleCloseMovement} product={selectedProduct} />}
+            {isFormOpen && (
+                <ProductForm
+                    onClose={handleCloseForm}
+                    productToEdit={selectedProduct}
+                    mode={activeTab}
+                />
+            )}
+            {isMovementOpen && selectedProduct && (
+                <StockMovementModal
+                    onClose={handleCloseMovement}
+                    product={selectedProduct}
+                    mode={activeTab}
+                />
+            )}
         </div>
     );
 }
