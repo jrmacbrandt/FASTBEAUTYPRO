@@ -360,8 +360,8 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
-                                        className="p-8 rounded-[2.5rem] bg-white/[0.03] border border-white/5 hover:border-[#f2b90d]/30 transition-all text-left group active:scale-[0.98]"
-                                        style={{ borderColor: selection.service?.id === s.id ? theme.primary : '' }}
+                                        className="p-8 rounded-[2.5rem] bg-white/50 border border-white hover:border-white/20 transition-all text-left group active:scale-[0.98]"
+                                        style={{ borderColor: selection.service?.id === s.id ? theme.primary : '#ffffff' }}
                                     >
                                         <div className="flex justify-between items-center">
                                             <span className="text-white text-2xl font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors">{s.name}</span>
@@ -388,8 +388,8 @@ Aguardo sua confirmação! 😊`;
                                         onClick={() => { setSelection({ ...selection, barber: b }); setStep(3); }}
                                         className="flex flex-col items-center group active:scale-[0.98]"
                                     >
-                                        <div className="size-32 rounded-[2.5rem] overflow-hidden border-2 border-white/5 group-hover:border-[#f2b90d]/50 transition-all mb-4 relative"
-                                            style={{ borderColor: selection.barber?.id === b.id ? theme.primary : '' }}>
+                                        <div className="size-32 rounded-[2.5rem] overflow-hidden border-2 border-white bg-white/50 group-hover:border-white/20 transition-all mb-4 relative"
+                                            style={{ borderColor: selection.barber?.id === b.id ? theme.primary : '#ffffff' }}>
                                             {b.avatar_url ? (
                                                 <img src={b.avatar_url} alt={b.full_name} className="size-full object-cover grayscale group-hover:grayscale-0 transition-all" />
                                             ) : (
@@ -433,8 +433,8 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={t}
                                         onClick={() => { setSelection({ ...selection, time: t }); setStep(5); }}
-                                        className="py-6 rounded-2xl md:rounded-3xl bg-white/[0.03] border border-white/5 text-white font-black italic text-xl hover:border-[#f2b90d]/50 transition-all active:scale-[0.98]"
-                                        style={{ borderColor: selection.time === t ? theme.primary : '', color: selection.time === t ? theme.primary : '' }}
+                                        className="py-6 rounded-2xl md:rounded-3xl bg-white/50 border border-white text-white font-black italic text-xl hover:border-white/20 transition-all active:scale-[0.98]"
+                                        style={{ borderColor: selection.time === t ? theme.primary : '#ffffff', color: selection.time === t ? theme.primary : '#ffffff' }}
                                     >
                                         {t}
                                     </button>
@@ -455,7 +455,7 @@ Aguardo sua confirmação! 😊`;
                                 <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-2">{tenant.name}</p>
                             </div>
 
-                            <div className="bg-white/[0.03] border border-white/5 rounded-[3rem] p-10 space-y-6 mb-12 shadow-2xl relative overflow-hidden">
+                            <div className="bg-white/50 border border-white hover:border-white/20 rounded-[3rem] p-10 space-y-6 mb-12 shadow-2xl relative overflow-hidden transition-all">
                                 <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
                                     <span className="material-symbols-outlined text-8xl" style={{ color: theme.primary }}>content_cut</span>
                                 </div>
@@ -714,7 +714,7 @@ const DateSelector = ({ onSelect, theme }: { onSelect: (date: string) => void, t
     const today = getTodaySP();
 
     return (
-        <div className="w-full max-w-md mx-auto bg-white/[0.03] border-2 border-white/5 rounded-[2.5rem] p-6 md:p-8">
+        <div className="w-full max-w-md mx-auto bg-white/50 border-2 border-white hover:border-white/20 rounded-[2.5rem] p-6 md:p-8 transition-all">
             {/* Header with month/year navigation */}
             <div className="flex items-center justify-between mb-6">
                 <button
