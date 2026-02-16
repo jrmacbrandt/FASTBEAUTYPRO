@@ -190,7 +190,7 @@ export default function ReportsPage() {
     }
 
     return (
-        <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-1000 pb-24" style={{ color: theme.text }}>
+        <div className="p-4 md:p-8 space-y-8 pb-24" style={{ color: theme.text }}>
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-8 gap-4">
                 <div className="relative">
                     <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-12 rounded-full blur-sm opacity-50" style={{ backgroundColor: theme.primary }}></div>

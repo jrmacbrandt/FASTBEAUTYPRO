@@ -513,7 +513,7 @@ function CRMContent() {
     }
 
     return (
-        <div className="p-4 md:p-8 space-y-8 animate-in fade-in duration-1000 pb-24" style={{ color: colors?.text }}>
+        <div className="p-4 md:p-8 space-y-8 pb-24" style={{ color: colors?.text }}>
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-8 gap-4">
                 <div className="relative">
                     <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-12 rounded-full blur-sm opacity-50" style={{ backgroundColor: colors?.primary || '#f2b90d' }}></div>
@@ -1260,10 +1260,11 @@ function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLa
     return (
         <div
             onClick={onClick}
-            className={`border p-6 rounded-[2rem] transition-all duration-500 group hover:translate-y-[-4px] shadow-xl overflow-hidden relative ${onClick ? 'cursor-pointer' : ''}`}
+            className={`p-6 rounded-[2rem] transition-all group hover:translate-y-[-4px] shadow-xl overflow-hidden relative ${onClick ? 'cursor-pointer' : ''}`}
             style={{
                 backgroundColor: colors?.cardBg || '#121214',
-                borderColor: isActive ? (colors?.primary || '#f2b90d') : (alert ? '#ef44444d' : `${colors?.border || '#27272a'}40`),
+                border: '1px solid',
+                borderColor: isActive ? (colors?.primary || '#f2b90d') : (alert ? '#ef44444d' : `${colors?.border || '#27272a'}1a`),
                 boxShadow: isActive ? `0 0 0 4px ${colors?.primary || '#f2b90d'}1a` : undefined
             }}
         >
