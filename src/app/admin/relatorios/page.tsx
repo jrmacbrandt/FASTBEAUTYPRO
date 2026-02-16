@@ -42,7 +42,7 @@ const MetricCard = ({ title, value, subtext, icon, theme, colorIndex = 0, header
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: theme.text }}>{title}</h3>
-                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-60" style={{ color: theme.text }}>{headerLabel}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60" style={{ color: theme.text }}>{headerLabel}</p>
                     </div>
                     <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
                         style={{ backgroundColor: activeColor.bg }}
@@ -242,10 +242,10 @@ export default function ReportsPage() {
                     colorIndex={1}
                     headerLabel="Resultado Final"
                     subtext={
-                        <div className="space-y-1 mt-1">
-                            <p className="text-[7px] text-zinc-400">TAXAS OPER. SERVIÇOS: R$ {metrics.serviceFees.toFixed(2)}</p>
-                            <p className="text-[7px] text-zinc-400">TAXAS OPER. PRODUTOS: R$ {metrics.productFees.toFixed(2)}</p>
-                            <p className="text-[8px] font-black text-rose-500 uppercase tracking-tighter">TOTAL DE TAXAS OPER.: R$ {metrics.totalFees.toFixed(2)}</p>
+                        <div className="space-y-1.5 mt-3 border-t border-white/5 pt-3">
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">TAXAS OPER. SERVIÇOS: R$ {metrics.serviceFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">TAXAS OPER. PRODUTOS: R$ {metrics.productFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-[11px] font-black text-rose-500 uppercase tracking-tighter">TOTAL DE TAXAS OPER.: R$ {metrics.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </div>
                     }
                 />
