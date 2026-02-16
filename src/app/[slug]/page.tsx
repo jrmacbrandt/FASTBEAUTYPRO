@@ -360,8 +360,8 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
-                                        className="p-8 rounded-[2.5rem] bg-white/50 border border-white hover:border-white/20 transition-all text-left group active:scale-[0.98]"
-                                        style={{ borderColor: selection.service?.id === s.id ? theme.primary : '#ffffff' }}
+                                        className={`p-8 rounded-[2.5rem] bg-white/50 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white hover:border-white/20'}`}
+                                        style={{ borderColor: selection.service?.id === s.id ? theme.primary : undefined }}
                                     >
                                         <div className="flex justify-between items-center">
                                             <span className="text-white text-2xl font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors">{s.name}</span>
@@ -388,8 +388,8 @@ Aguardo sua confirmação! 😊`;
                                         onClick={() => { setSelection({ ...selection, barber: b }); setStep(3); }}
                                         className="flex flex-col items-center group active:scale-[0.98]"
                                     >
-                                        <div className="size-32 rounded-[2.5rem] overflow-hidden border-2 border-white bg-white/50 group-hover:border-white/20 transition-all mb-4 relative"
-                                            style={{ borderColor: selection.barber?.id === b.id ? theme.primary : '#ffffff' }}>
+                                        <div className={`size-32 rounded-[2.5rem] overflow-hidden border-2 bg-white/50 transition-all mb-4 relative ${selection.barber?.id === b.id ? '' : 'border-white group-hover:border-white/20'}`}
+                                            style={{ borderColor: selection.barber?.id === b.id ? theme.primary : undefined }}>
                                             {b.avatar_url ? (
                                                 <img src={b.avatar_url} alt={b.full_name} className="size-full object-cover grayscale group-hover:grayscale-0 transition-all" />
                                             ) : (
@@ -433,8 +433,11 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={t}
                                         onClick={() => { setSelection({ ...selection, time: t }); setStep(5); }}
-                                        className="py-6 rounded-2xl md:rounded-3xl bg-white/50 border border-white text-white font-black italic text-xl hover:border-white/20 transition-all active:scale-[0.98]"
-                                        style={{ borderColor: selection.time === t ? theme.primary : '#ffffff', color: selection.time === t ? theme.primary : '#ffffff' }}
+                                        className={`py-6 rounded-2xl md:rounded-3xl bg-white/50 border font-black italic text-xl transition-all active:scale-[0.98] ${selection.time === t ? '' : 'border-white text-white hover:border-white/20'}`}
+                                        style={{
+                                            borderColor: selection.time === t ? theme.primary : undefined,
+                                            color: selection.time === t ? theme.primary : undefined
+                                        }}
                                     >
                                         {t}
                                     </button>
@@ -765,7 +768,7 @@ const DateSelector = ({ onSelect, theme }: { onSelect: (date: string) => void, t
                             className={`aspect-square rounded-xl flex items-center justify-center font-black italic text-lg transition-all ${isPast
                                 ? 'text-white/10 cursor-not-allowed'
                                 : isSelected
-                                    ? 'bg-[#f2b90d] text-black scale-110 shadow-lg'
+                                    ? 'text-black scale-110 shadow-lg'
                                     : 'text-white hover:bg-white/10 hover:scale-105 active:scale-95'
                                 }`}
                             style={isSelected ? { backgroundColor: theme.primary } : {}}
