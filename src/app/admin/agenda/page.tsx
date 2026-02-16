@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 import { useProfile } from '@/hooks/useProfile';
+import AppointmentEditModal from './AppointmentEditModal';
 
 interface Professional {
     id: string;
@@ -33,6 +34,8 @@ export default function AdminAgendaPage() {
     const [selectedProfessionalId, setSelectedProfessionalId] = useState<string>('all');
     const [appointments, setAppointments] = useState<Appointment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const fetchSidebarData = async (tid: string) => {
         const { data } = await supabase
@@ -127,7 +130,7 @@ export default function AdminAgendaPage() {
                         </div>
                         <div className="grid gap-4">
                             {todayItems.map(item => (
-                                <AdminAgendaCard key={item.id} item={item} colors={colors} isToday />
+                                <AdminAgendaCard key={item.id} item={item} colors={colors} isToday onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }} />
                             ))}
                         </div>
                     </div>
@@ -142,7 +145,7 @@ export default function AdminAgendaPage() {
                         </div>
                         <div className="grid gap-4">
                             {upcomingItems.map(item => (
-                                <AdminAgendaCard key={item.id} item={item} colors={colors} />
+                                <AdminAgendaCard key={item.id} item={item} colors={colors} onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }} />
                             ))}
                         </div>
                     </div>
@@ -156,11 +159,20 @@ export default function AdminAgendaPage() {
                     </div>
                 )}
             </div>
+
+            {isEditModalOpen && selectedAppointment && (
+                <AppointmentEditModal
+                    appointment={selectedAppointment}
+                    onClose={() => { setIsEditModalOpen(false); setSelectedAppointment(null); }}
+                    onSave={() => fetchAgenda(profile?.tenant_id || '')}
+                    colors={colors}
+                />
+            )}
         </div>
     );
 }
 
-const AdminAgendaCard = ({ item, colors, isToday }: { item: Appointment, colors: any, isToday?: boolean }) => {
+const AdminAgendaCard = ({ item, colors, isToday, onEdit }: { item: Appointment, colors: any, isToday?: boolean, onEdit: (appt: Appointment) => void }) => {
     return (
         <div className="group border p-5 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
             <div className="flex items-center gap-5 w-full md:w-auto">
@@ -186,16 +198,22 @@ const AdminAgendaCard = ({ item, colors, isToday }: { item: Appointment, colors:
                 <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border text-center w-full md:w-32 ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
                     item.status === 'absent' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
                         item.status === 'paid' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                            'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                            item.status === 'cancelled' ? 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20' :
+                                'bg-amber-500/10 text-amber-500 border-amber-500/20'
                     }`}>
                     {item.status === 'completed' ? 'REALIZADO' :
                         item.status === 'absent' ? 'AUSENTE' :
                             item.status === 'paid' ? 'PAGO' :
-                                'AGENDADO'}
+                                item.status === 'cancelled' ? 'CANCELADO' :
+                                    'AGENDADO'}
                 </div>
-                <Link href="/admin/caixa" className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all shrink-0 hover:bg-black/5" style={{ backgroundColor: `${colors.text}0d`, color: `${colors.text}60` }}>
-                    <span className="material-symbols-outlined text-[20px]">more_vert</span>
-                </Link>
+                <button
+                    onClick={() => onEdit(item)}
+                    className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all shrink-0 hover:bg-black/5"
+                    style={{ backgroundColor: `${colors.text}0d`, color: `${colors.text}60` }}
+                >
+                    <span className="material-symbols-outlined text-[20px]">edit</span>
+                </button>
             </div>
         </div>
     );
