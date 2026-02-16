@@ -73,8 +73,8 @@ export default function ReportsPage() {
     const [metrics, setMetrics] = useState({
         revenue: 0,
         cost: 0,
-        profit: 0,
-        margin: 0
+        commissions: 0,
+        profit: 0
     });
     const [chartData, setChartData] = useState<any[]>([]);
 
@@ -93,10 +93,10 @@ export default function ReportsPage() {
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-            // 1. Fetch Paid Orders (Revenue)
+            // 1. Fetch Paid Orders (Revenue + Commissions)
             const { data: orders } = await supabase
                 .from('orders')
-                .select('total_value, finalized_at, created_at')
+                .select('total_value, commission_amount, finalized_at, created_at')
                 .eq('tenant_id', tenantId)
                 .eq('status', 'paid')
                 .gte('created_at', thirtyDaysAgo.toISOString());
@@ -118,9 +118,10 @@ export default function ReportsPage() {
             // --- Calculation Logic ---
             let totalRevenue = 0;
             let totalCost = 0;
+            let totalCommissions = 0;
             const dailyStats: Record<string, { revenue: number, cost: number }> = {};
 
-            // Initialize last 7 days in dailyStats to ensure chart shows data even with gaps
+            // Initialize last 7 days in dailyStats
             for (let i = 6; i >= 0; i--) {
                 const date = new Date();
                 date.setDate(date.getDate() - i);
@@ -128,10 +129,13 @@ export default function ReportsPage() {
                 dailyStats[dateKey] = { revenue: 0, cost: 0 };
             }
 
-            // Process Revenue
+            // Process Revenue and Commissions
             orders?.forEach(order => {
                 const val = Number(order.total_value) || 0;
+                const comm = Number(order.commission_amount) || 0;
                 totalRevenue += val;
+                totalCommissions += comm;
+
                 const d = new Date(order.finalized_at || order.created_at);
                 const dateKey = d.toLocaleDateString('pt-BR');
                 if (dailyStats[dateKey]) {
@@ -150,14 +154,13 @@ export default function ReportsPage() {
                 }
             });
 
-            const netProfit = totalRevenue - totalCost;
-            const margin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0';
+            const netProfit = totalRevenue - totalCost - totalCommissions;
 
             setMetrics({
                 revenue: totalRevenue,
                 cost: totalCost,
-                profit: netProfit,
-                margin: Number(margin)
+                commissions: totalCommissions,
+                profit: netProfit
             });
 
             const formattedChartData = Object.keys(dailyStats).map(date => ({
@@ -223,20 +226,20 @@ export default function ReportsPage() {
                     subtext="Saída de estoque"
                 />
                 <MetricCard
+                    title="Comissões Pagas"
+                    value={`R$ ${metrics.commissions.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                    icon="handshake"
+                    theme={theme}
+                    colorIndex={3}
+                    subtext="Rateio com equipe"
+                />
+                <MetricCard
                     title="Lucro Líquido"
                     value={`R$ ${metrics.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     icon="trending_up"
                     theme={theme}
                     colorIndex={1}
-                    subtext="Faturamento - Custos"
-                />
-                <MetricCard
-                    title="Margem"
-                    value={`${metrics.margin}%`}
-                    icon="monitoring"
-                    theme={theme}
-                    colorIndex={3}
-                    subtext="Rentabilidade Mensal"
+                    subtext="Faturamento - (Custos + Comissões)"
                 />
             </div>
 
