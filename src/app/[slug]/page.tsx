@@ -504,11 +504,14 @@ Aguardo sua confirmação! 😊`;
                                         value={selection.birthMonth}
                                         onChange={(e) => setSelection({ ...selection, birthMonth: e.target.value })}
                                     >
-                                        <option value="" disabled className="bg-zinc-900">MÊS DE ANIVERSÁRIO (OBRIGATÓRIO)</option>
+                                        <option value="" disabled className="bg-zinc-900">MÊS DE ANIVERSÁRIO</option>
                                         {['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'].map(m => (
                                             <option key={m} value={m} className="bg-zinc-900">{m.toUpperCase()}</option>
                                         ))}
                                     </select>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-white/40 text-center">
+                                        TODOS OS CAMPOS SÃO DE PREENCHIMENTO OBRIGATÓRIO
+                                    </p>
                                 </div>
                                 <div className="pt-4">
                                     <VerificationBadge tenantId={tenant.id} phone={selection.clientPhone} />
@@ -518,7 +521,8 @@ Aguardo sua confirmação! 😊`;
                             <button
                                 onClick={handleConfirm}
                                 disabled={!selection.clientName || !selection.clientPhone || !selection.birthMonth}
-                                className="w-full bg-[#f2b90d] text-black font-black py-6 md:py-7 rounded-[2.5rem] uppercase italic tracking-widest text-sm md:text-lg shadow-[0_20px_40px_rgba(242,185,13,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-4 disabled:opacity-30"
+                                className="w-full bg-[#f2b90d] text-black font-black py-6 md:py-7 rounded-[2.5rem] uppercase italic tracking-widest text-sm md:text-lg shadow-[0_20px_40px_rgba(242,185,13,0.3)] hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 md:gap-4 disabled:opacity-20 disabled:cursor-not-allowed disabled:grayscale"
+                                style={{ backgroundColor: (!selection.clientName || !selection.clientPhone || !selection.birthMonth) ? 'rgba(255,255,255,0.05)' : theme.primary }}
                             >
                                 <span className="material-symbols-outlined text-2xl md:text-3xl">chat</span>
                                 ENVIAR NO WHATSAPP
