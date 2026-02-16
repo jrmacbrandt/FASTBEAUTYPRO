@@ -78,6 +78,14 @@ export default function ProfessionalAgendaPage() {
         }
     };
 
+    const handleUndoAbsent = async (id: string) => {
+        const { error } = await supabase
+            .from('appointments')
+            .update({ status: 'scheduled' })
+            .eq('id', id);
+        if (!error) fetchAgenda();
+    };
+
     const handleFinishCommand = async () => {
         setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
@@ -190,7 +198,16 @@ export default function ProfessionalAgendaPage() {
                             </div>
                             <div className="flex gap-2 w-full md:w-auto mt-2 md:mt-0">
                                 {item.status === 'absent' ? (
-                                    <span className="w-full md:w-auto text-center text-red-500 text-[10px] font-black uppercase border border-red-500/20 px-6 py-2.5 rounded-xl bg-red-500/5">AUSENTE</span>
+                                    <>
+                                        <span className="flex-1 md:flex-none text-center text-red-500 text-[10px] font-black uppercase border border-red-500/20 px-6 py-2.5 rounded-xl bg-red-500/5">AUSENTE</span>
+                                        <button
+                                            onClick={() => handleUndoAbsent(item.id)}
+                                            className="flex-1 md:flex-none text-emerald-500 text-[9px] md:text-[10px] font-black uppercase px-4 py-2.5 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/10 transition-all flex items-center justify-center gap-2"
+                                        >
+                                            <span className="material-symbols-outlined text-sm">undo</span>
+                                            CHEGOU
+                                        </button>
+                                    </>
                                 ) : item.status === 'completed' ? (
                                     <span className="w-full md:w-auto text-center text-emerald-500 text-[10px] font-black uppercase border border-emerald-500/20 px-6 py-2.5 rounded-xl bg-emerald-500/5">REALIZADO</span>
                                 ) : (
