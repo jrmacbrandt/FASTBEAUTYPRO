@@ -113,7 +113,7 @@ export default function ProductsPage() {
 
             <button
                 onClick={() => setIsFormOpen(true)}
-                className="group relative overflow-hidden font-black py-3 px-6 rounded-2xl uppercase tracking-[0.2em] text-[10px] transition-all border border-emerald-400/20 active:scale-95 w-full md:w-fit flex items-center justify-center gap-3"
+                className="group relative overflow-hidden font-black h-10 px-6 rounded-xl uppercase tracking-[0.2em] text-[9px] transition-all border border-emerald-400/20 active:scale-95 w-fit flex items-center justify-center gap-2"
                 style={{
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: 'white',

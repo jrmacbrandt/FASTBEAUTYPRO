@@ -20,7 +20,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
     const [formData, setFormData] = useState({
         barber_id: appointment.barber_id,
         service_id: appointment.service_id,
-        price: (appointment.total_price || appointment.services?.price || 0).toString().replace('.', ','),
+        price: (appointment.price || appointment.services?.price || 0).toString().replace('.', ','),
         date: appointment.scheduled_at.split('T')[0],
         time: appointment.scheduled_at.split('T')[1].substring(0, 5),
         status: appointment.status
@@ -59,7 +59,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                 .update({
                     barber_id: formData.barber_id,
                     service_id: formData.service_id,
-                    total_price: priceNum,
+                    price: priceNum,
                     scheduled_at: scheduledAt,
                     status: formData.status
                 })

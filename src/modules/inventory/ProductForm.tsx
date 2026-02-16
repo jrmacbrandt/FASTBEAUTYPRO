@@ -58,7 +58,6 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 name: formData.name,
                 description: formData.description,
                 barcode: formData.barcode,
-                category: isSupply ? 'supply' : 'sale',
                 cost_price: parseFloat(formData.cost_price.replace(',', '.')),
                 ...(isSupply ? {} : { sale_price: parseFloat(formData.sale_price.replace(',', '.')) }),
                 min_threshold: parseInt(formData.min_threshold || '0'),
