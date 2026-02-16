@@ -76,7 +76,7 @@ export default function ProfessionalHistoryPage() {
                     <CustomDatePicker
                         value={dateFilter}
                         onChange={val => setDateFilter(val)}
-                        className="w-full bg-black border border-white/10 rounded-xl py-3 px-4 text-sm"
+                        className="w-full bg-black border border-white/10 rounded-xl py-3 px-4 text-sm text-white"
                     />
                 </div>
                 <button

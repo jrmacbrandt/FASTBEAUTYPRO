@@ -162,7 +162,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                                 <CustomDatePicker
                                     value={formData.date}
                                     onChange={val => setFormData({ ...formData, date: val })}
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm"
+                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-[#f2b90d] focus:outline-none transition-all"
                                 />
                             </div>
                             <div className="space-y-2">
