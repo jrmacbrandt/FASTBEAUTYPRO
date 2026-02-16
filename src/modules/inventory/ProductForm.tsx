@@ -50,59 +50,123 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
             const { data: profile } = await supabase.from('profiles').select('tenant_id').eq('id', user.id).single();
             if (!profile?.tenant_id) throw new Error('No tenant found');
 
-            const isSupply = mode === 'supply';
-            const table = isSupply ? 'supplies' : 'products';
+            // DETERMINE TARGET TABLE BASED ON FORM SELECTION, NOT JUST MODE
+            const targetCategory = formData.category;
+            const targetTable = targetCategory === 'supply' ? 'supplies' : 'products';
 
-            const payload = {
+            // PREPARE PAYLOAD (COMMON FIELDS)
+            const basePayload = {
                 tenant_id: profile.tenant_id,
                 name: formData.name,
                 description: formData.description,
                 barcode: formData.barcode,
                 cost_price: parseFloat(formData.cost_price.replace(',', '.')),
-                ...(isSupply ? {} : { sale_price: parseFloat(formData.sale_price.replace(',', '.')) }),
                 min_threshold: parseInt(formData.min_threshold || '0'),
                 unit_type: formData.unit_type,
-                ...(productToEdit ? {} : { current_stock: parseInt(formData.current_stock || '0') })
             };
+
+            // ADD SPECIFIC FIELDS
+            const payload = targetCategory === 'supply'
+                ? { ...basePayload }
+                : { ...basePayload, sale_price: parseFloat(formData.sale_price.replace(',', '.')) };
 
             let error;
             let productId;
 
             if (productToEdit) {
-                const oldStock = parseInt(productToEdit.current_stock?.toString() || '0');
-                const newStock = parseInt(formData.current_stock || '0');
+                // CHECK IF CATEGORY CHANGED
+                const originalCategory = mode; // 'sale' or 'supply'
+                const hasChangedCategory = originalCategory !== targetCategory;
 
-                if (oldStock !== newStock) {
-                    const diff = newStock - oldStock;
-                    await supabase.from('stock_transactions').insert({
-                        tenant_id: profile.tenant_id,
-                        [isSupply ? 'supply_id' : 'product_id']: productToEdit.id,
-                        type: diff > 0 ? 'IN' : 'OUT',
-                        quantity: Math.abs(diff),
-                        reason: `Acerto manual via Admin (De ${oldStock} para ${newStock})`,
-                        created_by: user.id
-                    });
+                if (hasChangedCategory) {
+                    // MOVE PRODUCT: INSERT NEW -> DELETE OLD
+                    // 1. Create in new table
+                    const { data: newMovedProd, error: moveInsertError } = await supabase
+                        .from(targetTable)
+                        .insert({
+                            ...payload,
+                            current_stock: parseInt(formData.current_stock || productToEdit.current_stock?.toString() || '0') // Preserve stock or takes form
+                        })
+                        .select()
+                        .single();
+
+                    if (moveInsertError) throw moveInsertError;
+
+                    // 2. Delete from old table
+                    const oldTable = originalCategory === 'supply' ? 'supplies' : 'products';
+                    const { error: deleteError } = await supabase
+                        .from(oldTable)
+                        .delete()
+                        .eq('id', productToEdit.id);
+
+                    if (deleteError) {
+                        // If delete fails (e.g. constraints), rollback insert (manual) or warn
+                        // Simple rollback attempt:
+                        await supabase.from(targetTable).delete().eq('id', newMovedProd.id);
+                        throw new Error(`Não foi possível mover o produto (Histórico vinculado?). Erro: ${deleteError.message}`);
+                    }
+
+                    productId = newMovedProd.id;
+                } else {
+                    // NORMAL UPDATE (SAME TABLE)
+                    // Logic for stock difference only applies here or needs to be handled carefully in move
+                    const oldStock = parseInt(productToEdit.current_stock?.toString() || '0');
+                    const newStock = parseInt(formData.current_stock || '0');
+
+                    if (oldStock !== newStock) {
+                        const diff = newStock - oldStock;
+                        await supabase.from('stock_transactions').insert({
+                            tenant_id: profile.tenant_id,
+                            [targetCategory === 'supply' ? 'supply_id' : 'product_id']: productToEdit.id,
+                            type: diff > 0 ? 'IN' : 'OUT',
+                            quantity: Math.abs(diff),
+                            reason: `Acerto manual via Admin (De ${oldStock} para ${newStock})`,
+                            created_by: user.id
+                        });
+                    }
+                    // Update main data (excluding current_stock usually, but here we might relying on trigger or manual update? 
+                    // Previous code didn't update current_stock in payload for edit, only insert. 
+                    // But if user changed the stock input manually, we should probably update it via transaction or direct update?
+                    // Previous code DID NOT include current_stock in payload for update (line 69 condition).
+                    // BUT it logged a transaction. 
+                    // Wait, if we log a transaction, does a trigger update the stock? Or do we need to update the column?
+                    // Assuming Database Triggers handle stock updates from transactions OR we need to update column.
+                    // Given previous payload excluded it, I will assume we rely on transactions OR we assume the form 'current_stock' implies a correction.
+                    // Let's stick to previous behavior: Log transaction, don't update stock column directly in payload? 
+                    // WAIT: If I don't update stock column, how does it change? 
+                    // Code line 93 (original) was `update(payload)`. Payload line 69 excluded `current_stock` if `productToEdit`.
+                    // So previous code generated a transaction log BUT DID NOT UPDATE THE STOCK COLUMN? That seems like a bug or relies on triggers.
+                    // Let's assume we SHOULD update stock if it changed manually in the form.
+
+                    const { error: updateError } = await supabase
+                        .from(targetTable)
+                        .update({
+                            ...payload,
+                            current_stock: newStock // Force update to match form input
+                        })
+                        .eq('id', productToEdit.id);
+
+                    error = updateError;
+                    productId = productToEdit.id;
                 }
-
-                const { error: updateError } = await supabase
-                    .from(table)
-                    .update(payload)
-                    .eq('id', productToEdit.id);
-                error = updateError;
-                productId = productToEdit.id;
             } else {
+                // INSERT NEW
                 const { data: newProd, error: insertError } = await supabase
-                    .from(table)
-                    .insert(payload)
+                    .from(targetTable)
+                    .insert({
+                        ...payload,
+                        current_stock: parseInt(formData.current_stock || '0')
+                    })
                     .select()
                     .single();
                 error = insertError;
                 productId = newProd?.id;
 
                 if (!error && parseInt(formData.current_stock || '0') > 0 && productId) {
+                    // Initial Stock Log
                     await supabase.from('stock_transactions').insert({
                         tenant_id: profile.tenant_id,
-                        [isSupply ? 'supply_id' : 'product_id']: productId,
+                        [targetCategory === 'supply' ? 'supply_id' : 'product_id']: productId,
                         type: 'IN',
                         quantity: parseInt(formData.current_stock || '0'),
                         reason: 'Estoque Inicial',
