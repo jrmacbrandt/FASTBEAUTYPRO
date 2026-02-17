@@ -329,13 +329,13 @@ export default function MasterDashboardPage() {
             </div>
 
             <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
-                    <div className="flex items-center gap-4">
+                <div className="p-6 md:p-10 border-b flex flex-wrap gap-4 justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
+                    <div className="flex flex-wrap items-center gap-4">
                         <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>INQUILINOS NA PLATAFORMA</h3>
                         <div className="hidden md:block h-6 w-px bg-white/10 mx-2"></div>
                         <button
                             onClick={handleCleanup}
-                            className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 text-[9px] font-black uppercase tracking-widest"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 text-[9px] font-black uppercase tracking-widest"
                             title="Limpar imagens não utilizadas (Storage)"
                         >
                             <span className="material-symbols-outlined text-[14px]">cleaning_services</span>
