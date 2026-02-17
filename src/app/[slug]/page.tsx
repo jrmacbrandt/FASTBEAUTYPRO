@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { getAvailableSlots } from '@/lib/scheduling';
+import { maskPhone } from '@/lib/masks';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -522,7 +523,7 @@ Aguardo sua confirmação! 😊`;
                                         placeholder="SEU WHATSAPP (DDD + NÚMERO)"
                                         className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic focus:border-[#f2b90d] transition-all"
                                         value={selection.clientPhone}
-                                        onChange={(e) => setSelection({ ...selection, clientPhone: e.target.value })}
+                                        onChange={(e) => setSelection({ ...selection, clientPhone: maskPhone(e.target.value) })}
                                     />
                                     <select
                                         className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-white font-black italic focus:border-[#f2b90d] transition-all appearance-none cursor-pointer"

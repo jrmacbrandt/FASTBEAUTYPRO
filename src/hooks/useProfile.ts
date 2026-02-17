@@ -7,6 +7,9 @@ import { Profile } from '@/types';
 export function useProfile() {
     const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    const refreshProfile = () => setRefreshTrigger(prev => prev + 1);
 
     useEffect(() => {
         async function getProfile() {
@@ -113,7 +116,7 @@ export function useProfile() {
         });
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [refreshTrigger]);
 
     // THEME SYNC FIX: Enforce Dark Mode
     const storedType = typeof window !== 'undefined' ? localStorage.getItem('elite_business_type') : null;
@@ -144,6 +147,7 @@ export function useProfile() {
         loading,
         businessType,
         themeMode: 'dark',
-        theme
+        theme,
+        refreshProfile
     };
 }

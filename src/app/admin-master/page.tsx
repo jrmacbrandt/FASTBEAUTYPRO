@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import ImageUpload from '@/components/ui/ImageUpload';
+import { maskCPF, maskPhone, maskCEP } from '@/lib/masks';
 
 export const dynamic = 'force-dynamic';
 
@@ -264,11 +265,12 @@ export default function MasterDashboardPage() {
                 }).eq('id', targetTenant.id);
                 if (tenantUpdateError) throw tenantUpdateError;
 
-                if (targetTenant.profiles?.[0]?.id) {
+                const ownerProfile = targetTenant.profiles?.find((p: any) => p.role === 'owner') || targetTenant.profiles?.[0];
+                if (ownerProfile?.id) {
                     await supabase.from('profiles').update({
                         full_name: data.owner_name,
                         cpf: data.tax_id
-                    }).eq('id', targetTenant.profiles[0].id);
+                    }).eq('id', ownerProfile.id);
                 }
                 alert('Alterações salvas com sucesso! (V3)');
                 setIsEditModalOpen(false);
@@ -668,8 +670,8 @@ export default function MasterDashboardPage() {
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Telefone / WhatsApp</label>
                                             <input
                                                 type="text"
-                                                defaultValue={selectedTenant.phone}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: e.target.value })}
+                                                value={selectedTenant.phone || ''}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, phone: maskPhone(e.target.value) })}
                                                 placeholder="(00) 00000-0000"
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                             />
@@ -690,8 +692,8 @@ export default function MasterDashboardPage() {
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">CPF / CNPJ</label>
                                             <input
                                                 type="text"
-                                                defaultValue={selectedTenant.tax_id || ''}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, tax_id: e.target.value })}
+                                                value={selectedTenant.tax_id || ''}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, tax_id: maskCPF(e.target.value) })}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                             />
                                         </div>
@@ -699,13 +701,16 @@ export default function MasterDashboardPage() {
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
                                             <input
                                                 type="text"
-                                                defaultValue={selectedTenant.profiles?.[0]?.full_name || ''}
+                                                value={selectedTenant.profiles?.find((p: any) => p.role === 'owner')?.full_name || selectedTenant.profiles?.[0]?.full_name || ''}
                                                 onChange={(e) => {
                                                     const newProfiles = [...(selectedTenant.profiles || [])];
-                                                    if (newProfiles[0]) {
+                                                    const ownerIdx = newProfiles.findIndex((p: any) => p.role === 'owner');
+                                                    if (ownerIdx !== -1) {
+                                                        newProfiles[ownerIdx] = { ...newProfiles[ownerIdx], full_name: e.target.value };
+                                                    } else if (newProfiles[0]) {
                                                         newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
                                                     } else {
-                                                        newProfiles[0] = { full_name: e.target.value };
+                                                        newProfiles[0] = { full_name: e.target.value, role: 'owner' };
                                                     }
                                                     setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
                                                 }}
@@ -719,8 +724,8 @@ export default function MasterDashboardPage() {
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">CEP</label>
                                             <input
                                                 type="text"
-                                                defaultValue={selectedTenant.address_zip}
-                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, address_zip: e.target.value })}
+                                                value={selectedTenant.address_zip || ''}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, address_zip: maskCEP(e.target.value) })}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                             />
                                         </div>

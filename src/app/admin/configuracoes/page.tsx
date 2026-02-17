@@ -113,6 +113,9 @@ export default function EstablishmentSettingsPage() {
                 full_name: tenant.owner_name || profile.full_name,
                 cpf: tenant.tax_id?.replace(/\D/g, '')
             }).eq('id', profile.id);
+
+            // Notify system of profile update (for sidebar/layout sync)
+            window.dispatchEvent(new CustomEvent('profile-updated'));
         }
 
         if (!error) {

@@ -161,7 +161,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                 <div className="p-4 border-t shrink-0 relative z-[100]" style={{ borderColor: theme.border, backgroundColor: `${theme.sidebarBg}cc` }}>
                     <div className="p-3 border rounded-xl mb-4 shadow-inner pointer-events-none select-none" style={{ backgroundColor: theme.sidebarBg, borderColor: theme.border }}>
                         <p className="text-[7px] font-black uppercase tracking-[0.2em] mb-0.5" style={{ color: theme.primary }}>
-                            {user?.role?.toUpperCase() || 'ACESSO'}
+                            {user?.role === 'owner' ? 'PROPRIETÁRIO' : (user?.role?.toUpperCase() || 'ACESSO')}
                         </p>
                         <p className="text-[11px] font-black truncate" style={{ color: theme.text }}>{user?.full_name || 'Membro FastBeauty'}</p>
                     </div>

@@ -19,7 +19,16 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     const [isSupportMode, setIsSupportMode] = React.useState(false);
     const [isMaintenance, setIsMaintenance] = React.useState(false);
 
-    const { profile, loading: profileLoading, theme, businessType } = useProfile();
+    const { profile, loading: profileLoading, theme, businessType, refreshProfile } = useProfile();
+
+    React.useEffect(() => {
+        const handleProfileUpdate = () => {
+            console.log('🔄 Profile update detected! Refreshing...');
+            refreshProfile?.();
+        };
+        window.addEventListener('profile-updated', handleProfileUpdate);
+        return () => window.removeEventListener('profile-updated', handleProfileUpdate);
+    }, [refreshProfile]);
 
     React.useEffect(() => {
         const checkSupport = () => {
