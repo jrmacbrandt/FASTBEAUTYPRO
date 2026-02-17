@@ -29,36 +29,64 @@ export async function POST(req: NextRequest) {
             .select('avatar_url')
             .not('avatar_url', 'is', null);
 
-        if (profilesError) throw new Error(`Error fetching profiles: ${profilesError.message}`);
+        if (profilesError) console.warn(`Error fetching profiles: ${profilesError.message}`);
 
         const { data: tenants, error: tenantsError } = await supabaseAdmin
             .from('tenants')
             .select('logo_url')
             .not('logo_url', 'is', null);
 
-        if (tenantsError) throw new Error(`Error fetching tenants: ${tenantsError.message}`);
+        if (tenantsError) console.warn(`Error fetching tenants: ${tenantsError.message}`);
+
+        const { data: services, error: servicesError } = await supabaseAdmin
+            .from('services')
+            .select('image_url')
+            .not('image_url', 'is', null);
+
+        if (servicesError) console.warn(`Error fetching services: ${servicesError.message}`);
+
+        const { data: products, error: productsError } = await supabaseAdmin
+            .from('products')
+            .select('image_url')
+            .not('image_url', 'is', null);
+
+        if (productsError) console.warn(`Error fetching products: ${productsError.message}`);
 
         // Normalize Active Files Set (extract filenames)
         const activeFiles = new Set<string>();
 
-        profiles?.forEach(p => {
-            if (p.avatar_url) {
-                // avatar_url format: .../storage/v1/object/public/avatars/filename.webp
-                const parts = p.avatar_url.split('/');
+        const extractFilename = (url: string) => {
+            if (!url || url.startsWith('data:')) return null; // Ignore Base64
+            try {
+                // Handle different URL formats
+                // Standard Supabase: .../bucket/folder/filename.ext
+                // Custom Domain: .../filename.ext
+                const parts = url.split('/');
                 const filename = parts[parts.length - 1];
-                // Remove query parameters if any
-                const cleanFilename = filename.split('?')[0];
-                activeFiles.add(cleanFilename);
+                return filename.split('?')[0]; // Remove query params
+            } catch (e) {
+                return null;
             }
+        };
+
+        profiles?.forEach(p => {
+            const fname = extractFilename(p.avatar_url);
+            if (fname) activeFiles.add(fname);
         });
 
         tenants?.forEach(t => {
-            if (t.logo_url) {
-                const parts = t.logo_url.split('/');
-                const filename = parts[parts.length - 1];
-                const cleanFilename = filename.split('?')[0];
-                activeFiles.add(cleanFilename);
-            }
+            const fname = extractFilename(t.logo_url);
+            if (fname) activeFiles.add(fname);
+        });
+
+        services?.forEach(s => {
+            const fname = extractFilename(s.image_url);
+            if (fname) activeFiles.add(fname);
+        });
+
+        products?.forEach(p => {
+            const fname = extractFilename(p.image_url);
+            if (fname) activeFiles.add(fname);
         });
 
         console.log(`[StorageCleanup] Found ${activeFiles.size} active references in DB.`);
@@ -85,8 +113,20 @@ export async function POST(req: NextRequest) {
             errors.push(`DB Clean Error: ${dbErr.message}`);
         }
 
-        // 3. Process known buckets for Storage Cleanup
-        const buckets = ['avatars', 'logos'];
+        // 3. Process ALL buckets dynamically
+        const { data: bucketList, error: bucketListError } = await supabaseAdmin.storage.listBuckets();
+
+        // Default to known buckets if listing fails
+        let buckets = ['avatars', 'logos', 'products', 'services', 'public'];
+
+        if (bucketListError) {
+            console.error('[StorageCleanup] Error listing buckets:', bucketListError);
+            errors.push(`List Buckets Failed: ${bucketListError.message}`);
+        } else if (bucketList) {
+            buckets = bucketList.map(b => b.name);
+        }
+
+        console.log(`[StorageCleanup] Buckets to scan: ${buckets.join(', ')}`);
 
         for (const bucket of buckets) {
             let hasMore = true;
@@ -103,7 +143,8 @@ export async function POST(req: NextRequest) {
                 });
 
                 if (error) {
-                    errors.push(`Error listing ${bucket}: ${error.message}`);
+                    // Start tolerant logging - some buckets might be private or not listable
+                    console.warn(`[StorageCleanup] Skipped bucket/folder ${bucket}: ${error.message}`);
                     break;
                 }
 
@@ -116,12 +157,11 @@ export async function POST(req: NextRequest) {
 
                 // Identification Logic
                 const orphanFiles = files.filter(f => {
-                    // Safety Check: Ignore folders or non-files if any (Storage returns .placeholder sometimes)
+                    // Safety Check: Ignore folders or non-files
                     if (f.name === '.emptyFolderPlaceholder') return false;
+                    if (!f.id) return false; // Folders often don't have ID in some responses, or check metadata
 
-                    // Safety Check: Keep files newer than 24 hours to avoid race conditions with uploads
-                    // User explicitly mentioned "deleted during tests", so older files are the target.
-                    // Let's use 12 hours as a safe buffer.
+                    // Safety Check: Keep files newer than 12 hours
                     const fileTime = new Date(f.created_at).getTime();
                     const safeTime = Date.now() - (12 * 60 * 60 * 1000);
 
