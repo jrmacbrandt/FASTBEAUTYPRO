@@ -23,7 +23,26 @@ export async function POST(req: NextRequest) {
 
         console.log('[StorageCleanup] Starting analysis...');
 
-        // 1. Get all referenced files from DB (Authorized Source of Truth)
+        // 1. Process Database Cleanup FIRST (Remove orphaned records so their images are not whitelisted)
+        console.log('[SystemCleanup] Starting database cleanup...');
+        let dbStats = {};
+        const errors: string[] = [];
+
+        try {
+            const { data, error } = await supabaseAdmin.rpc('admin_cleanup_database');
+            if (error) {
+                console.warn('[SystemCleanup] Database cleanup RPC failed (Function might be missing):', error.message);
+                errors.push(`Database Clean Failed: ${error.message}`);
+            } else {
+                dbStats = data || {};
+                console.log('[SystemCleanup] Database Stats:', dbStats);
+            }
+        } catch (dbErr: any) {
+            console.error('[SystemCleanup] Unexpected DB error:', dbErr);
+            errors.push(`DB Clean Error: ${dbErr.message}`);
+        }
+
+        // 2. Get all referenced files from DB (Authorized Source of Truth AFTER cleanup)
         const { data: profiles, error: profilesError } = await supabaseAdmin
             .from('profiles')
             .select('avatar_url')
@@ -93,25 +112,7 @@ export async function POST(req: NextRequest) {
 
         const deletedFiles: string[] = [];
         const keptFiles: string[] = [];
-        const errors: string[] = [];
         let totalScanned = 0;
-
-        // 2. Process Database Cleanup
-        console.log('[SystemCleanup] Starting database cleanup...');
-        let dbStats = {};
-        try {
-            const { data, error } = await supabaseAdmin.rpc('admin_cleanup_database');
-            if (error) {
-                console.warn('[SystemCleanup] Database cleanup RPC failed (Function might be missing):', error.message);
-                errors.push(`Database Clean Failed: ${error.message}`);
-            } else {
-                dbStats = data || {};
-                console.log('[SystemCleanup] Database Stats:', dbStats);
-            }
-        } catch (dbErr: any) {
-            console.error('[SystemCleanup] Unexpected DB error:', dbErr);
-            errors.push(`DB Clean Error: ${dbErr.message}`);
-        }
 
         // 3. Process ALL buckets dynamically
         const { data: bucketList, error: bucketListError } = await supabaseAdmin.storage.listBuckets();
