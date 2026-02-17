@@ -380,8 +380,8 @@ Aguardo sua confirmação! 😊`;
                                                 {s.name}
                                             </span>
 
-                                            {/* Line 2: Price (Right Aligned & Big) */}
-                                            <div className="w-full text-right mb-1">
+                                            {/* Line 2: Price (Left Aligned & Big) */}
+                                            <div className="w-full text-left mb-1">
                                                 <span className="text-4xl md:text-5xl font-black italic text-white tracking-tighter">
                                                     R$ {s.price}
                                                 </span>
