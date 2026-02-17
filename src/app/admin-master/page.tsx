@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,6 +17,7 @@ export default function MasterDashboardPage() {
     const [selectedTenant, setSelectedTenant] = useState<any>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -216,6 +218,33 @@ export default function MasterDashboardPage() {
                 console.log('[MasterAction-V3] Attempting to save tenant data for:', targetTenant.id);
                 console.log('[MasterAction-V3] Data to save:', data);
 
+                let finalLogoUrl = data.logo_url;
+
+                if (newLogoFile) {
+                    try {
+                        const fileName = `logo-${targetTenant.id}-${Date.now()}.webp`;
+                        const { error: uploadError } = await supabase.storage
+                            .from('logos')
+                            .upload(fileName, newLogoFile, {
+                                cacheControl: '3600',
+                                upsert: true
+                            });
+
+                        if (uploadError) throw uploadError;
+
+                        const { data: { publicUrl } } = supabase.storage
+                            .from('logos')
+                            .getPublicUrl(fileName);
+
+                        finalLogoUrl = publicUrl;
+                    } catch (error) {
+                        console.error('Error uploading logo:', error);
+                        alert('Erro ao fazer upload da logo.');
+                        setSaving(false);
+                        return;
+                    }
+                }
+
                 const { error: tenantUpdateError, data: tenantUpdateData } = await supabase.from('tenants').update({
                     name: data.name,
                     slug: data.slug,
@@ -223,7 +252,7 @@ export default function MasterDashboardPage() {
                     has_paid: data.has_paid,
                     phone: data.phone,
                     address: data.address,
-                    logo_url: data.logo_url
+                    logo_url: finalLogoUrl
                 }).eq('id', targetTenant.id);
                 if (tenantUpdateError) throw tenantUpdateError;
 
@@ -467,6 +496,7 @@ export default function MasterDashboardPage() {
                                                         onClick={() => {
                                                             console.log('[DEBUG] Settings clicked for:', t.name);
                                                             setSelectedTenant(t);
+                                                            setNewLogoFile(null); // Reset file
                                                             setIsEditModalOpen(true);
                                                         }}
                                                         className="size-10 bg-white/5 text-slate-400 rounded-xl flex items-center justify-center transition-all border border-white/5 hover:bg-[#f2b90d] hover:text-black shadow-lg"
@@ -559,24 +589,14 @@ export default function MasterDashboardPage() {
                                             </div>
 
                                             <div className="space-y-2">
-                                                <input
-                                                    type="text"
-                                                    value={selectedTenant.logo_url || ''}
-                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, logo_url: e.target.value })}
-                                                    placeholder="Cole a URL da imagem aqui..."
-                                                    className="w-full bg-black/60 border border-white/20 rounded-lg px-4 py-3 text-sm text-white focus:outline-none focus:border-[#f2b90d] transition-all"
+                                                <ImageUpload
+                                                    currentImage={selectedTenant.logo_url}
+                                                    onImageSelect={(file, preview) => {
+                                                        setNewLogoFile(file);
+                                                        setSelectedTenant({ ...selectedTenant, logo_url: preview });
+                                                    }}
+                                                    helperText="Nova logo (Substituir)"
                                                 />
-
-                                                <div className="flex flex-col gap-1 text-[10px] text-zinc-400 font-medium px-1">
-                                                    <p className="flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[12px]">info</span>
-                                                        Formatos aceitos: JPG, PNG, WEBP
-                                                    </p>
-                                                    <p className="flex items-center gap-1">
-                                                        <span className="material-symbols-outlined text-[12px]">fit_screen</span>
-                                                        Tamanho recomendado: 500x500px (Quadrado)
-                                                    </p>
-                                                </div>
                                             </div>
                                         </div>
                                         {/* ÁREA DE EDIÇÃO DE LOGO COMPLETA - FIM */}

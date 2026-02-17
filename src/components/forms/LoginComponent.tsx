@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { processImage } from '@/lib/image-processing';
+import ImageUpload from '@/components/ui/ImageUpload';
 import { maskCPF, maskPhone } from '@/lib/masks';
 
 interface LoginProps {

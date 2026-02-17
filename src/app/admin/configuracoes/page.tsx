@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { maskPhone, maskCPF, maskCEP } from '@/lib/masks';
 import { processImage } from '@/lib/image-processing';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,21 +47,9 @@ export default function EstablishmentSettingsPage() {
 
     const fetchTenant = () => { }; // Replaced by useProfile
 
-    const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            try {
-                // Resize to 400x400 and convert to WebP (Standard store logo size)
-                const processedBlob = await processImage(file, 400, 400, 0.82);
-                const processedFile = new File([processedBlob], 'logo.webp', { type: 'image/webp' });
-
-                setLogoFile(processedFile);
-                setLogoPreview(URL.createObjectURL(processedBlob));
-            } catch (error) {
-                console.error('Error processing logo:', error);
-                alert('Erro ao processar imagem.');
-            }
-        }
+    const handleLogoSelect = (file: File, preview: string) => {
+        setLogoFile(file);
+        setLogoPreview(preview);
     };
 
     const handleSave = async (e?: React.FormEvent) => {
@@ -244,26 +233,25 @@ export default function EstablishmentSettingsPage() {
 
                         <div className="flex flex-col md:flex-row gap-8 items-start">
                             {/* Logo Upload Section */}
-                            <div className="shrink-0 flex flex-col items-center gap-4">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] opacity-70">Logo do Estabelecimento</label>
-                                <div className="relative group size-32 rounded-full border-2 border-dashed border-white/20 hover:border-[#f2b90d] transition-colors flex items-center justify-center overflow-hidden bg-black/40">
-                                    {logoPreview ? (
-                                        <img src={logoPreview} alt="Logo Preview" className="size-full object-cover" />
-                                    ) : (
-                                        <span className="material-symbols-outlined text-4xl text-white/20 group-hover:text-[#f2b90d] transition-colors">add_photo_alternate</span>
-                                    )}
-                                    <input
-                                        type="file"
-                                        className="absolute inset-0 opacity-0 cursor-pointer"
-                                        accept="image/*"
-                                        onChange={handleLogoChange}
-                                    />
-                                </div>
-                                <p className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider text-center max-w-[150px]">Toque para alterar<br />(Recomendado: 400x400px)</p>
-                            </div>
+                            <ImageUpload
+                                currentImage={logoPreview}
+                                onImageSelect={handleLogoSelect}
+                                helperText="Toque para alterar"
+                                className="w-full max-w-[200px]"
+                            />
 
                             <div className="flex-1 w-full space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Proprietário (Vinculado)</label>
+                                        <input
+                                            type="text"
+                                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm opacity-50 cursor-not-allowed"
+                                            value={profile?.full_name || ''}
+                                            readOnly
+                                            title="Nome vinculado ao cadastro principal (Profile)"
+                                        />
+                                    </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nome Fantasia</label>
                                         <input type="text" className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all" value={tenant.name} onChange={e => setTenant({ ...tenant, name: e.target.value })} />
