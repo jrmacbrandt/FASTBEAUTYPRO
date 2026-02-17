@@ -382,7 +382,7 @@ Aguardo sua confirmação! 😊`;
 
                                             {/* Line 2: Price (Right Aligned & Big) */}
                                             <div className="w-full text-right mb-1">
-                                                <span className="text-3xl md:text-4xl font-black italic text-white tracking-tighter">
+                                                <span className="text-4xl md:text-5xl font-black italic text-white tracking-tighter">
                                                     R$ {s.price}
                                                 </span>
                                             </div>
