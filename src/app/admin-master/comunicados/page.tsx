@@ -205,7 +205,7 @@ export default function MasterComunicadosPage() {
 
             {view === 'create' ? (
                 <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300">
-                    <div className="flex items-center justify-between mb-6 md:mb-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-10 gap-4">
                         <div className="flex items-center gap-3 md:gap-4">
                             <div className="size-12 md:size-14 bg-[#f2b90d]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#f2b90d] shrink-0">
                                 <span className="material-symbols-outlined text-2xl md:text-3xl">campaign</span>
