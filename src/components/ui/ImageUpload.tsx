@@ -19,8 +19,8 @@ export default function ImageUpload({ currentImage, onImageSelect, helperText, c
         if (file) {
             setLoading(true);
             try {
-                // Resize to 500x500 (Standard) and convert to WebP
-                const processedBlob = await processImage(file, 500, 500, 0.85);
+                // Resize to 200x200 (Compact) and convert to WebP
+                const processedBlob = await processImage(file, 200, 200, 0.85);
                 const processedFile = new File([processedBlob], 'upload.webp', { type: 'image/webp' });
 
                 const objectUrl = URL.createObjectURL(processedBlob);

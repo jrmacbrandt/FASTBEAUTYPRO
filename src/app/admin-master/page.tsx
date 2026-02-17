@@ -245,19 +245,30 @@ export default function MasterDashboardPage() {
                     }
                 }
 
-                const { error: tenantUpdateError, data: tenantUpdateData } = await supabase.from('tenants').update({
+                const { error: tenantUpdateError } = await supabase.from('tenants').update({
                     name: data.name,
                     slug: data.slug,
                     business_type: data.business_type,
                     has_paid: data.has_paid,
                     phone: data.phone,
-                    address: data.address,
+                    tax_id: data.tax_id,
+                    contact_email: data.contact_email,
+                    address_zip: data.address_zip,
+                    address_street: data.address_street,
+                    address_number: data.address_number,
+                    address_complement: data.address_complement,
+                    address_neighborhood: data.address_neighborhood,
+                    address_city: data.address_city,
+                    address_state: data.address_state,
                     logo_url: finalLogoUrl
                 }).eq('id', targetTenant.id);
                 if (tenantUpdateError) throw tenantUpdateError;
 
-                if (data.owner_name && targetTenant.profiles?.[0]?.id) {
-                    await supabase.from('profiles').update({ full_name: data.owner_name }).eq('id', targetTenant.profiles[0].id);
+                if (targetTenant.profiles?.[0]?.id) {
+                    await supabase.from('profiles').update({
+                        full_name: data.owner_name,
+                        cpf: data.tax_id
+                    }).eq('id', targetTenant.profiles[0].id);
                 }
                 alert('Alterações salvas com sucesso! (V3)');
                 setIsEditModalOpen(false);
@@ -664,6 +675,27 @@ export default function MasterDashboardPage() {
                                             />
                                         </div>
                                         <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">E-mail de Contato</label>
+                                            <input
+                                                type="email"
+                                                defaultValue={selectedTenant.contact_email || ''}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, contact_email: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">CPF / CNPJ</label>
+                                            <input
+                                                type="text"
+                                                defaultValue={selectedTenant.tax_id || ''}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, tax_id: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
                                             <input
                                                 type="text"
@@ -682,15 +714,64 @@ export default function MasterDashboardPage() {
                                         </div>
                                     </div>
 
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">CEP</label>
+                                            <input
+                                                type="text"
+                                                defaultValue={selectedTenant.address_zip}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, address_zip: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Cidade / UF</label>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                <input
+                                                    type="text"
+                                                    defaultValue={selectedTenant.address_city}
+                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, address_city: e.target.value })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                                />
+                                                <input
+                                                    type="text"
+                                                    defaultValue={selectedTenant.address_state}
+                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, address_state: e.target.value })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-bold text-white focus:outline-none"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <div className="space-y-1.5">
-                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Endereço Completo</label>
+                                        <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Rua / Logradouro</label>
                                         <input
                                             type="text"
-                                            defaultValue={selectedTenant.address}
-                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, address: e.target.value })}
-                                            placeholder="Rua, Número, Bairro, Cidade"
+                                            defaultValue={selectedTenant.address_street}
+                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, address_street: e.target.value })}
                                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                         />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Número</label>
+                                            <input
+                                                type="text"
+                                                defaultValue={selectedTenant.address_number}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, address_number: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Bairro</label>
+                                            <input
+                                                type="text"
+                                                defaultValue={selectedTenant.address_neighborhood}
+                                                onChange={(e) => setSelectedTenant({ ...selectedTenant, address_neighborhood: e.target.value })}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Advanced Stats / Support Section */}
@@ -724,7 +805,15 @@ export default function MasterDashboardPage() {
                                             business_type: selectedTenant.business_type,
                                             has_paid: selectedTenant.has_paid,
                                             phone: selectedTenant.phone,
-                                            address: selectedTenant.address,
+                                            tax_id: selectedTenant.tax_id,
+                                            contact_email: selectedTenant.contact_email,
+                                            address_zip: selectedTenant.address_zip,
+                                            address_street: selectedTenant.address_street,
+                                            address_number: selectedTenant.address_number,
+                                            address_complement: selectedTenant.address_complement,
+                                            address_neighborhood: selectedTenant.address_neighborhood,
+                                            address_city: selectedTenant.address_city,
+                                            address_state: selectedTenant.address_state,
                                             owner_name: selectedTenant.profiles?.[0]?.full_name,
                                             logo_url: selectedTenant.logo_url
                                         })}

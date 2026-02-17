@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import ImageUpload from '@/components/ui/ImageUpload';
-import { maskCPF, maskPhone } from '@/lib/masks';
+import { maskCPF, maskPhone, maskCEP } from '@/lib/masks';
 
 interface LoginProps {
     type: 'standard' | 'master';
@@ -27,9 +27,19 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
     const [shopName, setShopName] = useState('');
     const [couponCode, setCouponCode] = useState('');
     const [file, setFile] = useState<File | null>(null);
+
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [uploadStatus, setUploadStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [registerSuccess, setRegisterSuccess] = useState(false);
+
+    // Address states
+    const [cep, setCep] = useState('');
+    const [street, setStreet] = useState('');
+    const [number, setNumber] = useState('');
+    const [complement, setComplement] = useState('');
+    const [neighborhood, setNeighborhood] = useState('');
+    const [city, setCity] = useState('');
+    const [state, setState] = useState('');
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -161,6 +171,24 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         setUploadStatus('success');
     };
 
+    const handleCepLookup = async (cepValue: string) => {
+        const cleanCep = cepValue.replace(/\D/g, '');
+        if (cleanCep.length === 8) {
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    setStreet(data.logradouro || '');
+                    setNeighborhood(data.bairro || '');
+                    setCity(data.localidade || '');
+                    setState(data.uf || '');
+                }
+            } catch (err) {
+                console.error('CEP lookup failed:', err);
+            }
+        }
+    };
+
     // Unified Registration (Only for Owners/Estabelecimentos)
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -244,7 +272,15 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                     name: shopName,
                     slug: slug,
                     phone: storePhone.replace(/\D/g, ''),
+                    tax_id: cpf.replace(/\D/g, ''),
                     business_type: businessType,
+                    address_zip: cep.replace(/\D/g, ''),
+                    address_street: street,
+                    address_number: number,
+                    address_complement: complement,
+                    address_neighborhood: neighborhood,
+                    address_city: city,
+                    address_state: state,
                     active: true,
                     has_paid: appliedStatus === 'active',
                     logo_url: imageUrl || null,
@@ -269,6 +305,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                     tenant_id: newTenant.id,
                     full_name: fullName,
                     cpf: cpf.replace(/\D/g, ''),
+                    email: email,
                     role: 'owner',
                     status: 'active'
                 }).eq('id', userId);
@@ -398,6 +435,56 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                     <div className="relative">
                                         <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>confirmation_number</span>
                                         <input type="text" placeholder="Possui um código?" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs uppercase" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={couponCode} onChange={(e) => setCouponCode(e.target.value)} />
+                                    </div>
+                                </div>
+
+                                {/* Address Fields */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CEP</label>
+                                        <input
+                                            type="text"
+                                            placeholder="00000-000"
+                                            className="w-full border rounded-xl py-3 px-4 focus:outline-none transition-all font-bold text-xs"
+                                            style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }}
+                                            value={cep}
+                                            onChange={(e) => {
+                                                const val = maskCEP(e.target.value);
+                                                setCep(val);
+                                                if (val.replace(/\D/g, '').length === 8) handleCepLookup(val);
+                                            }}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>NÚMERO</label>
+                                        <input type="text" placeholder="123" className="w-full border rounded-xl py-3 px-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={number} onChange={(e) => setNumber(e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>LOGRADOURO</label>
+                                    <input type="text" placeholder="Rua..." className="w-full border rounded-xl py-3 px-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={street} onChange={(e) => setStreet(e.target.value)} />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>BAIRRO</label>
+                                        <input type="text" placeholder="Bairro" className="w-full border rounded-xl py-3 px-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={neighborhood} onChange={(e) => setNeighborhood(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>COMPLEMENTO</label>
+                                        <input type="text" placeholder="Ap, Sala..." className="w-full border rounded-xl py-3 px-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={complement} onChange={(e) => setComplement(e.target.value)} />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CIDADE</label>
+                                        <input type="text" placeholder="Cidade" className="w-full border rounded-xl py-3 px-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={city} onChange={(e) => setCity(e.target.value)} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>UF</label>
+                                        <input type="text" placeholder="UF" maxLength={2} className="w-full border rounded-xl py-3 px-4 focus:outline-none transition-all font-bold text-xs uppercase" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={state} onChange={(e) => setState(e.target.value)} />
                                     </div>
                                 </div>
                             </div>

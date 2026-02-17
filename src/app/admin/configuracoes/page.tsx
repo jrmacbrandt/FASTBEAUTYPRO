@@ -107,6 +107,14 @@ export default function EstablishmentSettingsPage() {
             })
             .eq('id', tenant.id);
 
+        if (!error && profile?.id) {
+            // Sync with profile
+            await supabase.from('profiles').update({
+                full_name: tenant.owner_name || profile.full_name,
+                cpf: tenant.tax_id?.replace(/\D/g, '')
+            }).eq('id', profile.id);
+        }
+
         if (!error) {
             alert('Configurações salvas com sucesso!');
         } else {
@@ -243,13 +251,13 @@ export default function EstablishmentSettingsPage() {
                             <div className="flex-1 w-full space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
                                     <div className="space-y-2">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Proprietário (Vinculado)</label>
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Nome do Proprietário</label>
                                         <input
                                             type="text"
-                                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm opacity-50 cursor-not-allowed"
-                                            value={profile?.full_name || ''}
-                                            readOnly
-                                            title="Nome vinculado ao cadastro principal (Profile)"
+                                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all"
+                                            value={tenant.owner_name || profile?.full_name || ''}
+                                            onChange={e => setTenant({ ...tenant, owner_name: e.target.value })}
+                                            placeholder="Seu nome completo"
                                         />
                                     </div>
                                     <div className="space-y-2">
