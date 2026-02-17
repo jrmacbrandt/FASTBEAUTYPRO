@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
-import { processImage } from '@/lib/image-processing';
 import ImageUpload from '@/components/ui/ImageUpload';
 import { maskCPF, maskPhone } from '@/lib/masks';
 
@@ -156,24 +155,10 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         }
     };
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const selectedFile = e.target.files?.[0];
-        if (selectedFile) {
-            setLoading(true);
-            try {
-                const optimizedBlob = await processImage(selectedFile, 150, 150, 0.7);
-                const optimizedFile = new File([optimizedBlob], `${selectedFile.name.split('.')[0]}.webp`, { type: 'image/webp' });
-                setFile(optimizedFile);
-                setUploadStatus('success');
-                const objectUrl = URL.createObjectURL(optimizedBlob);
-                if (previewUrl) URL.revokeObjectURL(previewUrl);
-                setPreviewUrl(objectUrl);
-            } catch (err) {
-                setUploadStatus('error');
-            } finally {
-                setLoading(false);
-            }
-        }
+    const handleImageSelect = (file: File, preview: string) => {
+        setFile(file);
+        setPreviewUrl(preview);
+        setUploadStatus('success');
     };
 
     // Unified Registration (Only for Owners/Estabelecimentos)
@@ -398,10 +383,13 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                 <div className="space-y-1.5">
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>LOGO DA LOJA</label>
                                     <div className="relative">
-                                        <input type="file" accept="image/*" className="hidden" id="file-upload" onChange={handleFileChange} />
-                                        <label htmlFor="file-upload" className="w-full border-2 border-dashed rounded-xl py-6 flex flex-col items-center justify-center cursor-pointer hover:bg-white/5 transition-all gap-2 relative overflow-hidden min-h-[100px]" style={{ borderColor: uploadStatus === 'success' ? colors.primary : (businessType === 'salon' ? '#7b438e40' : '#ffffff1a'), color: colors.textMuted }}>
-                                            {previewUrl ? <img src={previewUrl} alt="Preview" className="h-full w-full object-contain p-2 absolute" /> : <span className="material-symbols-outlined text-2xl" style={{ color: colors.primary }}>add_a_photo</span>}
-                                        </label>
+                                        <ImageUpload
+                                            currentImage={previewUrl}
+                                            onImageSelect={handleImageSelect}
+                                            helperText="Toque para adicionar"
+                                            bucket="logos"
+                                            className="w-full"
+                                        />
                                     </div>
                                 </div>
 

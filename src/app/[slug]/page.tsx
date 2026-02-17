@@ -360,14 +360,30 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
-                                        className={`p-8 rounded-[2.5rem] bg-white/25 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white hover:border-white/25'}`}
+                                        className={`p-6 rounded-[2.5rem] bg-white/25 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white hover:border-white/25'} flex items-center gap-6 relative overflow-hidden`}
                                         style={{ borderColor: selection.service?.id === s.id ? theme.primary : undefined }}
                                     >
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-white text-2xl font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors">{s.name}</span>
-                                            <span className="text-2xl font-black italic text-[#f2b90d]">R$ {s.price}</span>
+                                        {/* Image Container */}
+                                        <div className={`size-20 md:size-24 rounded-2xl overflow-hidden shrink-0 border border-white/10 ${selection.service?.id === s.id ? 'ring-2 ring-offset-2 ring-offset-black' : ''} transition-all bg-black/20`} style={{ '--tw-ring-color': theme.primary } as React.CSSProperties}>
+                                            {s.image_url ? (
+                                                <img src={s.image_url} alt={s.name} className="size-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                            ) : (
+                                                <div className="size-full flex items-center justify-center">
+                                                    <span className="material-symbols-outlined text-3xl text-white/20">spa</span>
+                                                </div>
+                                            )}
                                         </div>
-                                        <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest mt-2">Duração: {s.duration_minutes} min</p>
+
+                                        <div className="flex-1 min-w-0 z-10">
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-white text-lg md:text-xl font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors leading-none truncate pr-2">{s.name}</span>
+                                                <span className="text-lg md:text-xl font-black italic text-[#f2b90d] whitespace-nowrap">R$ {s.price}</span>
+                                            </div>
+                                            <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-[10px]">schedule</span>
+                                                {s.duration_minutes} min
+                                            </p>
+                                        </div>
                                     </button>
                                 ))}
                             </div>

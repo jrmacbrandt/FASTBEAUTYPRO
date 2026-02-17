@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { processImage } from '@/lib/image-processing';
 import { maskCPF, maskPhone, maskPercent } from '@/lib/masks';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 import { Profile, UserStatus } from '@/types';
 import { useProfile } from '@/hooks/useProfile';
@@ -79,18 +79,9 @@ export default function TeamManagementPage() {
         }
     }, [currentUser]);
 
-    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            try {
-                const processedBlob = await processImage(file, 400, 400, 0.8);
-                const processedFile = new File([processedBlob], 'avatar.webp', { type: 'image/webp' });
-                setAvatarFile(processedFile);
-                setAvatarPreview(URL.createObjectURL(processedBlob));
-            } catch (error) {
-                console.error('Erro ao processar imagem:', error);
-            }
-        }
+    const handleImageSelect = (file: File, preview: string) => {
+        setAvatarFile(file);
+        setAvatarPreview(preview);
     };
 
     const handleAction = async (id: string, action: 'suspend' | 'delete') => {
@@ -269,19 +260,13 @@ export default function TeamManagementPage() {
                         </div>
                         <div className="p-8 space-y-6">
                             {/* Avatar Config */}
-                            <div className="flex flex-col items-center gap-4 py-4">
-                                <div className="relative group cursor-pointer">
-                                    <div className="size-24 rounded-full border-2 border-dashed flex items-center justify-center overflow-hidden" style={{ borderColor: `${colors.primary}4d`, backgroundColor: `${colors.primary}0d` }}>
-                                        {avatarPreview ? (
-                                            <img src={avatarPreview} alt="Preview" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <span className="material-symbols-outlined text-4xl" style={{ color: colors.primary }}>add_a_photo</span>
-                                        )}
-                                    </div>
-                                    <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleImageChange} />
-                                </div>
-                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors.textMuted }}>Foto de Perfil</p>
-                            </div>
+                            <ImageUpload
+                                currentImage={avatarPreview}
+                                onImageSelect={handleImageSelect}
+                                helperText="Foto de Perfil"
+                                bucket="avatars"
+                                className="w-full max-w-[200px] mx-auto"
+                            />
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">

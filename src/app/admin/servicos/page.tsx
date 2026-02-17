@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { processImage } from '@/lib/image-processing';
 import { maskCurrency, maskNumber } from '@/lib/masks';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 import { useProfile } from '@/hooks/useProfile';
 
@@ -68,16 +68,10 @@ export default function ServicesPage() {
         setShowForm(false);
     };
 
-    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setImagePreview(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
+    const handleImageSelect = (file: File, preview: string) => {
+        setImageFile(file);
+        setImagePreview(preview);
+        setNewService(prev => ({ ...prev, image_url: preview }));
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -89,15 +83,21 @@ export default function ServicesPage() {
             let finalImageUrl = newService.image_url;
 
             if (imageFile) {
-                const processed = await processImage(imageFile, 400, 400, 0.8);
-                const reader = new FileReader();
-                reader.readAsDataURL(processed);
-                await new Promise(resolve => {
-                    reader.onloadend = () => {
-                        finalImageUrl = reader.result as string;
-                        resolve(null);
-                    };
-                });
+                const fileName = `service-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                const { error: uploadError } = await supabase.storage
+                    .from('services')
+                    .upload(fileName, imageFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('services')
+                    .getPublicUrl(fileName);
+
+                finalImageUrl = publicUrl;
             }
 
             const payload = {
@@ -193,23 +193,12 @@ export default function ServicesPage() {
                     <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Image Upload */}
                         <div className="md:col-span-3 flex flex-col items-center gap-4 py-4 border-b mb-4" style={{ borderColor: colors.border }}>
-                            <div className="relative group cursor-pointer">
-                                <div className="size-32 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden"
-                                    style={{ borderColor: `${colors.primary}4d`, backgroundColor: `${colors.primary}0d` }}>
-                                    {imagePreview ? (
-                                        <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
-                                    ) : (
-                                        <div className="flex flex-col items-center gap-2" style={{ color: `${colors.primary}80` }}>
-                                            <span className="material-symbols-outlined text-4xl">add_photo_alternate</span>
-                                            <span className="text-[9px] font-black uppercase">Foto do Serviço</span>
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span className="text-[10px] font-black text-white uppercase">Alterar</span>
-                                </div>
-                                <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onChange={handleImageChange} />
-                            </div>
+                            <ImageUpload
+                                currentImage={imagePreview}
+                                onImageSelect={handleImageSelect}
+                                helperText="Foto do Serviço"
+                                bucket="services"
+                            />
                         </div>
 
                         <div className="space-y-2">

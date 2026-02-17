@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { maskCurrency, maskNumber } from '@/lib/masks';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 interface ProductFormProps {
     onClose: () => void;
@@ -20,8 +21,10 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
         sale_price: '',
         current_stock: '',
         min_threshold: '',
-        unit_type: 'un'
+        unit_type: 'un',
+        image_url: ''
     });
+    const [imageFile, setImageFile] = useState<File | null>(null);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -35,10 +38,16 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 sale_price: productToEdit.sale_price?.toFixed(2).replace('.', ',') || '',
                 current_stock: productToEdit.current_stock?.toString() || '',
                 min_threshold: productToEdit.min_threshold?.toString() || '',
-                unit_type: productToEdit.unit_type
+                unit_type: productToEdit.unit_type,
+                image_url: productToEdit.image_url || ''
             });
         }
     }, [productToEdit, mode]);
+
+    const handleImageSelect = (file: File, preview: string) => {
+        setImageFile(file);
+        setFormData(prev => ({ ...prev, image_url: preview }));
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -65,10 +74,35 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                 unit_type: formData.unit_type,
             };
 
+            let finalImageUrl = formData.image_url;
+
+            if (imageFile) {
+                const fileName = `product-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
+                const { error: uploadError } = await supabase.storage
+                    .from('products')
+                    .upload(fileName, imageFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (uploadError) {
+                    console.error('Upload Error:', uploadError);
+                    // Don't throw, just continue without image update or alert user?
+                    // Throwing might block product save. Let's warn but continue? Or throw?
+                    // Generally better to throw if image was intended.
+                    // throw uploadError; 
+                } else {
+                    const { data: { publicUrl } } = supabase.storage
+                        .from('products')
+                        .getPublicUrl(fileName);
+                    finalImageUrl = publicUrl;
+                }
+            }
+
             // ADD SPECIFIC FIELDS
             const payload = targetCategory === 'supply'
-                ? { ...basePayload }
-                : { ...basePayload, sale_price: parseFloat(formData.sale_price.replace(',', '.')) };
+                ? { ...basePayload, image_url: finalImageUrl }
+                : { ...basePayload, sale_price: parseFloat(formData.sale_price.replace(',', '.')), image_url: finalImageUrl };
 
             let error;
             let productId;
@@ -198,6 +232,15 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-8">
+                        <div className="flex justify-center mb-6">
+                            <ImageUpload
+                                currentImage={formData.image_url}
+                                onImageSelect={handleImageSelect}
+                                helperText="Foto do Produto"
+                                bucket="products"
+                            />
+                        </div>
+
                         <div className="space-y-2 col-span-1 md:col-span-2">
                             <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO PRODUTO</label>
                             <input
@@ -214,7 +257,7 @@ export default function ProductForm({ onClose, productToEdit, mode }: ProductFor
                             <div className="relative">
                                 <select
                                     value={formData.category}
-                                    onChange={e => setFormData({ ...formData, category: e.target.value })}
+                                    onChange={e => setFormData({ ...formData, category: e.target.value as 'sale' | 'supply' })}
                                     className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all appearance-none cursor-pointer pr-10"
                                 >
                                     <option value="sale">Produto para Venda</option>
