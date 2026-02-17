@@ -257,17 +257,27 @@ export default function MasterDashboardPage() {
 
             if (res.ok) {
                 let report = '🧹 FAXINA CONCLUÍDA!\n\n';
+
+                // STORAGE SECTION
                 if (data.stats.storage) {
                     report += `🗄️ STORAGE:\n- Excluídos: ${data.stats.storage.deleted_count}\n- Mantidos: ${data.stats.storage.kept_count}\n\n`;
                 }
 
-                if (data.stats.database) {
+                // DATABASE SECTION
+                const db = data.stats.database || {};
+                const errors = data.stats.errors || [];
+
+                if (Object.keys(db).length > 0) {
                     report += '💾 BANCO DE DADOS (Registros Removidos):\n';
-                    if (data.stats.database.deleted_profiles) report += `- Perfis: ${data.stats.database.deleted_profiles}\n`;
-                    if (data.stats.database.deleted_appointments) report += `- Agendamentos: ${data.stats.database.deleted_appointments}\n`;
-                    if (data.stats.database.deleted_products) report += `- Produtos: ${data.stats.database.deleted_products}\n`;
-                    if (data.stats.database.deleted_services) report += `- Serviços: ${data.stats.database.deleted_services}\n`;
-                    if (data.stats.database.deleted_customers) report += `- Clientes: ${data.stats.database.deleted_customers}\n`;
+                    report += `- Perfis: ${db.deleted_profiles || 0}\n`;
+                    report += `- Agendamentos: ${db.deleted_appointments || 0}\n`;
+                    report += `- Produtos: ${db.deleted_products || 0}\n`;
+                    report += `- Serviços: ${db.deleted_services || 0}\n`;
+                    report += `- Clientes: ${db.deleted_customers || 0}\n`;
+                } else if (errors.some((e: string) => e.includes('Database Clean Failed'))) {
+                    report += '⚠️ AVISO: A limpeza do banco de dados falhou (Verifique se a função SQL foi criada).\n';
+                } else {
+                    report += '💾 BANCO DE DADOS: Nenhum registro órfão encontrado.\n';
                 }
 
                 alert(report);
