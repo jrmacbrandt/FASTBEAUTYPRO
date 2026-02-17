@@ -360,11 +360,11 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
-                                        className={`p-4 rounded-[2rem] bg-white/20 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex items-center gap-5 relative overflow-hidden`}
+                                        className={`p-4 rounded-[2rem] bg-white/20 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex items-center gap-4 relative overflow-hidden`}
                                         style={{ borderColor: selection.service?.id === s.id ? theme.primary : undefined }}
                                     >
                                         {/* Image Container */}
-                                        <div className={`size-16 md:size-20 rounded-2xl overflow-hidden shrink-0 border border-white/10 ${selection.service?.id === s.id ? 'ring-2 ring-offset-2 ring-offset-black' : ''} transition-all bg-black/20`} style={{ '--tw-ring-color': theme.primary } as React.CSSProperties}>
+                                        <div className={`size-20 md:size-24 rounded-2xl overflow-hidden shrink-0 border border-white/10 ${selection.service?.id === s.id ? 'ring-2 ring-offset-2 ring-offset-black' : ''} transition-all bg-black/20`} style={{ '--tw-ring-color': theme.primary } as React.CSSProperties}>
                                             {s.image_url ? (
                                                 <img src={s.image_url} alt={s.name} className="size-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                             ) : (
@@ -374,10 +374,21 @@ Aguardo sua confirmação! 😊`;
                                             )}
                                         </div>
 
-                                        <div className="flex-1 min-w-0 z-10 flex flex-col justify-center">
-                                            <span className="text-white text-base md:text-lg font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors leading-tight mb-1 truncate w-full">{s.name}</span>
-                                            <span className="text-xl md:text-2xl font-black italic text-white tracking-tighter mb-0.5">R$ {s.price}</span>
-                                            <p className="text-white/40 text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
+                                        <div className="flex-1 min-w-0 z-10 flex flex-col justify-between py-1">
+                                            {/* Line 1: Name */}
+                                            <span className="text-white text-base md:text-lg font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors leading-tight line-clamp-2 w-full mb-1">
+                                                {s.name}
+                                            </span>
+
+                                            {/* Line 2: Price (Right Aligned & Big) */}
+                                            <div className="w-full text-right mb-1">
+                                                <span className="text-3xl md:text-4xl font-black italic text-white tracking-tighter">
+                                                    R$ {s.price}
+                                                </span>
+                                            </div>
+
+                                            {/* Line 3: Duration */}
+                                            <p className="text-white/40 text-[10px] font-bold uppercase tracking-widest flex items-center gap-1">
                                                 <span className="material-symbols-outlined text-[10px]">schedule</span>
                                                 {s.duration_minutes} min
                                             </p>
