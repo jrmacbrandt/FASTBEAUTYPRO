@@ -246,6 +246,42 @@ export default function MasterDashboardPage() {
         }
     };
 
+    const handleCleanup = async () => {
+        if (!confirm('ATENÇÃO: LIMPEZA PROFUNDA DO SISTEMA\n\nEsta operação irá:\n1. Remover arquivos de imagem órfãos (Storage).\n2. Excluir registros órfãos no Banco de Dados (agendamentos, perfis, produtos sem loja vinculada).\n\nArquivos e dados criados nas últimas 12h serão PRESERVADOS por segurança.\n\nDeseja iniciar a faxina completa?')) return;
+
+        const originalLoading = loading;
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/master/cleanup-storage', { method: 'POST' });
+            const data = await res.json();
+
+            if (res.ok) {
+                let report = '🧹 FAXINA CONCLUÍDA!\n\n';
+                if (data.stats.storage) {
+                    report += `🗄️ STORAGE:\n- Excluídos: ${data.stats.storage.deleted_count}\n- Mantidos: ${data.stats.storage.kept_count}\n\n`;
+                }
+
+                if (data.stats.database) {
+                    report += '💾 BANCO DE DADOS (Registros Removidos):\n';
+                    if (data.stats.database.deleted_profiles) report += `- Perfis: ${data.stats.database.deleted_profiles}\n`;
+                    if (data.stats.database.deleted_appointments) report += `- Agendamentos: ${data.stats.database.deleted_appointments}\n`;
+                    if (data.stats.database.deleted_products) report += `- Produtos: ${data.stats.database.deleted_products}\n`;
+                    if (data.stats.database.deleted_services) report += `- Serviços: ${data.stats.database.deleted_services}\n`;
+                    if (data.stats.database.deleted_customers) report += `- Clientes: ${data.stats.database.deleted_customers}\n`;
+                }
+
+                alert(report);
+            } else {
+                throw new Error(data.error || 'Erro desconhecido');
+            }
+        } catch (error: any) {
+            console.error('Cleanup error:', error);
+            alert('❌ Erro na limpeza: ' + error.message);
+        } finally {
+            setLoading(originalLoading); // Restore previous loading state logic
+        }
+    };
+
     const metrics = [
         { label: 'Unidades Ativas (V3)', val: tenants.filter(t => t.active).length.toString(), trend: 'Sync: OK', icon: 'storefront' },
         { label: 'Status Sistema', val: '99.9%', trend: 'v3-final-' + new Date().getTime().toString().slice(-4), icon: 'check_circle' }
@@ -284,7 +320,18 @@ export default function MasterDashboardPage() {
 
             <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                 <div className="p-10 border-b flex justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
-                    <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>INQUILINOS NA PLATAFORMA</h3>
+                    <div className="flex items-center gap-4">
+                        <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>INQUILINOS NA PLATAFORMA</h3>
+                        <div className="hidden md:block h-6 w-px bg-white/10 mx-2"></div>
+                        <button
+                            onClick={handleCleanup}
+                            className="hidden md:flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/20 text-[9px] font-black uppercase tracking-widest"
+                            title="Limpar imagens não utilizadas (Storage)"
+                        >
+                            <span className="material-symbols-outlined text-[14px]">cleaning_services</span>
+                            Limpar Storage
+                        </button>
+                    </div>
                     <button
                         onClick={() => { fetchTenants(); fetchPendingCount(); }}
                         className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest opacity-50 hover:opacity-100 transition-opacity"
