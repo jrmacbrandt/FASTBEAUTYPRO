@@ -582,7 +582,7 @@ export default function MasterDashboardPage() {
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Nome da Loja</label>
                                             <input
                                                 type="text"
-                                                defaultValue={selectedTenant.name}
+                                                value={selectedTenant.name || ''}
                                                 onChange={(e) => {
                                                     const newName = e.target.value;
                                                     const newSlug = normalizeSlug(newName);
@@ -680,7 +680,7 @@ export default function MasterDashboardPage() {
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">E-mail de Contato</label>
                                             <input
                                                 type="email"
-                                                defaultValue={selectedTenant.contact_email || ''}
+                                                value={selectedTenant.contact_email || ''}
                                                 onChange={(e) => setSelectedTenant({ ...selectedTenant, contact_email: e.target.value })}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                             />
@@ -701,18 +701,9 @@ export default function MasterDashboardPage() {
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Proprietário (Nome)</label>
                                             <input
                                                 type="text"
-                                                value={selectedTenant.profiles?.find((p: any) => p.role === 'owner')?.full_name || selectedTenant.profiles?.[0]?.full_name || ''}
+                                                value={selectedTenant.owner_name ?? selectedTenant.profiles?.find((p: any) => p.role === 'owner')?.full_name ?? selectedTenant.profiles?.[0]?.full_name ?? ''}
                                                 onChange={(e) => {
-                                                    const newProfiles = [...(selectedTenant.profiles || [])];
-                                                    const ownerIdx = newProfiles.findIndex((p: any) => p.role === 'owner');
-                                                    if (ownerIdx !== -1) {
-                                                        newProfiles[ownerIdx] = { ...newProfiles[ownerIdx], full_name: e.target.value };
-                                                    } else if (newProfiles[0]) {
-                                                        newProfiles[0] = { ...newProfiles[0], full_name: e.target.value };
-                                                    } else {
-                                                        newProfiles[0] = { full_name: e.target.value, role: 'owner' };
-                                                    }
-                                                    setSelectedTenant({ ...selectedTenant, profiles: newProfiles });
+                                                    setSelectedTenant({ ...selectedTenant, owner_name: e.target.value });
                                                 }}
                                                 className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all"
                                             />
@@ -734,13 +725,13 @@ export default function MasterDashboardPage() {
                                             <div className="grid grid-cols-2 gap-2">
                                                 <input
                                                     type="text"
-                                                    defaultValue={selectedTenant.address_city}
+                                                    value={selectedTenant.address_city || ''}
                                                     onChange={(e) => setSelectedTenant({ ...selectedTenant, address_city: e.target.value })}
                                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
                                                 />
                                                 <input
                                                     type="text"
-                                                    defaultValue={selectedTenant.address_state}
+                                                    value={selectedTenant.address_state || ''}
                                                     onChange={(e) => setSelectedTenant({ ...selectedTenant, address_state: e.target.value })}
                                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-bold text-white focus:outline-none"
                                                 />

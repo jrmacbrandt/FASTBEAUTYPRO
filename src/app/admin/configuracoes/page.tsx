@@ -86,6 +86,7 @@ export default function EstablishmentSettingsPage() {
             .from('tenants')
             .update({
                 name: tenant.name,
+                owner_name: tenant.owner_name,
                 logo_url: logoUrl,
                 slug: tenant.slug,
                 phone: tenant.phone?.replace(/\D/g, ''),
@@ -258,7 +259,7 @@ export default function EstablishmentSettingsPage() {
                                         <input
                                             type="text"
                                             className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 font-bold text-white text-sm focus:border-[#f2b90d]/50 outline-none transition-all"
-                                            value={tenant.owner_name || profile?.full_name || ''}
+                                            value={tenant.owner_name ?? ''}
                                             onChange={e => setTenant({ ...tenant, owner_name: e.target.value })}
                                             placeholder="Seu nome completo"
                                         />
