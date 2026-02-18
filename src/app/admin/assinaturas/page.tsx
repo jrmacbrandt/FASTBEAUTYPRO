@@ -24,10 +24,9 @@ export default function SubscriptionsPage() {
         if (!user) return;
 
         if (activeTab === 'plans') {
-            const { data } = await supabase
-                .from('subscription_plans')
-                .select('*')
-                .order('created_at');
+            // ⚡ REC(Security): Use RPC to fetch plans (Bypasses RLS read issues)
+            const { data, error } = await supabase.rpc('get_vip_plans');
+            if (error) console.error('Erro ao buscar planos:', error);
             setPlans(data || []);
         } else {
             const { data } = await supabase
