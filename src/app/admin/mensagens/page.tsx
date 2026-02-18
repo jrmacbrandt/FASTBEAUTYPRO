@@ -335,13 +335,15 @@ export default function TeamMessagesPage() {
                                     Ver Todas as Datas
                                 </button>
                             )}
-                            <button
-                                onClick={() => setView('create')}
-                                className="bg-[#f2b90d] hover:bg-[#d9a50c] text-black px-6 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-xl active:scale-95"
-                            >
-                                <span className="material-symbols-outlined text-sm">add_circle</span>
-                                Novo Comunicado
-                            </button>
+                            {!selectedDate && (
+                                <button
+                                    onClick={() => setView('create')}
+                                    className="bg-[#f2b90d] hover:bg-[#d9a50c] text-black px-6 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-xl active:scale-95"
+                                >
+                                    <span className="material-symbols-outlined text-sm">add_circle</span>
+                                    Novo Comunicado
+                                </button>
+                            )}
                         </div>
                     </div>
 
