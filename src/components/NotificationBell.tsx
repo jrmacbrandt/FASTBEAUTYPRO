@@ -104,8 +104,21 @@ export function NotificationBell() {
 
             {/* Modal de Leitura */}
             {selectedNotification && (
-                <div className="fixed inset-0 z-[200] flex items-start justify-center p-4 pt-24 md:pt-32 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col max-h-[70vh] md:max-h-[80vh] overflow-hidden animate-in fade-in duration-300">
+                <div
+                    className="fixed inset-0 z-[200] flex items-start justify-center p-4 pt-24 md:pt-32 bg-black/90 backdrop-blur-md animate-in fade-in duration-300"
+                    onClick={() => setSelectedNotification(null)}
+                >
+                    <div
+                        className="bg-[#121214] border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col max-h-[70vh] md:max-h-[80vh] overflow-hidden animate-in fade-in duration-300 relative"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <button
+                            onClick={() => setSelectedNotification(null)}
+                            className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors z-10"
+                        >
+                            <span className="material-symbols-outlined text-2xl">close</span>
+                        </button>
+
                         <div className="p-8 md:p-10 flex flex-col min-h-0">
                             {/* Header (Fixo) */}
                             <div className="shrink-0">
