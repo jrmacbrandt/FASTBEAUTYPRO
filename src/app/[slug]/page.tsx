@@ -361,7 +361,7 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
-                                        className={`p-2.5 rounded-[1.8rem] bg-white/20 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex items-center gap-4 relative overflow-hidden`}
+                                        className={`p-2.5 rounded-[1.8rem] bg-white/20 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex items-center gap-4 relative overflow-hidden w-fit max-w-full`}
                                         style={{ borderColor: selection.service?.id === s.id ? theme.primary : undefined }}
                                     >
                                         {/* Image Container */}

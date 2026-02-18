@@ -413,7 +413,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                                     <label className="opacity-70 text-[9px] uppercase tracking-widest ml-1 italic" style={{ color: colors.textMuted }}>CPF / CNPJ</label>
                                     <div className="relative">
                                         <span className="material-symbols-outlined absolute left-4 top-3 text-[18px] opacity-40" style={{ color: colors.textMuted }}>fingerprint</span>
-                                        <input type="text" placeholder="000.000.000-00" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} maxLength={14} required />
+                                        <input type="text" placeholder="000.000.000-00" className="w-full border rounded-xl py-3 pl-12 pr-4 focus:outline-none transition-all font-bold text-xs" style={{ backgroundColor: colors.inputBg, borderColor: businessType === 'salon' ? '#7b438e20' : '#ffffff0d', color: colors.text }} value={cpf} onChange={(e) => setCpf(maskCPF(e.target.value))} maxLength={18} required />
                                     </div>
                                 </div>
 

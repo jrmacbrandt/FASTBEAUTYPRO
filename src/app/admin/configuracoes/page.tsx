@@ -282,6 +282,7 @@ export default function EstablishmentSettingsPage() {
                                             value={tenant.tax_id || ''}
                                             onChange={e => setTenant({ ...tenant, tax_id: maskCPF(e.target.value) })}
                                             placeholder="000.000.000-00"
+                                            maxLength={18}
                                         />
                                     </div>
                                 </div>

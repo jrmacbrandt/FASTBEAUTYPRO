@@ -278,8 +278,8 @@ export default function TeamManagementPage() {
                                     <input type="email" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="joao@exemplo.com" />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>CPF</label>
-                                    <input type="text" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })} maxLength={14} placeholder="000.000.000-00" />
+                                    <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>CPF / CNPJ</label>
+                                    <input type="text" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.cpf} onChange={(e) => setFormData({ ...formData, cpf: maskCPF(e.target.value) })} maxLength={18} placeholder="000.000.000-00" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest italic ml-2" style={{ color: colors.textMuted }}>WhatsApp</label>
