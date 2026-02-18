@@ -421,26 +421,6 @@ export default function MasterDashboardPage() {
                                                         ) : (
                                                             <span className="material-symbols-outlined opacity-30">storefront</span>
                                                         )}
-                                                        <button
-                                                            onClick={() => { setSelectedTenant(t); setIsEditModalOpen(true); }}
-                                                            style={{
-                                                                position: 'absolute',
-                                                                top: 0,
-                                                                right: 0,
-                                                                width: '24px',
-                                                                height: '24px',
-                                                                backgroundColor: 'rgba(0,0,0,0.8)',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                borderBottomLeftRadius: '8px',
-                                                                cursor: 'pointer',
-                                                                border: 'none'
-                                                            }}
-                                                            title="Editar Logo"
-                                                        >
-                                                            <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#f2b90d' }}>edit</span>
-                                                        </button>
                                                     </div>
                                                     <div className="flex flex-col">
                                                         <span className="font-black uppercase tracking-tight">{t.name}</span>
