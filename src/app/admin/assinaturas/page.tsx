@@ -57,7 +57,13 @@ export default function SubscriptionsPage() {
             benefits: currentPlan.benefits
         };
 
-        const { error } = await supabase.from('subscription_plans').insert(payload);
+        // ⚡ REC(Security): Use RPC to bypass RLS recursion/policy issues
+        const { error } = await supabase.rpc('create_vip_plan', {
+            p_name: currentPlan.name,
+            p_price: parseFloat(currentPlan.price),
+            p_description: currentPlan.description,
+            p_benefits: currentPlan.benefits
+        });
 
         if (error) {
             alert('Erro ao salvar plano: ' + error.message);
