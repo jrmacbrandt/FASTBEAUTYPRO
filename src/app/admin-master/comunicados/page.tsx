@@ -368,7 +368,7 @@ export default function MasterComunicadosPage() {
                     )}
 
                     {selectedDate && (
-                        <div className="flex items-center justify-between mb-8 px-2">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 px-2">
                             <h4 className="text-lg md:text-xl font-black italic uppercase text-[#f2b90d]">
                                 Transmissões de {selectedDate}
                             </h4>
