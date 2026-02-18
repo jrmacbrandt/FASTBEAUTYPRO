@@ -15,6 +15,7 @@ export default function MasterComunicadosPage() {
     const [history, setHistory] = useState<any[]>([]);
     const [view, setView] = useState<'history' | 'create'>('history');
     const [selectedHistoryItems, setSelectedHistoryItems] = useState<string[]>([]);
+    const [selectedDate, setSelectedDate] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchOwners = async () => {
@@ -181,6 +182,20 @@ export default function MasterComunicadosPage() {
 
     const isAllSelected = owners.length > 0 && selectedRecipients.length === owners.length;
 
+    // Agrupamento do histórico por data
+    const groupedHistory = history.reduce((acc: any, item: any) => {
+        const date = new Date(item.created_at).toLocaleDateString('pt-BR');
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(item);
+        return acc;
+    }, {});
+
+    const sortedDates = Object.keys(groupedHistory).sort((a, b) => {
+        const dateA = a.split('/').reverse().join('');
+        const dateB = b.split('/').reverse().join('');
+        return dateB.localeCompare(dateA);
+    });
+
     return (
         <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative pb-20 px-4 md:px-0 lg:pt-10">
             {/* Overlay de Sucesso */}
@@ -327,6 +342,15 @@ export default function MasterComunicadosPage() {
                                     Excluir ({selectedHistoryItems.length})
                                 </button>
                             )}
+                            {selectedDate && (
+                                <button
+                                    onClick={() => setSelectedDate(null)}
+                                    className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-4 py-3 rounded-xl border border-white/5 flex items-center gap-2 text-[10px] font-black uppercase transition-all"
+                                >
+                                    <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                    Ver Todas as Datas
+                                </button>
+                            )}
                             <button
                                 onClick={() => setView('create')}
                                 className="bg-[#f2b90d] hover:bg-[#d9a50c] text-black px-6 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-xl active:scale-95"
@@ -337,19 +361,35 @@ export default function MasterComunicadosPage() {
                         </div>
                     </div>
 
-                    {history.length > 0 && (
+                    {!selectedDate && history.length > 0 && (
                         <div className="flex items-center justify-end mb-6 px-2">
+                            {/* Selector hidden in summary view to avoid confusion */}
+                        </div>
+                    )}
+
+                    {selectedDate && (
+                        <div className="flex items-center justify-between mb-8 px-2">
+                            <h4 className="text-lg md:text-xl font-black italic uppercase text-[#f2b90d]">
+                                Transmissões de {selectedDate}
+                            </h4>
                             <label className="flex items-center gap-2 cursor-pointer group">
                                 <span className="text-[9px] font-black uppercase text-slate-500 group-hover:text-amber-500 transition-colors">Selecionar Tudo</span>
                                 <div className="relative">
                                     <input
                                         type="checkbox"
                                         className="sr-only"
-                                        checked={history.length > 0 && selectedHistoryItems.length === history.length}
-                                        onChange={(e) => handleSelectAllHistory(e.target.checked)}
+                                        checked={groupedHistory[selectedDate]?.every((item: any) => selectedHistoryItems.includes(item.id))}
+                                        onChange={(e) => {
+                                            const dayIds = groupedHistory[selectedDate].map((i: any) => i.id);
+                                            if (e.target.checked) {
+                                                setSelectedHistoryItems(prev => Array.from(new Set([...prev, ...dayIds])));
+                                            } else {
+                                                setSelectedHistoryItems(prev => prev.filter(id => !dayIds.includes(id)));
+                                            }
+                                        }}
                                     />
-                                    <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${selectedHistoryItems.length === history.length && history.length > 0 ? 'bg-amber-500 border-amber-500' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
-                                        {selectedHistoryItems.length === history.length && history.length > 0 && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
+                                    <div className={`size-5 rounded-lg border-2 flex items-center justify-center transition-all ${groupedHistory[selectedDate]?.every((item: any) => selectedHistoryItems.includes(item.id)) ? 'bg-amber-500 border-amber-500' : 'bg-black border-white/10 group-hover:border-white/20'}`}>
+                                        {groupedHistory[selectedDate]?.every((item: any) => selectedHistoryItems.includes(item.id)) && <span className="material-symbols-outlined text-black text-[14px] font-black">check</span>}
                                     </div>
                                 </div>
                             </label>
@@ -367,8 +407,43 @@ export default function MasterComunicadosPage() {
                                 <span className="material-symbols-outlined text-6xl mb-4 text-slate-500">campaign</span>
                                 <p className="text-[12px] font-black uppercase tracking-widest">Nenhuma transmissão master registrada</p>
                             </div>
+                        ) : !selectedDate ? (
+                            /* Visualização de Lista de Datas */
+                            <div className="grid grid-cols-1 gap-3">
+                                {sortedDates.map(date => {
+                                    const count = groupedHistory[date].length;
+                                    const selectedCount = groupedHistory[date].filter((i: any) => selectedHistoryItems.includes(i.id)).length;
+
+                                    return (
+                                        <div
+                                            key={date}
+                                            onClick={() => setSelectedDate(date)}
+                                            className={`bg-black/40 border p-6 md:p-8 rounded-3xl group transition-all cursor-pointer flex items-center justify-between ${selectedCount > 0 ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5 hover:border-white/10'}`}
+                                        >
+                                            <div className="flex items-center gap-4 md:gap-6">
+                                                <div className="size-12 md:size-14 bg-white/5 rounded-2xl flex items-center justify-center group-hover:bg-[#f2b90d]/10 group-hover:text-[#f2b90d] transition-all">
+                                                    <span className="material-symbols-outlined">calendar_today</span>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-lg md:text-xl font-black text-white italic uppercase">{date}</h4>
+                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{count} {count === 1 ? 'Transmissão enviada' : 'Transmissões enviadas'}</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                {selectedCount > 0 && (
+                                                    <div className="bg-[#f2b90d] text-black px-3 py-1 rounded-full text-[10px] font-black uppercase italic">
+                                                        {selectedCount} selecionada{selectedCount > 1 ? 's' : ''}
+                                                    </div>
+                                                )}
+                                                <span className="material-symbols-outlined text-slate-600 group-hover:text-[#f2b90d] group-hover:translate-x-1 transition-all">chevron_right</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         ) : (
-                            history.map((item) => (
+                            /* Visualização das Transmissões do Dia Selecionado */
+                            groupedHistory[selectedDate].map((item: any) => (
                                 <div
                                     key={item.id}
                                     className={`bg-black/40 border p-5 md:p-8 rounded-3xl group transition-all relative ${selectedHistoryItems.includes(item.id) ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5 hover:border-white/10'}`}
@@ -387,7 +462,7 @@ export default function MasterComunicadosPage() {
                                             <div className="flex items-center gap-3 mb-3">
                                                 <span className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] italic">Unidade: {item.receiver_profile?.full_name || 'Admin'}</span>
                                                 <span className="size-1 bg-slate-700 rounded-full" />
-                                                <span className="text-[9px] font-bold text-slate-500 uppercase">{new Date(item.created_at).toLocaleDateString()} às {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span className="text-[9px] font-bold text-slate-500 uppercase">{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                             </div>
                                             <h4 className="text-base md:text-lg font-black text-white italic uppercase truncate mb-2">{item.title}</h4>
                                             <p className="text-sm text-slate-400 font-medium line-clamp-3 leading-relaxed opacity-70 italic whitespace-pre-wrap">{item.message}</p>
