@@ -64,7 +64,7 @@ export function NotificationBell() {
             </button>
 
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-[#18181b] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="fixed sm:absolute inset-x-4 sm:inset-auto right-auto sm:right-0 top-[70px] sm:top-full mt-2 w-auto sm:w-80 bg-[#18181b] border border-white/10 rounded-[2rem] shadow-2xl z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="p-4 border-b border-white/5 flex justify-between items-center bg-black/20">
                         <h3 className="font-bold text-white text-xs uppercase tracking-widest italic">Comunicados</h3>
                         <button onClick={() => setIsOpen(false)} className="text-slate-500 hover:text-white transition-colors">
