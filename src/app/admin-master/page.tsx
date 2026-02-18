@@ -360,17 +360,17 @@ export default function MasterDashboardPage() {
                 </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 {metrics.map((m, i) => (
-                    <div key={i} className="p-8 rounded-[2rem] border relative group transition-all shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                        <span className="material-symbols-outlined absolute top-8 right-8 text-6xl opacity-10 group-hover:opacity-20 transition-all" style={{ color: colors.primary }}>{m.icon}</span>
-                        <p className="text-[10px] font-black uppercase tracking-widest mb-1 italic" style={{ color: colors.textMuted }}>{m.label}</p>
-                        <h4 className="text-4xl font-black italic tracking-tighter mb-4" style={{ color: colors.text }}>{m.val}</h4>
+                    <div key={i} className="p-6 md:p-8 rounded-3xl md:rounded-[2rem] border relative group transition-all shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                        <span className="material-symbols-outlined absolute top-6 right-6 md:top-8 md:right-8 text-4xl md:text-6xl opacity-10 group-hover:opacity-20 transition-all" style={{ color: colors.primary }}>{m.icon}</span>
+                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-1 italic" style={{ color: colors.textMuted }}>{m.label}</p>
+                        <h4 className="text-2xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.text }}>{m.val}</h4>
                     </div>
                 ))}
             </div>
 
-            <div className="rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+            <div className="rounded-3xl md:rounded-[2.5rem] border overflow-visible shadow-2xl" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                 <div className="p-6 md:p-10 border-b flex flex-wrap gap-4 justify-between items-center" style={{ borderColor: `${colors.text}0d` }}>
                     <div className="flex flex-wrap items-center gap-4">
                         <h3 className="text-2xl font-black italic tracking-tight uppercase" style={{ color: colors.text }}>INQUILINOS NA PLATAFORMA</h3>
@@ -393,7 +393,7 @@ export default function MasterDashboardPage() {
                         Atualizar Lista
                     </button>
                 </div>
-                <div className="p-8">
+                <div className="p-4 md:p-8">
                     {loading ? (
                         <div className="text-center py-20 opacity-40">
                             <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
@@ -511,11 +511,11 @@ export default function MasterDashboardPage() {
             {/* Modal de Gestão de Inquilino */}
             {
                 isEditModalOpen && selectedTenant && (
-                    <div className="fixed inset-0 z-[100] flex items-start justify-center py-8 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                        <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[3rem] p-10 relative shadow-2xl my-8">
+                    <div className="fixed inset-0 z-[100] flex items-start justify-center py-4 md:py-8 bg-black/90 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
+                        <div className="bg-[#121214] border border-white/10 w-full max-w-[600px] rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative shadow-2xl my-4 md:my-8 mx-4">
                             <div className="absolute top-0 left-0 w-full h-1 bg-[#f2b90d] animate-pulse"></div>
 
-                            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors">
+                            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-6 right-6 md:top-8 md:right-8 text-slate-500 hover:text-white transition-colors">
                                 <span className="material-symbols-outlined">close</span>
                             </button>
 

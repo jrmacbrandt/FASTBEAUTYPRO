@@ -173,8 +173,8 @@ export default function TeamMessagesPage() {
         <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative pb-20 px-4 md:px-0">
             {status === 'success' && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center pointer-events-none p-6 bg-black/20 backdrop-blur-sm">
-                    <div className="bg-emerald-500 text-white px-8 md:px-10 py-6 md:py-8 rounded-[2rem] md:rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 flex flex-col items-center gap-3 md:gap-4 pointer-events-auto">
-                        <span className="material-symbols-outlined text-4xl md:text-5xl font-bold italic">check_circle</span>
+                    <div className="bg-emerald-500 text-white px-6 md:px-10 py-6 md:py-8 rounded-3xl md:rounded-[2.5rem] shadow-2xl animate-in zoom-in duration-300 flex flex-col items-center gap-3 md:gap-4 pointer-events-auto">
+                        <span className="material-symbols-outlined text-3xl md:text-5xl font-bold italic">check_circle</span>
                         <div className="text-center">
                             <h4 className="text-lg md:text-xl font-black italic uppercase">Enviado</h4>
                             <p className="text-white/80 text-[8px] md:text-[10px] font-bold uppercase tracking-widest mt-1">Comunicado com sucesso!</p>
@@ -184,7 +184,7 @@ export default function TeamMessagesPage() {
             )}
 
             {view === 'create' ? (
-                <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="bg-[#121214] p-6 md:p-12 rounded-3xl md:rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-right-4 duration-300">
                     <div className="flex items-center justify-between mb-6 md:mb-10">
                         <div className="flex items-center gap-3 md:gap-4">
                             <div className="size-12 md:size-14 bg-[#f2b90d]/10 rounded-xl md:rounded-2xl flex items-center justify-center text-[#f2b90d] shrink-0">
@@ -289,7 +289,7 @@ export default function TeamMessagesPage() {
                     </div>
                 </div>
             ) : (
-                <div className="bg-[#121214] p-6 md:p-12 rounded-[2rem] md:rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-300">
+                <div className="bg-[#121214] p-6 md:p-12 rounded-3xl md:rounded-[2.5rem] border border-white/5 shadow-2xl animate-in fade-in slide-in-from-left-4 duration-300">
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 md:mb-12 gap-6">
                         <div className="flex items-center gap-3 md:gap-4">
                             <div className="size-12 md:size-14 bg-amber-500/10 rounded-xl md:rounded-2xl flex items-center justify-center text-amber-500 shrink-0">

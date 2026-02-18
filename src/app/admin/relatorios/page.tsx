@@ -32,31 +32,30 @@ const MetricCard = ({ title, value, subtext, icon, theme, colorIndex = 0, header
     const activeColor = colors[colorIndex % colors.length];
 
     return (
-        <div className="rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
+        <div className="rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
             style={{ backgroundColor: theme.cardBg }}>
             <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-20 pointer-events-none"
                 style={{ backgroundColor: activeColor.primary }}
             ></div>
 
             <div className="relative z-10">
-                <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center justify-between mb-6 md:mb-8">
                     <div>
-                        <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: theme.text }}>{title}</h3>
-                        <p className="text-[10px] font-bold uppercase tracking-widest opacity-60" style={{ color: theme.text }}>{headerLabel}</p>
+                        <h3 className="text-lg md:text-xl font-black italic uppercase mb-1" style={{ color: theme.text }}>{title}</h3>
+                        <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest opacity-60" style={{ color: theme.text }}>{headerLabel}</p>
                     </div>
-                    <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
+                    <div className="size-10 md:size-12 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
                         style={{ backgroundColor: activeColor.bg }}
                     >
-                        <span className="material-symbols-outlined" style={{ color: activeColor.primary }}>{icon}</span>
+                        <span className="material-symbols-outlined text-[20px] md:text-[24px]" style={{ color: activeColor.primary }}>{icon}</span>
                     </div>
                 </div>
 
                 <div className="space-y-1">
-                    <h4 className="text-4xl font-black italic tracking-tighter" style={{ color: theme.text }}>{value}</h4>
+                    <h4 className="text-2xl md:text-4xl font-black italic tracking-tighter" style={{ color: theme.text }}>{value}</h4>
                     {subtext && (
-                        <div className="flex items-center gap-2">
-                            <span className="size-1.5 rounded-full bg-emerald-500"></span>
-                            <p className="text-[10px] font-bold uppercase tracking-widest opacity-60" style={{ color: theme.text }}>{subtext}</p>
+                        <div className="flex flex-col space-y-1">
+                            {subtext}
                         </div>
                     )}
                 </div>
@@ -252,29 +251,29 @@ export default function ReportsPage() {
             </div>
 
             {/* Charts Area */}
-            <div className="rounded-[2.5rem] p-8 md:p-10 shadow-2xl overflow-hidden transition-all"
+            <div className="rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl overflow-hidden transition-all"
                 style={{ backgroundColor: theme.cardBg }}
             >
-                <div className="flex items-center justify-between mb-10">
+                <div className="flex items-center justify-between mb-8 md:mb-10">
                     <div>
-                        <h3 className="text-2xl font-black italic uppercase tracking-tighter" style={{ color: theme.text }}>Performance Diária</h3>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-40" style={{ color: theme.textMuted }}>Faturamento vs Custos (Últimos 7 dias)</p>
+                        <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter" style={{ color: theme.text }}>Performance Diária</h3>
+                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-40" style={{ color: theme.textMuted }}>Faturamento vs Custos (Últimos 7 dias)</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <span className="size-3 rounded-full" style={{ backgroundColor: theme.primary }}></span>
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-60" style={{ color: theme.text }}>Receita</span>
+                    <div className="flex items-center gap-2 md:gap-4">
+                        <div className="flex items-center gap-1 md:gap-2">
+                            <span className="size-2 md:size-3 rounded-full" style={{ backgroundColor: theme.primary }}></span>
+                            <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-60" style={{ color: theme.text }}>Receita</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <span className="size-3 rounded-full bg-red-500"></span>
-                            <span className="text-[9px] font-black uppercase tracking-widest opacity-60" style={{ color: theme.text }}>Custo</span>
+                        <div className="flex items-center gap-1 md:gap-2">
+                            <span className="size-2 md:size-3 rounded-full bg-red-500"></span>
+                            <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest opacity-60" style={{ color: theme.text }}>Custo</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="h-[400px] w-full">
+                <div className="h-[300px] md:h-[400px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={chartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                        <BarChart data={chartData} margin={{ top: 0, right: 10, left: -10, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={theme.chartGrid} opacity={0.3} />
                             <XAxis
                                 dataKey="name"
