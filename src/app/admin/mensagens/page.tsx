@@ -316,11 +316,11 @@ export default function TeamMessagesPage() {
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-wrap items-center gap-3">
                             {selectedHistoryItems.length > 0 && (
                                 <button
                                     onClick={handleBulkDelete}
-                                    className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-5 py-3 rounded-xl border border-red-500/20 flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-lg active:scale-95"
+                                    className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-5 py-3 rounded-xl border border-red-500/20 flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-lg active:scale-95 flex-1 min-w-[140px] justify-center"
                                 >
                                     <span className="material-symbols-outlined text-sm">delete_sweep</span>
                                     Excluir ({selectedHistoryItems.length})
@@ -329,7 +329,7 @@ export default function TeamMessagesPage() {
                             {selectedDate && (
                                 <button
                                     onClick={() => setSelectedDate(null)}
-                                    className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-4 py-3 rounded-xl border border-white/5 flex items-center gap-2 text-[10px] font-black uppercase transition-all"
+                                    className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white px-4 py-3 rounded-xl border border-white/5 flex items-center gap-2 text-[10px] font-black uppercase transition-all flex-1 min-w-[140px] justify-center"
                                 >
                                     <span className="material-symbols-outlined text-sm">arrow_back</span>
                                     Ver Todas as Datas
@@ -338,7 +338,7 @@ export default function TeamMessagesPage() {
                             {!selectedDate && (
                                 <button
                                     onClick={() => setView('create')}
-                                    className="bg-[#f2b90d] hover:bg-[#d9a50c] text-black px-6 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-xl active:scale-95 shrink-0"
+                                    className="bg-[#f2b90d] hover:bg-[#d9a50c] text-black px-6 py-3 rounded-xl flex items-center gap-2 text-[10px] font-black uppercase transition-all shadow-xl active:scale-95 shrink-0 flex-1 min-w-[140px] justify-center"
                                 >
                                     <span className="material-symbols-outlined text-sm">add_circle</span>
                                     Novo Comunicado
@@ -404,20 +404,20 @@ export default function TeamMessagesPage() {
                                         <div
                                             key={date}
                                             onClick={() => setSelectedDate(date)}
-                                            className={`bg-black/40 border p-6 md:p-8 rounded-3xl group transition-all cursor-pointer flex items-center justify-between ${selectedCount > 0 ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5 hover:border-white/10'}`}
+                                            className={`bg-black/40 border p-5 md:p-8 rounded-3xl group transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${selectedCount > 0 ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5 hover:border-white/10'}`}
                                         >
                                             <div className="flex items-center gap-4 md:gap-6">
-                                                <div className="size-12 md:size-14 bg-white/5 rounded-2xl flex items-center justify-center group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-all">
-                                                    <span className="material-symbols-outlined">calendar_today</span>
+                                                <div className="size-10 md:size-14 bg-white/5 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-all">
+                                                    <span className="material-symbols-outlined text-xl md:text-2xl">calendar_today</span>
                                                 </div>
-                                                <div>
-                                                    <h4 className="text-lg md:text-xl font-black text-white italic uppercase">{date}</h4>
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{count} {count === 1 ? 'Mensagem enviada' : 'Mensagens enviadas'}</p>
+                                                <div className="min-w-0">
+                                                    <h4 className="text-base md:text-xl font-black text-white italic uppercase truncate">{date}</h4>
+                                                    <p className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">{count} {count === 1 ? 'Mensagem' : 'Mensagens'}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-4">
+                                            <div className="flex items-center justify-between sm:justify-end gap-3 md:gap-4">
                                                 {selectedCount > 0 && (
-                                                    <div className="bg-amber-500 text-black px-3 py-1 rounded-full text-[10px] font-black uppercase italic">
+                                                    <div className="bg-amber-500 text-black px-3 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase italic whitespace-nowrap">
                                                         {selectedCount} selecionada{selectedCount > 1 ? 's' : ''}
                                                     </div>
                                                 )}
