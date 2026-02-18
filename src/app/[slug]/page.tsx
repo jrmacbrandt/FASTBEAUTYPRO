@@ -361,32 +361,32 @@ Aguardo sua confirmação! 😊`;
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
-                                        className={`p-2.5 rounded-[1.8rem] bg-white/20 border transition-all text-left group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex items-center gap-4 relative overflow-hidden w-fit max-w-full`}
+                                        className={`p-3 rounded-[2rem] bg-white/10 border transition-all text-center group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex flex-col items-center gap-3 relative overflow-hidden w-36 md:w-48 shrink-0`}
                                         style={{ borderColor: selection.service?.id === s.id ? theme.primary : undefined }}
                                     >
                                         {/* Image Container */}
-                                        <div className={`size-16 md:size-20 rounded-2xl overflow-hidden shrink-0 border border-white/10 ${selection.service?.id === s.id ? 'ring-2 ring-offset-2 ring-offset-black' : ''} transition-all bg-black/20`} style={{ '--tw-ring-color': theme.primary } as React.CSSProperties}>
+                                        <div className={`size-24 md:size-32 rounded-2xl overflow-hidden shrink-0 border border-white/10 ${selection.service?.id === s.id ? 'ring-2 ring-offset-2 ring-offset-black' : ''} transition-all bg-black/20`} style={{ '--tw-ring-color': theme.primary } as React.CSSProperties}>
                                             {s.image_url ? (
                                                 <img src={s.image_url} alt={s.name} className="size-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
                                             ) : (
                                                 <div className="size-full flex items-center justify-center">
-                                                    <span className="material-symbols-outlined text-2xl text-white/20">spa</span>
+                                                    <span className="material-symbols-outlined text-3xl text-white/20">spa</span>
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="flex-1 min-w-0 z-10 flex flex-col justify-center gap-0.5">
+                                        <div className="flex flex-col items-center gap-1 w-full">
                                             {/* Line 1: Name */}
-                                            <span className="text-white text-sm md:text-base font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors leading-tight line-clamp-1 w-full">
+                                            <span className="text-white text-xs md:text-sm font-black italic uppercase tracking-tighter group-hover:text-[#f2b90d] transition-colors leading-tight line-clamp-2 w-full">
                                                 {s.name}
                                             </span>
 
                                             {/* Line 2: Price & Duration */}
-                                            <div className="flex items-end gap-2.5">
-                                                <span className="text-2xl md:text-3xl font-black italic text-white tracking-tighter leading-none">
+                                            <div className="flex flex-col items-center gap-0.5">
+                                                <span className="text-xl md:text-2xl font-black italic text-white tracking-tighter leading-none">
                                                     R$ {s.price}
                                                 </span>
-                                                <p className="text-white/40 text-[8px] md:text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 mb-0.5">
+                                                <p className="text-white/40 text-[8px] md:text-[9px] font-bold uppercase tracking-widest flex items-center gap-1">
                                                     <span className="material-symbols-outlined text-[10px]">schedule</span>
                                                     {s.duration_minutes} min
                                                 </p>
