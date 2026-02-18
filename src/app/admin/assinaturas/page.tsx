@@ -27,7 +27,6 @@ export default function SubscriptionsPage() {
             const { data } = await supabase
                 .from('subscription_plans')
                 .select('*')
-                .eq('tenant_id', user.user_metadata.tenant_id)
                 .order('created_at');
             setPlans(data || []);
         } else {
@@ -38,7 +37,6 @@ export default function SubscriptionsPage() {
                     clients (name, phone),
                     subscription_plans (name, price)
                 `)
-                .eq('tenant_id', user.user_metadata.tenant_id)
                 .eq('status', 'active');
             setSubscribers(data || []);
         }
