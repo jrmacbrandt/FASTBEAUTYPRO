@@ -251,10 +251,10 @@ export default function MasterDashboardPage() {
                     slug: data.slug,
                     business_type: data.business_type,
                     has_paid: data.has_paid,
-                    phone: data.phone,
-                    tax_id: data.tax_id,
+                    phone: data.phone?.replace(/\D/g, ''),
+                    tax_id: data.tax_id?.replace(/\D/g, ''),
                     contact_email: data.contact_email,
-                    address_zip: data.address_zip,
+                    address_zip: data.address_zip?.replace(/\D/g, ''),
                     address_street: data.address_street,
                     address_number: data.address_number,
                     address_complement: data.address_complement,
@@ -269,7 +269,7 @@ export default function MasterDashboardPage() {
                 if (ownerProfile?.id) {
                     await supabase.from('profiles').update({
                         full_name: data.owner_name,
-                        cpf: data.tax_id
+                        cpf: data.tax_id?.replace(/\D/g, '')
                     }).eq('id', ownerProfile.id);
                 }
                 alert('Alterações salvas com sucesso! (V3)');
