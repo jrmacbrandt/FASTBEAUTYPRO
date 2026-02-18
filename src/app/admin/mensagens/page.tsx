@@ -404,24 +404,24 @@ export default function TeamMessagesPage() {
                                         <div
                                             key={date}
                                             onClick={() => setSelectedDate(date)}
-                                            className={`bg-black/40 border p-5 md:p-8 rounded-3xl group transition-all cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${selectedCount > 0 ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5 hover:border-white/10'}`}
+                                            className={`bg-black/40 border p-5 md:p-8 rounded-3xl group transition-all cursor-pointer flex items-center justify-between gap-3 md:gap-6 ${selectedCount > 0 ? 'border-amber-500/40 bg-amber-500/5' : 'border-white/5 hover:border-white/10'}`}
                                         >
-                                            <div className="flex items-center gap-4 md:gap-6">
-                                                <div className="size-10 md:size-14 bg-white/5 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-all">
+                                            <div className="flex items-center gap-4 md:gap-6 min-w-0">
+                                                <div className="size-10 md:size-14 bg-white/5 rounded-xl md:rounded-2xl flex items-center justify-center group-hover:bg-amber-500/10 group-hover:text-amber-500 transition-all shrink-0">
                                                     <span className="material-symbols-outlined text-xl md:text-2xl">calendar_today</span>
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <h4 className="text-base md:text-xl font-black text-white italic uppercase truncate">{date}</h4>
+                                                    <h4 className="text-sm md:text-xl font-black text-white italic uppercase truncate">{date}</h4>
                                                     <p className="text-[8px] md:text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">{count} {count === 1 ? 'Mensagem' : 'Mensagens'}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center justify-between sm:justify-end gap-3 md:gap-4">
+                                            <div className="flex items-center gap-3 md:gap-4 shrink-0">
                                                 {selectedCount > 0 && (
-                                                    <div className="bg-amber-500 text-black px-3 py-1 rounded-full text-[8px] md:text-[10px] font-black uppercase italic whitespace-nowrap">
-                                                        {selectedCount} selecionada{selectedCount > 1 ? 's' : ''}
+                                                    <div className="bg-amber-500 text-black px-2 md:px-3 py-1 rounded-full text-[7px] md:text-[10px] font-black uppercase italic whitespace-nowrap">
+                                                        {selectedCount} <span className="hidden xs:inline">selecionada{selectedCount > 1 ? 's' : ''}</span>
                                                     </div>
                                                 )}
-                                                <span className="material-symbols-outlined text-slate-600 group-hover:text-amber-500 group-hover:translate-x-1 transition-all">chevron_right</span>
+                                                <span className="material-symbols-outlined text-slate-600 group-hover:text-amber-500 group-hover:translate-x-1 transition-all text-xl md:text-2xl">chevron_right</span>
                                             </div>
                                         </div>
                                     );
