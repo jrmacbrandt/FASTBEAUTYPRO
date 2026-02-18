@@ -38,7 +38,10 @@ export default function EstablishmentSettingsPage() {
 
     useEffect(() => {
         if (profile?.tenant_id) {
-            setTenant(profile.tenant);
+            setTenant({
+                ...profile.tenant,
+                owner_name: profile.full_name
+            });
             setUserEmail(profile.email || '');
             setCurrentLoginEmail(profile.email || '');
             if (profile.tenant?.logo_url) setLogoPreview(profile.tenant.logo_url);
@@ -82,11 +85,10 @@ export default function EstablishmentSettingsPage() {
             }
         }
 
-        const { error } = await supabase
+        const { error: tenantError } = await supabase
             .from('tenants')
             .update({
                 name: tenant.name,
-                owner_name: tenant.owner_name,
                 logo_url: logoUrl,
                 slug: tenant.slug,
                 phone: tenant.phone?.replace(/\D/g, ''),
@@ -108,10 +110,10 @@ export default function EstablishmentSettingsPage() {
             })
             .eq('id', tenant.id);
 
-        if (!error && profile?.id) {
+        if (!tenantError && profile?.id) {
             // Sync with profile
             await supabase.from('profiles').update({
-                full_name: tenant.owner_name || profile.full_name,
+                full_name: tenant.owner_name,
                 cpf: tenant.tax_id?.replace(/\D/g, '')
             }).eq('id', profile.id);
 
@@ -119,11 +121,11 @@ export default function EstablishmentSettingsPage() {
             window.dispatchEvent(new CustomEvent('profile-updated'));
         }
 
-        if (!error) {
+        if (!tenantError) {
             alert('Configurações salvas com sucesso!');
         } else {
-            console.error('Error saving tenant:', error);
-            alert('Erro ao salvar: ' + error.message);
+            console.error('Error saving tenant:', tenantError);
+            alert('Erro ao salvar: ' + tenantError.message);
         }
         setIsSaving(false);
     };
