@@ -10,12 +10,15 @@ export default function ProfessionalAgendaPage() {
     const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
     const [selectedClient, setSelectedClient] = useState<any>(null);
     const [cart, setCart] = useState<{ id: string; name: string; price: number; qty: number; type: 'service' | 'product' }[]>([]);
-    const [dailyAgenda, setDailyAgenda] = useState<any[]>([]);
+    const [todayAgenda, setTodayAgenda] = useState<any[]>([]);
+    const [upcomingAgenda, setUpcomingAgenda] = useState<any[]>([]);
+    const [historyAgenda, setHistoryAgenda] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [allServices, setAllServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [inclusionTab, setInclusionTab] = useState<'services' | 'products'>('services');
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
+    const [currentTab, setCurrentTab] = useState<'hoje' | 'proximos' | 'historico'>('hoje');
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -34,15 +37,24 @@ export default function ProfessionalAgendaPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
+        // Fetch last 60 days to cover History but also future for Upcoming
+        const sixtyDaysAgo = new Date();
+        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+
         const { data, error } = await supabase
             .from('appointments')
-            .select('*, profiles(full_name), services(name, price)')
+            .select('*, profiles(full_name), services(name, price), orders(total_value, items)')
             .eq('barber_id', session.user.id)
-            .gte('scheduled_at', new Date().toISOString().split('T')[0] + 'T00:00:00')
+            .gte('scheduled_at', sixtyDaysAgo.toISOString())
             .order('scheduled_at', { ascending: true });
 
         if (!error && data) {
-            setDailyAgenda(data);
+            const today = new Date();
+            const todayStr = today.toISOString().split('T')[0];
+
+            setTodayAgenda(data.filter(a => a.scheduled_at.startsWith(todayStr) && a.status === 'scheduled'));
+            setUpcomingAgenda(data.filter(a => a.scheduled_at > todayStr && a.status === 'scheduled'));
+            setHistoryAgenda(data.filter(a => a.status === 'completed' || a.status === 'absent' || a.status === 'paid').reverse());
         }
         setLoading(false);
     };
@@ -88,7 +100,9 @@ export default function ProfessionalAgendaPage() {
 
     const handleOpenCommand = (appointment: any) => {
         setSelectedClient(appointment);
-        setCart([]);
+        // Load custom items from order if exists
+        const savedItems = appointment.orders?.[0]?.items || [];
+        setCart(savedItems);
         setView('command');
     };
 
@@ -110,69 +124,83 @@ export default function ProfessionalAgendaPage() {
         if (!error) fetchAgenda();
     };
 
-    const handleFinishCommand = async () => {
+    const handleSaveDraft = async () => {
         setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return setLoading(false);
 
         const { data: barberProfile } = await supabase
             .from('profiles')
-            .select('service_commission, product_commission, tenant_id')
+            .select('tenant_id')
             .eq('id', session.user.id)
             .single();
 
-        if (!barberProfile) {
-            alert('Erro ao buscar perfil do profissional.');
-            setLoading(false);
-            return;
-        }
+        if (!barberProfile) return setLoading(false);
 
         const serviceTotal = parseFloat(selectedClient?.services?.price?.toString() || '0');
         const productTotal = cart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
-        const serviceCommissionRate = (barberProfile.service_commission || 0) / 100;
-        const productCommissionRate = (barberProfile.product_commission || 0) / 100;
-
-        const commissionAmount = (serviceTotal * serviceCommissionRate) + (productTotal * productCommissionRate);
         const totalValue = serviceTotal + productTotal;
 
-        // Create ORDER record
-        const { error: orderError } = await supabase
+        // Upsert order as draft (items only, status pending_payment ONLY on Finalize)
+        // Check if order exists
+        const { data: existingOrder } = await supabase
             .from('orders')
-            .insert({
+            .select('id')
+            .eq('appointment_id', selectedClient.id)
+            .single();
+
+        if (existingOrder) {
+            await supabase.from('orders').update({
+                total_value: totalValue,
+                items: cart
+            }).eq('id', existingOrder.id);
+        } else {
+            await supabase.from('orders').insert({
                 tenant_id: barberProfile.tenant_id,
                 appointment_id: selectedClient.id,
                 barber_id: session.user.id,
                 total_value: totalValue,
-                service_total: serviceTotal,
-                product_total: productTotal,
-                status: 'pending_payment'
+                status: 'draft',
+                items: cart
             });
+        }
 
-        if (orderError) {
-            console.error(orderError);
-            alert('Erro ao criar pedido: ' + orderError.message);
+        alert('Comanda salva como rascunho!');
+        setLoading(false);
+        fetchAgenda();
+        setView('agenda');
+    };
+
+    const handleFinalizeOrder = async (item: any) => {
+        if (!confirm('Deseja FINALIZAR este atendimento e enviar para o caixa?')) return;
+
+        setLoading(true);
+
+        // 1. Mark Appointment as completed
+        const { error: apptError } = await supabase
+            .from('appointments')
+            .update({ status: 'completed' })
+            .eq('id', item.id);
+
+        if (apptError) {
+            alert('Erro ao atualizar agendamento');
             setLoading(false);
             return;
         }
 
-        // Update Appointment with final status, price and POSSIBLY changed service
-        const { error: apptError } = await supabase
-            .from('appointments')
-            .update({
-                status: 'completed',
-                service_id: selectedClient.service_id,
-                price: serviceTotal
-            })
-            .eq('id', selectedClient.id);
+        // 2. Update Order status to pending_payment
+        const { error: orderError } = await supabase
+            .from('orders')
+            .update({ status: 'pending_payment', finalized_at: new Date() })
+            .eq('appointment_id', item.id);
 
-        if (!apptError) {
-            alert(`Comanda enviada para o Caixa!\nComissão estimada: R$ ${commissionAmount.toFixed(2)}`);
-            fetchAgenda();
-            setView('agenda');
-        } else {
-            alert('Erro ao atualizar agendamento: ' + apptError.message);
+        if (orderError) {
+            console.error('Order finalize error:', orderError);
         }
+
+        alert('Atendimento finalizado e enviado para o caixa!');
         setLoading(false);
+        fetchAgenda();
     };
 
     const addToCart = (item: any, type: 'service' | 'product') => {
@@ -211,40 +239,98 @@ export default function ProfessionalAgendaPage() {
     const upcomingItems = dailyAgenda.filter(p => !p.scheduled_at.startsWith(todayStr));
 
     if (view === 'agenda') {
+        const activeAgenda = currentTab === 'hoje' ? todayAgenda : currentTab === 'proximos' ? upcomingAgenda : historyAgenda;
+
         return (
             <div className="space-y-4 md:space-y-6 animate-in fade-in duration-500 pb-10">
+                {/* TABS NAVIGATION */}
+                <div className="flex bg-black/40 p-1.5 rounded-2xl gap-1 border border-white/5 sticky top-0 z-20 backdrop-blur-xl">
+                    <button
+                        onClick={() => setCurrentTab('hoje')}
+                        className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentTab === 'hoje' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'}`}
+                        style={currentTab === 'hoje' ? { backgroundColor: colors.primary } : {}}
+                    >
+                        Hoje ({todayAgenda.length})
+                    </button>
+                    <button
+                        onClick={() => setCurrentTab('proximos')}
+                        className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentTab === 'proximos' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'}`}
+                        style={currentTab === 'proximos' ? { backgroundColor: colors.primary } : {}}
+                    >
+                        Próximos ({upcomingAgenda.length})
+                    </button>
+                    <button
+                        onClick={() => setCurrentTab('historico')}
+                        className={`flex-1 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${currentTab === 'historico' ? 'bg-primary text-black' : 'text-slate-400 hover:text-white'}`}
+                        style={currentTab === 'historico' ? { backgroundColor: colors.primary } : {}}
+                    >
+                        Histórico
+                    </button>
+                </div>
+
                 <div className="space-y-12">
-                    {/* TODAY SECTION */}
-                    {todayItems.length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 px-2">
-                                <span className="size-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                <h3 className="text-sm font-black uppercase tracking-widest opacity-60" style={{ color: colors.text }}>Agenda de Hoje</h3>
+                    {currentTab === 'historico' ? (
+                        <div className="rounded-[2rem] border overflow-hidden" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left">
+                                    <thead>
+                                        <tr className="text-[9px] font-black uppercase tracking-widest italic opacity-40 border-b" style={{ color: colors.text, borderColor: `${colors.text}0d` }}>
+                                            <th className="px-6 py-4">Status</th>
+                                            <th className="px-6 py-4">Nome</th>
+                                            <th className="px-6 py-4 text-center">Horário</th>
+                                            <th className="px-6 py-4 text-right">Valor</th>
+                                            <th className="px-6 py-4 text-right">Ação</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-sm font-bold">
+                                        {historyAgenda.map(item => (
+                                            <tr key={item.id} className="border-b transition-colors hover:bg-white/5" style={{ color: colors.text, borderColor: `${colors.text}0d` }}>
+                                                <td className="px-6 py-4">
+                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                        {item.status === 'completed' ? 'REALIZADO' : 'AUSENTE'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 truncate max-w-[150px]">
+                                                    <span className="block">{item.customer_name}</span>
+                                                    <span className="text-[9px] opacity-40 font-mono italic">{item.customer_phone || 'S/ Tel'}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-center">
+                                                    <span className="block">{new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
+                                                    <span className="text-[10px] opacity-60 italic">{item.scheduled_at.split('T')[1].substring(0, 5)}</span>
+                                                </td>
+                                                <td className="px-6 py-4 text-right font-black italic">
+                                                    R$ {Number(item.orders?.[0]?.total_value || item.services?.price || 0).toFixed(2)}
+                                                </td>
+                                                <td className="px-6 py-4 text-right">
+                                                    <a href={`https://wa.me/55${item.customer_phone?.replace(/\D/g, '')}`} target="_blank" className="text-emerald-500 hover:scale-110 inline-block">
+                                                        <span className="material-symbols-outlined text-base">chat</span>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
                             </div>
-                            <div className="grid gap-3 md:gap-4">
-                                {todayItems.map(item => (
-                                    <AgendaCard key={item.id} item={item} colors={colors} businessType={businessType} onAbsent={handleMarkAbsent} onUndo={handleUndoAbsent} onStart={handleOpenCommand} />
-                                ))}
-                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid gap-3 md:gap-4">
+                            {activeAgenda.map(item => (
+                                <AgendaCard
+                                    key={item.id}
+                                    item={item}
+                                    colors={colors}
+                                    businessType={businessType}
+                                    onAbsent={handleMarkAbsent}
+                                    onUndo={null}
+                                    onStart={handleOpenCommand}
+                                    onFinalize={handleFinalizeOrder}
+                                    showDate={currentTab === 'proximos'}
+                                />
+                            ))}
                         </div>
                     )}
 
-                    {/* UPCOMING SECTION */}
-                    {upcomingItems.length > 0 && (
-                        <div className="space-y-4">
-                            <div className="flex items-center gap-2 px-2">
-                                <span className="size-2 rounded-full bg-amber-500"></span>
-                                <h3 className="text-sm font-black uppercase tracking-widest opacity-60" style={{ color: colors.text }}>Próximos Agendamentos</h3>
-                            </div>
-                            <div className="grid gap-3 md:gap-4">
-                                {upcomingItems.map(item => (
-                                    <AgendaCard key={item.id} item={item} colors={colors} businessType={businessType} onAbsent={handleMarkAbsent} onUndo={handleUndoAbsent} onStart={handleOpenCommand} showDate />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {!loading && todayItems.length === 0 && upcomingItems.length === 0 && (
+                    {!loading && activeAgenda.length === 0 && (
                         <div className="text-center py-16 md:py-20 opacity-30">
                             <span className="material-symbols-outlined text-4xl md:text-6xl italic" style={{ color: colors.textMuted }}>event_busy</span>
                             <p className="font-black uppercase text-[10px] md:text-xs tracking-[0.4em] mt-4" style={{ color: colors.textMuted }}>Nenhum agendamento encontrado</p>
@@ -468,7 +554,7 @@ export default function ProfessionalAgendaPage() {
                             <span className="font-black uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Geral</span>
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {total.toFixed(2)}</span>
                         </div>
-                        <button onClick={handleFinishCommand} className="w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>SALVAR <span className="material-symbols-outlined">save</span></button>
+                        <button onClick={handleSaveDraft} className="w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>SALVAR <span className="material-symbols-outlined">save</span></button>
                     </div>
                 </div>
             </aside>
@@ -477,9 +563,10 @@ export default function ProfessionalAgendaPage() {
 }
 
 // PREMIUM AGENDA CARD COMPONENT
-const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onStart, showDate }: any) => {
+const AgendaCard = ({ item, colors, businessType, onAbsent, onStart, onFinalize, showDate }: any) => {
     const isToday = !showDate;
     const status = item.status;
+    const hasOrder = item.orders && item.orders.length > 0;
 
     return (
         <div className="group border p-4 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
@@ -492,10 +579,11 @@ const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onStart, sho
                         {item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}
                     </span>
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <h4 className="font-bold text-base md:text-xl truncate" style={{ color: colors.text }}>{item.customer_name}</h4>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="text-[10px] md:text-xs font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>{item.services?.name || 'Serviço'}</span>
+                        {hasOrder && <span className="text-[8px] bg-sky-500/20 text-sky-500 px-2 py-0.5 rounded-full font-black uppercase border border-sky-500/20">Comanda Iniciada</span>}
                     </div>
                 </div>
             </div>
@@ -503,43 +591,35 @@ const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onStart, sho
             <div className="flex items-center gap-4 w-full md:w-auto">
                 <div className="flex flex-col items-end mr-4 hidden md:flex">
                     <span className="text-[9px] font-black uppercase tracking-widest opacity-40 italic" style={{ color: colors.textMuted }}>Valor</span>
-                    <span className="text-lg font-black italic tracking-tighter" style={{ color: colors.text }}>R$ {Number(item.services?.price || 0).toFixed(2)}</span>
+                    <span className="text-lg font-black italic tracking-tighter" style={{ color: colors.text }}>R$ {Number(hasOrder ? item.orders[0].total_value : (item.services?.price || 0)).toFixed(2)}</span>
                 </div>
 
-                <div className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest border text-center flex-1 md:flex-none md:w-32 ${status === 'completed' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' :
-                    status === 'absent' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' :
-                        status === 'paid' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
-                            status === 'cancelled' ? 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20' :
-                                'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                    }`}>
-                    {status === 'completed' ? 'REALIZADO' :
-                        status === 'absent' ? 'AUSENTE' :
-                            status === 'paid' ? 'PAGO' :
-                                status === 'cancelled' ? 'CANCELADO' :
-                                    'AGENDADO'}
-                </div>
-
-                <div className="flex gap-2">
-                    {status === 'absent' ? (
-                        <button onClick={() => onUndo(item.id)} className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">
-                            <span className="material-symbols-outlined text-[20px]">undo</span>
-                        </button>
-                    ) : status !== 'completed' && status !== 'paid' && status !== 'cancelled' ? (
+                <div className="flex gap-2 w-full md:w-auto">
+                    {status === 'scheduled' && (
                         <>
                             {!showDate && (
-                                <button onClick={() => onAbsent(item.id)} className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all bg-rose-500/10 text-rose-500 hover:bg-rose-500/20">
+                                <button onClick={() => onAbsent(item.id)} className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all bg-rose-500/10 text-rose-500 hover:bg-rose-500/20" title="Marcar Ausente">
                                     <span className="material-symbols-outlined text-[20px]">person_off</span>
                                 </button>
                             )}
                             <button
                                 onClick={() => onStart(item)}
-                                className="h-10 md:h-12 px-4 md:px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 italic"
-                                style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
+                                className="h-10 md:h-12 px-4 md:px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 italic border"
+                                style={{ backgroundColor: 'transparent', borderColor: colors.primary, color: colors.primary }}
                             >
-                                {showDate ? 'DETALHES' : 'INICIAR'}
+                                {hasOrder ? 'EDITAR' : 'INICIAR'}
                             </button>
+                            {!showDate && (
+                                <button
+                                    onClick={() => onFinalize(item)}
+                                    className="h-10 md:h-12 px-4 md:px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 italic"
+                                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
+                                >
+                                    FINALIZAR
+                                </button>
+                            )}
                         </>
-                    ) : null}
+                    )}
                 </div>
             </div>
         </div>
