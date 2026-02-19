@@ -161,8 +161,7 @@ export default function ProfessionalAgendaPage() {
             .update({
                 status: 'completed',
                 service_id: selectedClient.service_id,
-                price: serviceTotal,
-                total_price: totalValue
+                price: serviceTotal
             })
             .eq('id', selectedClient.id);
 
