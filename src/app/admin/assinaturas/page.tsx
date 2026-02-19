@@ -46,28 +46,53 @@ export default function SubscriptionsPage() {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
 
-        const payload = {
-            tenant_id: user.user_metadata.tenant_id,
-            name: currentPlan.name,
-            price: parseFloat(currentPlan.price),
-            description: currentPlan.description,
-            benefits: currentPlan.benefits
-        };
+        if (currentPlan.id) {
+            // Update existing plan
+            const { error } = await supabase.rpc('update_vip_plan', {
+                p_id: currentPlan.id,
+                p_name: currentPlan.name,
+                p_price: parseFloat(currentPlan.price),
+                p_description: currentPlan.description,
+                p_benefits: currentPlan.benefits
+            });
 
-        // ⚡ REC(Security): Use RPC to bypass RLS recursion/policy issues
-        const { error } = await supabase.rpc('create_vip_plan', {
-            p_name: currentPlan.name,
-            p_price: parseFloat(currentPlan.price),
-            p_description: currentPlan.description,
-            p_benefits: currentPlan.benefits
-        });
+            if (error) {
+                alert('Erro ao atualizar plano: ' + error.message);
+            } else {
+                alert('Plano atualizado com sucesso!');
+                setIsEditing(false);
+                setCurrentPlan({ name: '', price: '', description: '', benefits: { cuts: 'Ilimitado' } });
+                fetchData();
+            }
+        } else {
+            // Create new plan
+            const { error } = await supabase.rpc('create_vip_plan', {
+                p_name: currentPlan.name,
+                p_price: parseFloat(currentPlan.price),
+                p_description: currentPlan.description,
+                p_benefits: currentPlan.benefits
+            });
+
+            if (error) {
+                alert('Erro ao salvar plano: ' + error.message);
+            } else {
+                alert('Plano criado com sucesso!');
+                setIsEditing(false);
+                setCurrentPlan({ name: '', price: '', description: '', benefits: { cuts: 'Ilimitado' } });
+                fetchData();
+            }
+        }
+    };
+
+    const handleDeletePlan = async (planId: string) => {
+        if (!confirm('Tem certeza que deseja excluir definitivamente este plano? Esta ação não pode ser desfeita.')) return;
+
+        const { error } = await supabase.rpc('delete_vip_plan', { p_id: planId });
 
         if (error) {
-            alert('Erro ao salvar plano: ' + error.message);
+            alert('Erro ao excluir plano: ' + error.message);
         } else {
-            alert('Plano salvo com sucesso!');
-            setIsEditing(false);
-            setCurrentPlan({ name: '', price: '', description: '', benefits: { cuts: 'Ilimitado' } });
+            alert('Plano excluído definitivamente!');
             fetchData();
         }
     };
@@ -128,6 +153,27 @@ export default function SubscriptionsPage() {
                                             <span className="material-symbols-outlined text-8xl text-[#f2b90d]">workspace_premium</span>
                                         </div>
 
+                                        {/* Edit/Delete Actions */}
+                                        <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button
+                                                onClick={() => {
+                                                    setCurrentPlan({ ...plan });
+                                                    setIsEditing(true);
+                                                }}
+                                                className="size-8 rounded-lg bg-white/10 hover:bg-[#f2b90d] hover:text-black flex items-center justify-center transition-colors"
+                                                title="Editar Plano"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">edit</span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeletePlan(plan.id)}
+                                                className="size-8 rounded-lg bg-white/10 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors"
+                                                title="Excluir Plano"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">delete</span>
+                                            </button>
+                                        </div>
+
                                         <div className="relative z-10 space-y-4">
                                             <div>
                                                 <h3 className="text-2xl font-black italic text-white">{plan.name}</h3>
@@ -154,7 +200,7 @@ export default function SubscriptionsPage() {
                             {isEditing && (
                                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                                     <div className="bg-[#121214] border border-white/10 rounded-3xl p-8 max-w-lg w-full space-y-6 animate-in zoom-in-95">
-                                        <h3 className="text-xl font-black italic text-white">Novo Plano VIP</h3>
+                                        <h3 className="text-xl font-black italic text-white">{currentPlan.id ? 'Editar Plano VIP' : 'Novo Plano VIP'}</h3>
 
                                         <div className="space-y-4">
                                             <div>
