@@ -15,6 +15,7 @@ export default function ProfessionalAgendaPage() {
     const [allServices, setAllServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [inclusionTab, setInclusionTab] = useState<'services' | 'products'>('services');
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -184,6 +185,26 @@ export default function ProfessionalAgendaPage() {
             if (existing) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
             return [...prev, { ...item, type, qty: 1 }];
         });
+        setSelectedItems([]); // Clear multi-select when adding
+    };
+
+    const addSelectedToCart = () => {
+        const itemsToAdd = inclusionTab === 'services'
+            ? allServices.filter(s => selectedItems.includes(s.id))
+            : products.filter(p => selectedItems.includes(p.id));
+
+        itemsToAdd.forEach(item => {
+            addToCart(item, inclusionTab === 'services' ? 'service' : 'product');
+        });
+        setSelectedItems([]);
+    };
+
+    const removeFromCart = (itemId: string) => {
+        setCart(prev => prev.filter(i => i.id !== itemId));
+    };
+
+    const toggleSelectItem = (id: string) => {
+        setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
     const todayDate = new Date();
@@ -266,7 +287,7 @@ export default function ProfessionalAgendaPage() {
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black uppercase tracking-widest opacity-50 ml-1" style={{ color: colors.textMuted }}>Serviço Realizado</label>
+                                <label className="text-[9px] font-black uppercase tracking-widest opacity-50 ml-1" style={{ color: colors.textMuted }}>Serviço Agendado</label>
                                 <select
                                     className="w-full bg-black border border-white/10 rounded-xl py-4 px-4 text-sm font-bold text-white focus:border-primary outline-none transition-all"
                                     value={selectedClient.service_id}
@@ -323,18 +344,28 @@ export default function ProfessionalAgendaPage() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                             {inclusionTab === 'services' ? (
-                                allServices.filter(s => s.id !== selectedClient.service_id).map(s => (
-                                    <div key={s.id} className="p-4 rounded-3xl border group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                                        <div className="size-16 rounded-2xl flex items-center justify-center mb-4 border overflow-hidden" style={{ backgroundColor: `${colors.primary}1a`, borderColor: `${colors.primary}33`, color: colors.primary }}>
-                                            {s.image_url ? (
-                                                <img src={s.image_url} alt={s.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <span className="material-symbols-outlined text-3xl">flatware</span>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-between items-start mb-4 px-1">
-                                            <h4 className="font-bold text-sm truncate mr-2" style={{ color: colors.text }}>{s.name}</h4>
-                                            <span className="font-black text-sm shrink-0" style={{ color: colors.primary }}>R$ {s.price}</span>
+                                allServices.filter(s => s.id !== selectedClient.service_id && !cart.some(c => c.id === s.id)).map(s => (
+                                    <div key={s.id} className={`p-4 rounded-3xl border group transition-all relative ${selectedItems.includes(s.id) ? 'ring-2 ring-primary ring-offset-2 ring-offset-black' : ''}`} style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                                        <div className="flex gap-4 mb-4">
+                                            <div className="size-20 rounded-2xl flex items-center justify-center border overflow-hidden shrink-0" style={{ backgroundColor: `${colors.primary}1a`, borderColor: `${colors.primary}33`, color: colors.primary }}>
+                                                {s.image_url ? (
+                                                    <img src={s.image_url} alt={s.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="material-symbols-outlined text-3xl">flatware</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                                                <h4 className="font-bold text-sm truncate uppercase italic" style={{ color: colors.text }}>{s.name}</h4>
+                                                <div className="flex justify-between items-end">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="size-5 rounded border-white/20 bg-black accent-primary cursor-pointer"
+                                                        checked={selectedItems.includes(s.id)}
+                                                        onChange={() => toggleSelectItem(s.id)}
+                                                    />
+                                                    <span className="font-black text-base italic" style={{ color: colors.primary }}>R$ {s.price}</span>
+                                                </div>
+                                            </div>
                                         </div>
                                         <button
                                             onClick={() => addToCart(s, 'service')}
@@ -346,24 +377,32 @@ export default function ProfessionalAgendaPage() {
                                     </div>
                                 ))
                             ) : (
-                                products.map(p => (
-                                    <div key={p.id} className="p-3 md:p-4 rounded-3xl border group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                                        <div className="w-full aspect-square rounded-2xl mb-3 md:mb-4 overflow-hidden border bg-black/20" style={{ borderColor: `${colors.primary}1a` }}>
-                                            {p.image_url ? (
-                                                <img alt={p.name} src={p.image_url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center opacity-30">
-                                                    <span className="material-symbols-outlined text-5xl">inventory_2</span>
+                                products.filter(p => !cart.some(c => c.id === p.id)).map(p => (
+                                    <div key={p.id} className={`p-4 rounded-3xl border group transition-all relative ${selectedItems.includes(p.id) ? 'ring-2 ring-primary ring-offset-2 ring-offset-black' : ''}`} style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                                        <div className="flex gap-4 mb-4">
+                                            <div className="size-20 rounded-2xl flex items-center justify-center border overflow-hidden shrink-0 bg-black/20" style={{ borderColor: `${colors.primary}1a`, color: colors.primary }}>
+                                                {p.image_url ? (
+                                                    <img alt={p.name} src={p.image_url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                ) : (
+                                                    <span className="material-symbols-outlined text-3xl">inventory_2</span>
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                                                <h4 className="font-bold text-sm truncate uppercase italic" style={{ color: colors.text }}>{p.name}</h4>
+                                                <div className="flex justify-between items-end">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="size-5 rounded border-white/20 bg-black accent-primary cursor-pointer"
+                                                        checked={selectedItems.includes(p.id)}
+                                                        onChange={() => toggleSelectItem(p.id)}
+                                                    />
+                                                    <span className="font-black text-base italic" style={{ color: colors.primary }}>R$ {p.price}</span>
                                                 </div>
-                                            )}
-                                        </div>
-                                        <div className="flex justify-between items-start mb-3 md:mb-4 px-1">
-                                            <h4 className="font-bold text-sm md:text-base truncate mr-2" style={{ color: colors.text }}>{p.name}</h4>
-                                            <span className="font-black text-xs md:text-base shrink-0" style={{ color: colors.primary }}>R$ {p.price}</span>
+                                            </div>
                                         </div>
                                         <button
                                             onClick={() => addToCart(p, 'product')}
-                                            className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
+                                            className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
                                             style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
                                         >
                                             <span className="material-symbols-outlined text-sm">add</span> ADICIONAR
@@ -372,23 +411,48 @@ export default function ProfessionalAgendaPage() {
                                 ))
                             )}
                         </div>
+
+                        {selectedItems.length > 0 && (
+                            <div className="mt-8 flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                <button
+                                    onClick={addSelectedToCart}
+                                    className="px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center gap-3 hover:scale-105 active:scale-95 italic"
+                                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
+                                >
+                                    <span className="material-symbols-outlined">add_task</span>
+                                    ADICIONAR SELECIONADOS ({selectedItems.length})
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
 
             <aside className="w-full xl:w-80 2xl:w-96">
                 <div className="border rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 sticky top-4 md:top-10" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}>
-                    <div className="space-y-6 mb-8 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                    <h3 className="text-base md:text-xl font-black uppercase italic tracking-tighter mb-8 flex items-center gap-2" style={{ color: colors.text }}>
+                        <span className="material-symbols-outlined text-primary">analytics</span> COMANDA VIRTUAL
+                    </h3>
+
+                    <div className="space-y-6 mb-8 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                         {/* SERVIÇOS SECTION */}
                         <div className="space-y-3">
                             <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic block mb-2" style={{ color: colors.textMuted }}>Serviços</span>
-                            <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-center group/item">
                                 <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{selectedClient.services?.name} (Base)</span>
                                 <span className="font-black text-sm" style={{ color: colors.text }}>R$ {basePrice.toFixed(2)}</span>
                             </div>
                             {cart.filter(i => i.type === 'service').map(item => (
-                                <div key={item.id} className="flex justify-between items-center">
-                                    <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
+                                <div key={item.id} className="flex justify-between items-center group/item">
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => removeFromCart(item.id)}
+                                            className="opacity-0 group-hover/item:opacity-100 transition-opacity text-rose-500 hover:scale-110 active:scale-90"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                        </button>
+                                        <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
+                                    </div>
                                     <span className="font-black text-sm" style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
                                 </div>
                             ))}
@@ -399,8 +463,16 @@ export default function ProfessionalAgendaPage() {
                             <div className="space-y-3 pt-4 border-t" style={{ borderColor: `${colors.text}0d` }}>
                                 <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic block mb-2" style={{ color: colors.textMuted }}>Produtos</span>
                                 {cart.filter(i => i.type === 'product').map(item => (
-                                    <div key={item.id} className="flex justify-between items-center">
-                                        <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
+                                    <div key={item.id} className="flex justify-between items-center group/item">
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => removeFromCart(item.id)}
+                                                className="opacity-0 group-hover/item:opacity-100 transition-opacity text-rose-500 hover:scale-110 active:scale-90"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                            </button>
+                                            <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
+                                        </div>
                                         <span className="font-black text-sm" style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
                                     </div>
                                 ))}
@@ -412,7 +484,7 @@ export default function ProfessionalAgendaPage() {
                             <span className="font-black uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Geral</span>
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {total.toFixed(2)}</span>
                         </div>
-                        <button onClick={handleFinishCommand} className="w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>FINALIZAR <span className="material-symbols-outlined">send</span></button>
+                        <button onClick={handleFinishCommand} className="w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>SALVAR <span className="material-symbols-outlined">save</span></button>
                     </div>
                 </div>
             </aside>
