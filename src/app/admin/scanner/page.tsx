@@ -29,16 +29,31 @@ export default function ScannerPage() {
 
             const { data: client, error: clientError } = await supabase
                 .from('clients')
-                .select('*, client_loyalty(*)')
+                .select('*')
                 .eq('tenant_id', profile.tenant_id)
                 .eq('phone', normalizedPhone)
                 .single();
 
-            if (clientError || !client) {
-                setError('Cliente não encontrado nesta unidade.');
-            } else {
-                setClientData(client);
+            if (clientError) {
+                console.error('Database Error:', clientError);
+                setError(`Erro na busca: ${clientError.message}`);
+                return;
             }
+
+            if (!client) {
+                setError('Cliente não encontrado nesta unidade.');
+                return;
+            }
+
+            // Fetch loyalty separately to avoid join errors
+            const { data: loyalty } = await supabase
+                .from('client_loyalty')
+                .select('*')
+                .eq('tenant_id', profile.tenant_id)
+                .eq('client_phone', normalizedPhone)
+                .single();
+
+            setClientData({ ...client, client_loyalty: loyalty ? [loyalty] : [] });
 
         } catch (err: any) {
             setError(err.message);
