@@ -22,14 +22,16 @@ export default function ScannerPage() {
         setClientData(null);
 
         try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) throw new Error('Não autenticado');
+            if (!profile?.tenant_id) throw new Error('Unidade não identificada.');
+
+            const normalizedPhone = phone.replace(/\D/g, '');
+            if (!normalizedPhone) throw new Error('Telefone inválido.');
 
             const { data: client, error: clientError } = await supabase
                 .from('clients')
                 .select('*, client_loyalty(*)')
-                .eq('tenant_id', user.user_metadata.tenant_id)
-                .eq('phone', phone)
+                .eq('tenant_id', profile.tenant_id)
+                .eq('phone', normalizedPhone)
                 .single();
 
             if (clientError || !client) {
