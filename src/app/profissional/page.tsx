@@ -233,10 +233,7 @@ export default function ProfessionalAgendaPage() {
         setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
 
-    const todayDate = new Date();
-    const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth() + 1).padStart(2, '0')}-${String(todayDate.getDate()).padStart(2, '0')}`;
-    const todayItems = dailyAgenda.filter(p => p.scheduled_at.startsWith(todayStr));
-    const upcomingItems = dailyAgenda.filter(p => !p.scheduled_at.startsWith(todayStr));
+
 
     if (view === 'agenda') {
         const activeAgenda = currentTab === 'hoje' ? todayAgenda : currentTab === 'proximos' ? upcomingAgenda : historyAgenda;
