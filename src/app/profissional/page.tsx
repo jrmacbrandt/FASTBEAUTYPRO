@@ -180,10 +180,11 @@ export default function ProfessionalAgendaPage() {
 
     const addToCart = (item: any, type: 'service' | 'product') => {
         if (type === 'product' && item.current_stock === 0) return alert('Sem estoque!');
+        const itemPrice = Number(item.price || 0);
         setCart(prev => {
             const existing = prev.find(i => i.id === item.id);
             if (existing) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
-            return [...prev, { ...item, type, qty: 1 }];
+            return [...prev, { ...item, price: itemPrice, type, qty: 1 }];
         });
         setSelectedItems([]); // Clear multi-select when adding
     };
@@ -257,8 +258,8 @@ export default function ProfessionalAgendaPage() {
         );
     }
 
-    const basePrice = selectedClient?.services?.price || 0;
-    const total = cart.reduce((acc, curr) => acc + (curr.price * curr.qty), basePrice);
+    const basePrice = Number(selectedClient?.services?.price || 0);
+    const total = cart.reduce((acc, curr) => acc + (Number(curr.price || 0) * (curr.qty || 1)), basePrice);
 
     return (
         <div className="flex flex-col xl:flex-row gap-6 md:gap-8 animate-in slide-in-from-right duration-500 pb-10">
@@ -367,13 +368,6 @@ export default function ProfessionalAgendaPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => addToCart(s, 'service')}
-                                            className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
-                                            style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
-                                        >
-                                            <span className="material-symbols-outlined text-sm">add</span> ADICIONAR
-                                        </button>
                                     </div>
                                 ))
                             ) : (
@@ -400,13 +394,6 @@ export default function ProfessionalAgendaPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <button
-                                            onClick={() => addToCart(p, 'product')}
-                                            className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
-                                            style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
-                                        >
-                                            <span className="material-symbols-outlined text-sm">add</span> ADICIONAR
-                                        </button>
                                     </div>
                                 ))
                             )}
@@ -447,7 +434,7 @@ export default function ProfessionalAgendaPage() {
                                     <div className="flex items-center gap-2">
                                         <button
                                             onClick={() => removeFromCart(item.id)}
-                                            className="opacity-0 group-hover/item:opacity-100 transition-opacity text-rose-500 hover:scale-110 active:scale-90"
+                                            className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
                                         >
                                             <span className="material-symbols-outlined text-lg">delete</span>
                                         </button>
@@ -467,7 +454,7 @@ export default function ProfessionalAgendaPage() {
                                         <div className="flex items-center gap-2">
                                             <button
                                                 onClick={() => removeFromCart(item.id)}
-                                                className="opacity-0 group-hover/item:opacity-100 transition-opacity text-rose-500 hover:scale-110 active:scale-90"
+                                                className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
                                             >
                                                 <span className="material-symbols-outlined text-lg">delete</span>
                                             </button>
