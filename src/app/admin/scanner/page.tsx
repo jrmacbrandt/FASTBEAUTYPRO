@@ -128,6 +128,20 @@ export default function ScannerPage() {
                         >
                             <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: colors.primary }}></div>
 
+                            {/* Botão Fechar */}
+                            <button
+                                onClick={() => {
+                                    setClientData(null);
+                                    setPhone('');
+                                    setError('');
+                                }}
+                                className="absolute top-4 right-4 size-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors z-30"
+                                style={{ color: colors.textMuted }}
+                                title="Fechar"
+                            >
+                                <span className="material-symbols-outlined text-xl">close</span>
+                            </button>
+
                             <div className="flex items-start justify-between">
                                 <div>
                                     <h2 className="text-2xl font-black italic" style={{ color: colors.text }}>{clientData.name}</h2>
