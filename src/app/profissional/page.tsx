@@ -299,7 +299,7 @@ export default function ProfessionalAgendaPage() {
                     <div>
                         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                             <h4 className="text-base md:text-lg font-black uppercase italic tracking-tight flex items-center gap-2" style={{ color: colors.text }}>
-                                <span className="material-symbols-outlined text-primary">add_circle</span> SERVIÇOS & PRODUTOS
+                                <span className="material-symbols-outlined text-primary">add_circle</span> + INCLUIR
                             </h4>
 
                             {/* TABS */}
@@ -325,28 +325,48 @@ export default function ProfessionalAgendaPage() {
                             {inclusionTab === 'services' ? (
                                 allServices.filter(s => s.id !== selectedClient.service_id).map(s => (
                                     <div key={s.id} className="p-4 rounded-3xl border group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                                        <div className="size-12 rounded-2xl flex items-center justify-center mb-4 border" style={{ backgroundColor: `${colors.primary}1a`, borderColor: `${colors.primary}33`, color: colors.primary }}>
-                                            <span className="material-symbols-outlined">flatware</span>
+                                        <div className="size-16 rounded-2xl flex items-center justify-center mb-4 border overflow-hidden" style={{ backgroundColor: `${colors.primary}1a`, borderColor: `${colors.primary}33`, color: colors.primary }}>
+                                            {s.image_url ? (
+                                                <img src={s.image_url} alt={s.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="material-symbols-outlined text-3xl">flatware</span>
+                                            )}
                                         </div>
                                         <div className="flex justify-between items-start mb-4 px-1">
                                             <h4 className="font-bold text-sm truncate mr-2" style={{ color: colors.text }}>{s.name}</h4>
                                             <span className="font-black text-sm shrink-0" style={{ color: colors.primary }}>R$ {s.price}</span>
                                         </div>
-                                        <button onClick={() => addToCart(s, 'service')} className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest bg-white/5 border border-white/10 hover:border-primary/50 text-white hover:text-primary active:scale-95">
-                                            <span className="material-symbols-outlined text-sm">add</span> + incluir
+                                        <button
+                                            onClick={() => addToCart(s, 'service')}
+                                            className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
+                                            style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
+                                        >
+                                            <span className="material-symbols-outlined text-sm">add</span> ADICIONAR
                                         </button>
                                     </div>
                                 ))
                             ) : (
                                 products.map(p => (
                                     <div key={p.id} className="p-3 md:p-4 rounded-3xl border group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                                        <img alt="Produto" src={p.image_url || 'https://picsum.photos/200/200'} className="w-full aspect-square rounded-2xl mb-3 md:mb-4 object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                        <div className="w-full aspect-square rounded-2xl mb-3 md:mb-4 overflow-hidden border bg-black/20" style={{ borderColor: `${colors.primary}1a` }}>
+                                            {p.image_url ? (
+                                                <img alt={p.name} src={p.image_url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center opacity-30">
+                                                    <span className="material-symbols-outlined text-5xl">inventory_2</span>
+                                                </div>
+                                            )}
+                                        </div>
                                         <div className="flex justify-between items-start mb-3 md:mb-4 px-1">
                                             <h4 className="font-bold text-sm md:text-base truncate mr-2" style={{ color: colors.text }}>{p.name}</h4>
                                             <span className="font-black text-xs md:text-base shrink-0" style={{ color: colors.primary }}>R$ {p.price}</span>
                                         </div>
-                                        <button onClick={() => addToCart(p, 'product')} className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest bg-white/5 border border-white/10 hover:border-primary/50 text-white hover:text-primary active:scale-95">
-                                            <span className="material-symbols-outlined text-sm">add</span> + incluir
+                                        <button
+                                            onClick={() => addToCart(p, 'product')}
+                                            className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest shadow-lg active:scale-95"
+                                            style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
+                                        >
+                                            <span className="material-symbols-outlined text-sm">add</span> ADICIONAR
                                         </button>
                                     </div>
                                 ))
