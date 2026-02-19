@@ -77,7 +77,7 @@ export default function ScannerPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Search Form */}
-                <div className="border p-6 rounded-3xl space-y-6 shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                <div className="border p-4 md:p-6 rounded-3xl space-y-6 shadow-xl" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
                     <h3 className="text-lg font-bold flex items-center gap-2" style={{ color: colors.text }}>
                         <span className="material-symbols-outlined" style={{ color: colors.primary }}>qr_code_scanner</span>
                         Entrada Manual
@@ -123,7 +123,7 @@ export default function ScannerPage() {
                             <p className="font-bold text-sm uppercase tracking-widest" style={{ color: colors.textMuted }}>Aguardando Validação...</p>
                         </div>
                     ) : (
-                        <div className="border p-8 rounded-3xl space-y-6 shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden"
+                        <div className="border p-5 md:p-8 rounded-3xl space-y-6 shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden"
                             style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}
                         >
                             <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: colors.primary }}></div>
@@ -135,11 +135,11 @@ export default function ScannerPage() {
                                     setPhone('');
                                     setError('');
                                 }}
-                                className="absolute top-4 right-4 size-8 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors z-30"
+                                className="absolute top-2 right-2 size-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors z-30"
                                 style={{ color: colors.textMuted }}
                                 title="Fechar"
                             >
-                                <span className="material-symbols-outlined text-xl">close</span>
+                                <span className="material-symbols-outlined text-2xl">close</span>
                             </button>
 
                             <div className="flex items-start justify-between">
