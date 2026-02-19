@@ -750,22 +750,22 @@ function CRMContent() {
                                                             {client.name.charAt(0)}
                                                         </div>
                                                         <div>
-                                                            <p className="text-[11px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
-                                                            <p className="text-[8px] font-bold mt-1 uppercase tracking-tighter" style={{ color: colors?.textMuted }}>LTV: R$ {client.total_spent || '0,00'}</p>
+                                                            <p className="text-[13px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
+                                                            <p className="text-[10px] font-bold mt-1.5 uppercase tracking-tighter" style={{ color: colors?.textMuted }}>LTV: R$ {client.total_spent || '0,00'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <p className="text-[10px] font-bold" style={{ color: colors?.textMuted }}>
+                                                    <p className="text-[12px] font-bold" style={{ color: colors?.textMuted }}>
                                                         {client.last_visit ? new Date(client.last_visit).toLocaleDateString() : '--'}
                                                     </p>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <div className="flex flex-col items-center">
-                                                        <span className={`text-[8px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : ''}`} style={{ color: client.last_contact_at ? undefined : colors?.textMuted }}>
+                                                        <span className={`text-[10px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : ''}`} style={{ color: client.last_contact_at ? undefined : colors?.textMuted }}>
                                                             {client.last_contact_at ? 'Abordado' : 'Aguardando'}
                                                         </span>
-                                                        <span className="text-[7px]" style={{ color: colors?.textMuted }}>
+                                                        <span className="text-[9px]" style={{ color: colors?.textMuted }}>
                                                             {client.last_contact_at ? new Date(client.last_contact_at).toLocaleDateString() : 'NUNCA'}
                                                         </span>
                                                     </div>
@@ -901,8 +901,8 @@ function CRMContent() {
                     >
                         <div className="p-8 border-b flex items-center justify-between" style={{ borderColor: `${colors?.border}20` }}>
                             <div>
-                                <h3 className="text-xl font-black italic uppercase" style={{ color: colors?.text }}>Gestão da Base</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest mt-1" style={{ color: colors?.textMuted }}>Excluir ou Sincronizar Clientes</p>
+                                <h3 className="text-2xl font-black italic uppercase" style={{ color: colors?.text }}>Gestão da Base</h3>
+                                <p className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: colors?.textMuted }}>Excluir ou Sincronizar Clientes</p>
                             </div>
                             <button
                                 onClick={() => setIsClientModalOpen(false)}
@@ -926,14 +926,14 @@ function CRMContent() {
                                                 else setSelectedClients([]);
                                             }}
                                         />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d]">Selecionar Todos ({clientsList.length})</span>
+                                        <span className="text-xs font-black uppercase tracking-widest text-[#f2b90d]">Selecionar Todos ({clientsList.length})</span>
                                     </label>
                                 </div>
 
                                 {clientsList.length === 0 ? (
                                     <div className="text-center py-10">
                                         <span className="material-symbols-outlined text-4xl text-slate-700 mb-4 block">person_search</span>
-                                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest">Nenhum cliente cadastrado ainda</p>
+                                        <p className="text-slate-500 text-xs font-black uppercase tracking-widest">Nenhum cliente cadastrado ainda</p>
                                     </div>
                                 ) : (
                                     clientsList.map((client) => (
@@ -951,13 +951,13 @@ function CRMContent() {
                                                     }}
                                                 />
                                                 <div>
-                                                    <p className="text-xs font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
-                                                    <p className="text-[9px] font-bold mt-1" style={{ color: colors?.textMuted }}>{client.phone}</p>
+                                                    <p className="text-[14px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
+                                                    <p className="text-[11px] font-bold mt-1.5" style={{ color: colors?.textMuted }}>{client.phone}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right flex flex-col items-end">
-                                                <p className="text-[10px] font-black" style={{ color: colors?.primary }}>R$ {Number(client.total_spent || 0).toFixed(2)}</p>
-                                                <p className="text-[7px] uppercase font-black tracking-tighter" style={{ color: colors?.textMuted }}>Gasto Total</p>
+                                                <p className="text-xs font-black" style={{ color: colors?.primary }}>R$ {Number(client.total_spent || 0).toFixed(2)}</p>
+                                                <p className="text-[9px] uppercase font-black tracking-tighter" style={{ color: colors?.textMuted }}>Gasto Total</p>
                                             </div>
                                         </div>
                                     ))
@@ -968,14 +968,14 @@ function CRMContent() {
                         <div className="p-8 border-t border-white/5 flex gap-4">
                             <button
                                 onClick={() => setIsClientModalOpen(false)}
-                                className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all"
+                                className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-xs tracking-widest py-4 rounded-2xl transition-all"
                             >
                                 CANCELAR
                             </button>
                             <button
                                 onClick={handleDeleteClients}
                                 disabled={selectedClients.length === 0 || isDeleting}
-                                className="flex-1 bg-rose-500 hover:bg-rose-600 disabled:opacity-30 disabled:grayscale text-white font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2"
+                                className="flex-1 bg-rose-500 hover:bg-rose-600 disabled:opacity-30 disabled:grayscale text-white font-black uppercase text-xs tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2"
                             >
                                 <span className="material-symbols-outlined text-lg">{isDeleting ? 'sync' : 'delete_forever'}</span>
                                 {isDeleting ? 'EXCLUINDO...' : `EXCLUIR SELECIONADOS (${selectedClients.length})`}
