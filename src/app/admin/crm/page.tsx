@@ -952,12 +952,12 @@ function CRMContent() {
                                                 />
                                                 <div>
                                                     <p className="text-[14px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
-                                                    <p className="text-[11px] font-bold mt-1.5" style={{ color: colors?.textMuted }}>{client.phone}</p>
+                                                    <p className="text-[13px] font-bold mt-1.5" style={{ color: colors?.textMuted }}>{client.phone}</p>
                                                 </div>
                                             </div>
                                             <div className="text-right flex flex-col items-end">
-                                                <p className="text-xs font-black" style={{ color: colors?.primary }}>R$ {Number(client.total_spent || 0).toFixed(2)}</p>
-                                                <p className="text-[9px] uppercase font-black tracking-tighter" style={{ color: colors?.textMuted }}>Gasto Total</p>
+                                                <p className="text-base font-black" style={{ color: colors?.primary }}>R$ {Number(client.total_spent || 0).toFixed(2)}</p>
+                                                <p className="text-[10px] uppercase font-black tracking-tighter" style={{ color: colors?.textMuted }}>Gasto Total</p>
                                             </div>
                                         </div>
                                     ))
