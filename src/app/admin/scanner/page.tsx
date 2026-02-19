@@ -123,7 +123,7 @@ export default function ScannerPage() {
                             <p className="font-bold text-sm uppercase tracking-widest" style={{ color: colors.textMuted }}>Aguardando Validação...</p>
                         </div>
                     ) : (
-                        <div className="border p-5 md:p-8 rounded-3xl space-y-6 shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden"
+                        <div className="border p-5 pt-14 md:p-8 md:pt-16 rounded-3xl space-y-6 shadow-2xl animate-in zoom-in-95 duration-300 relative overflow-hidden"
                             style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}
                         >
                             <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: colors.primary }}></div>
@@ -135,7 +135,7 @@ export default function ScannerPage() {
                                     setPhone('');
                                     setError('');
                                 }}
-                                className="absolute top-2 right-2 size-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors z-30"
+                                className="absolute top-3 right-3 size-10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors z-30"
                                 style={{ color: colors.textMuted }}
                                 title="Fechar"
                             >
