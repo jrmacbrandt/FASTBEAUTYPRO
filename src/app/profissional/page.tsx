@@ -9,11 +9,12 @@ export default function ProfessionalAgendaPage() {
     const [view, setView] = useState<'agenda' | 'command'>('agenda');
     const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
     const [selectedClient, setSelectedClient] = useState<any>(null);
-    const [cart, setCart] = useState<{ id: string; name: string; price: number; qty: number }[]>([]);
+    const [cart, setCart] = useState<{ id: string; name: string; price: number; qty: number; type: 'service' | 'product' }[]>([]);
     const [dailyAgenda, setDailyAgenda] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [allServices, setAllServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [inclusionTab, setInclusionTab] = useState<'services' | 'products'>('services');
 
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
@@ -57,9 +58,10 @@ export default function ProfessionalAgendaPage() {
 
         if (profile?.tenant_id) {
             const { data } = await supabase
-                .from('inventory')
+                .from('products')
                 .select('*')
-                .eq('tenant_id', profile.tenant_id);
+                .eq('tenant_id', profile.tenant_id)
+                .order('name', { ascending: true });
             if (data) setProducts(data);
         }
     };
@@ -175,12 +177,12 @@ export default function ProfessionalAgendaPage() {
         setLoading(false);
     };
 
-    const addToCart = (product: any) => {
-        if (product.current_stock === 0) return alert('Sem estoque!');
+    const addToCart = (item: any, type: 'service' | 'product') => {
+        if (type === 'product' && item.current_stock === 0) return alert('Sem estoque!');
         setCart(prev => {
-            const existing = prev.find(i => i.id === product.id);
-            if (existing) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-            return [...prev, { ...product, qty: 1 }];
+            const existing = prev.find(i => i.id === item.id);
+            if (existing) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+            return [...prev, { ...item, type, qty: 1 }];
         });
     };
 
@@ -249,7 +251,7 @@ export default function ProfessionalAgendaPage() {
                         </div>
                         <div className="min-w-0 flex-1">
                             <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight truncate" style={{ color: colors.text }}>{selectedClient.customer_name}</h3>
-                            <p className="font-black text-[9px] md:text-[10px] uppercase tracking-[0.2em] opacity-60 truncate" style={{ color: colors.textMuted }}>
+                            <p className="font-black text-[11px] md:text-[12px] uppercase tracking-[0.2em] opacity-60 truncate" style={{ color: colors.textMuted }}>
                                 {new Date(selectedClient.scheduled_at).toLocaleDateString('pt-BR')} às {selectedClient.scheduled_at.split('T')[1].substring(0, 5)}
                             </p>
                         </div>
@@ -260,7 +262,7 @@ export default function ProfessionalAgendaPage() {
                     {/* EDIT SERVICE SECTION */}
                     <div className="p-6 md:p-8 rounded-3xl border" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
                         <h4 className="text-base md:text-lg font-black uppercase italic tracking-tight mb-6 flex items-center gap-2" style={{ color: colors.text }}>
-                            <span className="material-symbols-outlined text-primary">edit_note</span> EDITAR SERVIÇO
+                            <span className="material-symbols-outlined text-primary">edit_note</span> SERVIÇOS
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2">
@@ -286,43 +288,69 @@ export default function ProfessionalAgendaPage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[9px] font-black uppercase tracking-widest opacity-50 ml-1" style={{ color: colors.textMuted }}>Valor do Serviço (R$)</label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    className="w-full bg-black border border-white/10 rounded-xl py-4 px-4 text-sm font-bold text-white focus:border-primary outline-none transition-all"
-                                    value={selectedClient.services?.price || 0}
-                                    onChange={(e) => {
-                                        setSelectedClient({
-                                            ...selectedClient,
-                                            services: {
-                                                ...selectedClient.services,
-                                                price: e.target.value
-                                            }
-                                        });
-                                    }}
-                                />
+                                <div className="w-full bg-black/40 border border-white/5 rounded-xl py-4 px-4 text-sm font-bold text-zinc-400 opacity-60">
+                                    {selectedClient.services?.price || 0}
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* ADD PRODUCTS SECTION */}
+                    {/* UNIFIED INCLUSION SECTION */}
                     <div>
-                        <h4 className="text-base md:text-lg font-black uppercase italic tracking-tight mb-4 flex items-center gap-2" style={{ color: colors.text }}>
-                            <span className="material-symbols-outlined text-primary">inventory_2</span> ADICIONAR PRODUTOS
-                        </h4>
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                            <h4 className="text-base md:text-lg font-black uppercase italic tracking-tight flex items-center gap-2" style={{ color: colors.text }}>
+                                <span className="material-symbols-outlined text-primary">add_circle</span> SERVIÇOS & PRODUTOS
+                            </h4>
+
+                            {/* TABS */}
+                            <div className="flex p-1 rounded-2xl bg-black/40 border border-white/5 w-fit gap-1">
+                                <button
+                                    onClick={() => setInclusionTab('services')}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${inclusionTab === 'services' ? 'bg-primary text-black italic' : 'text-zinc-500 hover:text-white'}`}
+                                    style={inclusionTab === 'services' ? { backgroundColor: colors.primary } : {}}
+                                >
+                                    Serviços
+                                </button>
+                                <button
+                                    onClick={() => setInclusionTab('products')}
+                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${inclusionTab === 'products' ? 'bg-primary text-black italic' : 'text-zinc-500 hover:text-white'}`}
+                                    style={inclusionTab === 'products' ? { backgroundColor: colors.primary } : {}}
+                                >
+                                    Produtos
+                                </button>
+                            </div>
+                        </div>
+
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                            {products.map(p => (
-                                <div key={p.id} className="p-3 md:p-4 rounded-3xl border group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
-                                    <img alt="Produto" src={p.image_url || 'https://picsum.photos/200/200'} className="w-full aspect-square rounded-2xl mb-3 md:mb-4 object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
-                                    <div className="flex justify-between items-start mb-3 md:mb-4 px-1">
-                                        <h4 className="font-bold text-sm md:text-base truncate mr-2" style={{ color: colors.text }}>{p.name}</h4>
-                                        <span className="font-black text-xs md:text-base shrink-0" style={{ color: colors.primary }}>RS {p.price}</span>
+                            {inclusionTab === 'services' ? (
+                                allServices.filter(s => s.id !== selectedClient.service_id).map(s => (
+                                    <div key={s.id} className="p-4 rounded-3xl border group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                                        <div className="size-12 rounded-2xl flex items-center justify-center mb-4 border" style={{ backgroundColor: `${colors.primary}1a`, borderColor: `${colors.primary}33`, color: colors.primary }}>
+                                            <span className="material-symbols-outlined">flatware</span>
+                                        </div>
+                                        <div className="flex justify-between items-start mb-4 px-1">
+                                            <h4 className="font-bold text-sm truncate mr-2" style={{ color: colors.text }}>{s.name}</h4>
+                                            <span className="font-black text-sm shrink-0" style={{ color: colors.primary }}>R$ {s.price}</span>
+                                        </div>
+                                        <button onClick={() => addToCart(s, 'service')} className="w-full font-black py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest bg-white/5 border border-white/10 hover:border-primary/50 text-white hover:text-primary active:scale-95">
+                                            <span className="material-symbols-outlined text-sm">add</span> + incluir
+                                        </button>
                                     </div>
-                                    <button onClick={() => addToCart(p)} className="w-full font-black py-3 md:py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[9px] md:text-[10px] uppercase tracking-widest" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary }}>
-                                        <span className="material-symbols-outlined text-sm">add</span> ADICIONAR
-                                    </button>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                products.map(p => (
+                                    <div key={p.id} className="p-3 md:p-4 rounded-3xl border group transition-all" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                                        <img alt="Produto" src={p.image_url || 'https://picsum.photos/200/200'} className="w-full aspect-square rounded-2xl mb-3 md:mb-4 object-cover opacity-60 group-hover:opacity-100 transition-opacity" />
+                                        <div className="flex justify-between items-start mb-3 md:mb-4 px-1">
+                                            <h4 className="font-bold text-sm md:text-base truncate mr-2" style={{ color: colors.text }}>{p.name}</h4>
+                                            <span className="font-black text-xs md:text-base shrink-0" style={{ color: colors.primary }}>R$ {p.price}</span>
+                                        </div>
+                                        <button onClick={() => addToCart(p, 'product')} className="w-full font-black py-4 rounded-xl transition-all flex items-center justify-center gap-2 text-[10px] uppercase tracking-widest bg-white/5 border border-white/10 hover:border-primary/50 text-white hover:text-primary active:scale-95">
+                                            <span className="material-symbols-outlined text-sm">add</span> + incluir
+                                        </button>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
@@ -330,18 +358,34 @@ export default function ProfessionalAgendaPage() {
 
             <aside className="w-full xl:w-80 2xl:w-96">
                 <div className="border rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 sticky top-4 md:top-10" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}>
-                    <h3 className="text-lg md:text-xl font-black mb-6 md:mb-8 flex items-center gap-2 italic uppercase" style={{ color: colors.text }}><span className="material-symbols-outlined" style={{ color: colors.primary }}>receipt_long</span> Resumo</h3>
-                    <div className="space-y-3 md:space-y-4 mb-6 md:mb-8 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
-                        <div className="flex justify-between items-center">
-                            <span className="font-bold text-[10px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{selectedClient.services?.name}</span>
-                            <span className="font-black text-sm" style={{ color: colors.text }}>R$ {basePrice.toFixed(2)}</span>
-                        </div>
-                        {cart.map(item => (
-                            <div key={item.id} className="flex justify-between items-center">
-                                <span className="font-bold text-xs md:text-sm opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
-                                <span className="font-black text-sm" style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                    <div className="space-y-6 mb-8 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                        {/* SERVIÇOS SECTION */}
+                        <div className="space-y-3">
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic block mb-2" style={{ color: colors.textMuted }}>Serviços</span>
+                            <div className="flex justify-between items-center">
+                                <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{selectedClient.services?.name} (Base)</span>
+                                <span className="font-black text-sm" style={{ color: colors.text }}>R$ {basePrice.toFixed(2)}</span>
                             </div>
-                        ))}
+                            {cart.filter(i => i.type === 'service').map(item => (
+                                <div key={item.id} className="flex justify-between items-center">
+                                    <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
+                                    <span className="font-black text-sm" style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* PRODUTOS SECTION */}
+                        {cart.some(i => i.type === 'product') && (
+                            <div className="space-y-3 pt-4 border-t" style={{ borderColor: `${colors.text}0d` }}>
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 italic block mb-2" style={{ color: colors.textMuted }}>Produtos</span>
+                                {cart.filter(i => i.type === 'product').map(item => (
+                                    <div key={item.id} className="flex justify-between items-center">
+                                        <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
+                                        <span className="font-black text-sm" style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div className="border-t pt-5 md:pt-6" style={{ borderColor: `${colors.text}1a` }}>
                         <div className="flex justify-between items-baseline mb-6 md:mb-8">
