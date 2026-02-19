@@ -15,6 +15,7 @@ interface Professional {
 interface Appointment {
     id: string;
     customer_name: string;
+    customer_whatsapp: string;
     scheduled_at: string;
     status: string;
     barber_id: string;

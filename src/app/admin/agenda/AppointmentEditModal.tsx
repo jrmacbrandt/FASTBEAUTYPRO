@@ -98,15 +98,23 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
     if (loading) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="bg-[#18181b] border border-white/10 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                <div className="p-8">
-                    <div className="flex justify-between items-center mb-8">
-                        <div>
-                            <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">EDITAR AGENDAMENTO</h3>
-                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Cliente: {appointment.customer_name}</p>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-2 md:p-4">
+            <div className="bg-[#18181b] border border-white/10 w-[96%] max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 max-h-[92vh] flex flex-col">
+                <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
+                    <div className="flex justify-between items-start mb-8">
+                        <div className="flex-1 pr-4">
+                            <h3 className="text-xl md:text-2xl font-black italic uppercase text-white tracking-tighter">EDITAR AGENDAMENTO</h3>
+                            <div className="mt-2 space-y-1">
+                                <p className="text-[13px] md:text-sm font-black text-[#f2b90d] uppercase tracking-wider leading-tight">
+                                    Cliente: {appointment.customer_name}
+                                </p>
+                                <p className="text-[11px] md:text-xs font-bold text-zinc-500 uppercase tracking-widest flex items-center gap-1.5 leading-tight">
+                                    <span className="material-symbols-outlined text-[14px]">call</span>
+                                    {appointment.customer_whatsapp || 'Não informado'}
+                                </p>
+                            </div>
                         </div>
-                        <button onClick={onClose} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                        <button onClick={onClose} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors shrink-0">
                             <span className="material-symbols-outlined text-zinc-400">close</span>
                         </button>
                     </div>
@@ -117,7 +125,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                             <select
                                 value={formData.barber_id}
                                 onChange={e => setFormData({ ...formData, barber_id: e.target.value })}
-                                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all cursor-pointer"
                             >
                                 {professionals.map(p => (
                                     <option key={p.id} value={p.id}>{p.full_name}</option>
@@ -125,7 +133,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                             </select>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">SERVIÇO</label>
                                 <select
@@ -138,7 +146,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                                             price: s ? s.price.toString().replace('.', ',') : formData.price
                                         });
                                     }}
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
+                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all cursor-pointer"
                                 >
                                     {services.map(s => (
                                         <option key={s.id} value={s.id}>{s.name}</option>
@@ -147,12 +155,9 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                             </div>
                             <div className="space-y-2">
                                 <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">VALOR (R$)</label>
-                                <input
-                                    type="text"
-                                    value={formData.price}
-                                    onChange={e => setFormData({ ...formData, price: maskCurrency(e.target.value) })}
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
-                                />
+                                <div className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm font-bold text-zinc-400 opacity-60">
+                                    {formData.price}
+                                </div>
                             </div>
                         </div>
 
@@ -165,18 +170,22 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                                     className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-[#f2b90d] focus:outline-none transition-all"
                                 />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative">
                                 <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">HORÁRIO</label>
-                                <input
-                                    type="time"
-                                    value={formData.time}
-                                    onChange={e => setFormData({ ...formData, time: e.target.value })}
-                                    className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all"
-                                />
+                                <div className="relative cursor-pointer group" onClick={() => (document.getElementById('edit-modal-time') as HTMLInputElement)?.showPicker()}>
+                                    <input
+                                        id="edit-modal-time"
+                                        type="time"
+                                        value={formData.time}
+                                        onChange={e => setFormData({ ...formData, time: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] focus:outline-none transition-all pointer-events-auto cursor-pointer"
+                                    />
+                                    <span className="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-zinc-500 group-hover:text-[#f2b90d] transition-colors pointer-events-none text-xl">schedule</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="pt-4 space-y-3">
+                        <div className="pt-4 space-y-3 pb-2">
                             <button
                                 type="submit"
                                 disabled={saving}
@@ -188,7 +197,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                                 type="button"
                                 onClick={handleCancelAppointment}
                                 disabled={saving}
-                                className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold py-4 rounded-xl uppercase tracking-widest transition-all text-[10px] border border-red-500/20"
+                                className="w-full bg-red-500/5 hover:bg-red-500/10 text-red-500 font-bold py-4 rounded-xl uppercase tracking-widest transition-all text-[10px] border border-red-500/10"
                             >
                                 CANCELAR AGENDAMENTO
                             </button>
