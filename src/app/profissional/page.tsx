@@ -276,7 +276,6 @@ export default function ProfessionalAgendaPage() {
                                             <th className="px-6 py-4">Nome</th>
                                             <th className="px-6 py-4 text-center">Horário</th>
                                             <th className="px-6 py-4 text-right">Valor</th>
-                                            <th className="px-6 py-4 text-right">Ação</th>
                                         </tr>
                                     </thead>
                                     <tbody className="text-sm font-bold">
@@ -289,7 +288,7 @@ export default function ProfessionalAgendaPage() {
                                                 </td>
                                                 <td className="px-6 py-4 truncate max-w-[150px]">
                                                     <span className="block">{item.customer_name}</span>
-                                                    <span className="text-[9px] opacity-40 font-mono italic">{item.customer_phone || 'S/ Tel'}</span>
+                                                    <span className="text-[9px] opacity-40 font-mono italic">{item.customer_whatsapp || 'S/ Tel'}</span>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <span className="block">{new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</span>
@@ -297,11 +296,6 @@ export default function ProfessionalAgendaPage() {
                                                 </td>
                                                 <td className="px-6 py-4 text-right font-black italic">
                                                     R$ {Number(item.orders?.[0]?.total_value || item.services?.price || 0).toFixed(2)}
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <a href={`https://wa.me/55${item.customer_phone?.replace(/\D/g, '')}`} target="_blank" className="text-emerald-500 hover:scale-110 inline-block">
-                                                        <span className="material-symbols-outlined text-base">chat</span>
-                                                    </a>
                                                 </td>
                                             </tr>
                                         ))}
@@ -334,7 +328,7 @@ export default function ProfessionalAgendaPage() {
                         </div>
                     )}
                 </div>
-            </div>
+            </div >
         );
     }
 
