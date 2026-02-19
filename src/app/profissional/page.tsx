@@ -145,10 +145,7 @@ export default function ProfessionalAgendaPage() {
                 total_value: totalValue,
                 service_total: serviceTotal,
                 product_total: productTotal,
-                commission_amount: commissionAmount,
-                status: 'pending_payment',
-                finalized_at: new Date(),
-                items: cart
+                status: 'pending_payment'
             });
 
         if (orderError) {
