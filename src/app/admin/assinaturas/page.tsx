@@ -149,25 +149,22 @@ export default function SubscriptionsPage() {
                                 {/* List Plans */}
                                 {plans.map(plan => (
                                     <div key={plan.id} className="bg-[#18181b] border border-[#f2b90d]/20 rounded-3xl p-8 relative overflow-hidden group hover:border-[#f2b90d]/50 transition-all">
-                                        <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
-                                            <span className="material-symbols-outlined text-8xl text-[#f2b90d]">workspace_premium</span>
-                                        </div>
 
-                                        {/* Edit/Delete Actions */}
-                                        <div className="absolute top-4 right-4 z-20 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {/* Edit/Delete Actions - Always Visible */}
+                                        <div className="absolute top-4 right-4 z-20 flex gap-2 transition-opacity">
                                             <button
                                                 onClick={() => {
                                                     setCurrentPlan({ ...plan });
                                                     setIsEditing(true);
                                                 }}
-                                                className="size-8 rounded-lg bg-white/10 hover:bg-[#f2b90d] hover:text-black flex items-center justify-center transition-colors"
+                                                className="size-8 rounded-lg bg-white/10 text-white hover:bg-[#f2b90d] hover:text-black flex items-center justify-center transition-colors"
                                                 title="Editar Plano"
                                             >
                                                 <span className="material-symbols-outlined text-sm">edit</span>
                                             </button>
                                             <button
                                                 onClick={() => handleDeletePlan(plan.id)}
-                                                className="size-8 rounded-lg bg-white/10 hover:bg-red-500 hover:text-white flex items-center justify-center transition-colors"
+                                                className="size-8 rounded-lg bg-white/10 text-red-500 hover:bg-[#f2b90d] hover:text-black flex items-center justify-center transition-colors"
                                                 title="Excluir Plano"
                                             >
                                                 <span className="material-symbols-outlined text-sm">delete</span>
