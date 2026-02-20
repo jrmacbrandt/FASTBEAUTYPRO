@@ -356,12 +356,12 @@ Aguardo sua confirmação! 😊`;
                             <h2 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-12">
                                 O QUE VAMOS <br /><span style={{ color: theme.primary }}>FAZER HOJE?</span>
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                                 {services.map(s => (
                                     <button
                                         key={s.id}
                                         onClick={() => { setSelection({ ...selection, service: s }); setStep(2); }}
-                                        className={`p-3 rounded-[2rem] bg-white/10 border transition-all text-center group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex flex-col items-center gap-3 relative overflow-hidden w-36 md:w-48 shrink-0`}
+                                        className={`p-3 rounded-[2rem] bg-white/10 border transition-all text-center group active:scale-[0.98] ${selection.service?.id === s.id ? '' : 'border-white/10 hover:border-white/20'} flex flex-col items-center gap-3 relative overflow-hidden w-full shrink-0`}
                                         style={{ borderColor: selection.service?.id === s.id ? theme.primary : undefined }}
                                     >
                                         {/* Image Container */}
