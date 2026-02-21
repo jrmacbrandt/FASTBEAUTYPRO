@@ -981,6 +981,18 @@ function CRMContent() {
                                         </button>
                                     ))}
                                 </div>
+
+                                {hasChanges && (
+                                    <button
+                                        onClick={handleSaveLoyalty}
+                                        disabled={savingLoyalty}
+                                        className="w-full mt-4 bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[10px] tracking-[0.2em] py-4 rounded-2xl transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300"
+                                        style={{ backgroundColor: colors?.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">{savingLoyalty ? 'sync' : 'save'}</span>
+                                        {savingLoyalty ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                                    </button>
+                                )}
                             </div>
 
                             {/* Intelligence Audit Preview */}
