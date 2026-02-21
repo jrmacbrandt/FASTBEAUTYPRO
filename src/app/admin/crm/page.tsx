@@ -518,18 +518,23 @@ function CRMContent() {
     };
 
     const handleToggleCampaignType = (type: 'recovery' | 'birthday' | 'loyalty') => {
-        setSelectedCampaignType(type);
+        const isDeselecting = selectedCampaignType === type;
+        const newType = isDeselecting ? null : type;
+        setSelectedCampaignType(newType);
+
         const firstName = campaignClient.name.split(' ')[0];
         const storeName = tenant?.name || 'nossa loja';
 
         let baseTemplate = '';
-        if (type === 'recovery') {
+        if (newType === 'recovery') {
             baseTemplate = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
-        } else if (type === 'birthday') {
+        } else if (newType === 'birthday') {
             baseTemplate = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
-        } else if (type === 'loyalty') {
+        } else if (newType === 'loyalty') {
             const stamps = campaignClient.stamps_count || 0;
             baseTemplate = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
+        } else {
+            baseTemplate = `Olá, ${firstName}! 👋 Como você está?`;
         }
 
         let incentivePart = '';
@@ -1475,9 +1480,9 @@ function CRMContent() {
                             <div className="grid grid-cols-3 gap-3">
                                 <button
                                     onClick={() => handleToggleCampaignType('recovery')}
-                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border ${selectedCampaignType === 'recovery'
-                                            ? 'bg-rose-500 border-rose-500 text-white'
-                                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'recovery'
+                                        ? 'bg-rose-500 border-rose-500 text-white'
+                                        : 'bg-white/5 border-white/10 text-white/40'
                                         }`}
                                 >
                                     <span className={`material-symbols-outlined ${selectedCampaignType === 'recovery' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>person_remove</span>
@@ -1485,9 +1490,9 @@ function CRMContent() {
                                 </button>
                                 <button
                                     onClick={() => handleToggleCampaignType('birthday')}
-                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border ${selectedCampaignType === 'birthday'
-                                            ? 'bg-emerald-500 border-emerald-500 text-white'
-                                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'birthday'
+                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                        : 'bg-white/5 border-white/10 text-white/40'
                                         }`}
                                 >
                                     <span className={`material-symbols-outlined ${selectedCampaignType === 'birthday' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>celebration</span>
@@ -1495,9 +1500,9 @@ function CRMContent() {
                                 </button>
                                 <button
                                     onClick={() => handleToggleCampaignType('loyalty')}
-                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border ${selectedCampaignType === 'loyalty'
-                                            ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
-                                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'loyalty'
+                                        ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                        : 'bg-white/5 border-white/10 text-white/40'
                                         }`}
                                 >
                                     <span className={`material-symbols-outlined ${selectedCampaignType === 'loyalty' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>loyalty</span>
@@ -1511,9 +1516,9 @@ function CRMContent() {
                                     <button
                                         onClick={() => handleToggleIncentive('service')}
                                         disabled={!rewardService}
-                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 ${selectedIncentiveType === 'service'
-                                                ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
-                                                : 'bg-white/5 border-white/10 border-dashed text-white/40 hover:border-white/20'
+                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 hover:border-[#f2b90d] hover:bg-transparent ${selectedIncentiveType === 'service'
+                                            ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                            : 'bg-white/5 border-white/10 border-dashed text-white/40'
                                             }`}
                                     >
                                         <span className={`material-symbols-outlined text-sm ${selectedIncentiveType === 'service' ? '' : 'text-white/20'}`}>content_cut</span>
@@ -1522,9 +1527,9 @@ function CRMContent() {
                                     <button
                                         onClick={() => handleToggleIncentive('product')}
                                         disabled={!rewardProduct}
-                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 ${selectedIncentiveType === 'product'
-                                                ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
-                                                : 'bg-white/5 border-white/10 border-dashed text-white/40 hover:border-white/20'
+                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 hover:border-[#f2b90d] hover:bg-transparent ${selectedIncentiveType === 'product'
+                                            ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                            : 'bg-white/5 border-white/10 border-dashed text-white/40'
                                             }`}
                                     >
                                         <span className={`material-symbols-outlined text-sm ${selectedIncentiveType === 'product' ? '' : 'text-white/20'}`}>shopping_bag</span>
