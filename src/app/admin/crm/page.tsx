@@ -21,6 +21,11 @@ function CRMContent() {
     });
     const [savingLoyalty, setSavingLoyalty] = useState(false);
     const [selectedLoyaltyTarget, setSelectedLoyaltyTarget] = useState<number | null>(null);
+    const [rewardService, setRewardService] = useState<string | null>(null);
+    const [rewardProduct, setRewardProduct] = useState<string | null>(null);
+    const [services, setServices] = useState<any[]>([]);
+    const [products, setProducts] = useState<any[]>([]);
+    const [savingRewards, setSavingRewards] = useState(false);
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [clientsList, setClientsList] = useState<any[]>([]);
     const [selectedClients, setSelectedClients] = useState<string[]>([]);
@@ -104,20 +109,27 @@ function CRMContent() {
                 { data: appointments },
                 { data: allClients }
             ] = await Promise.all([
-                supabase.from('tenants').select('id, loyalty_target, name, business_type, phone').eq('id', tid).single(),
+                supabase.from('tenants').select('id, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone').eq('id', tid).single(),
                 supabase.from('clients').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
                 getSegmentedClients(tid, { days_inactive: 45 }),
                 getSegmentedClients(tid, { min_spent: 500 }),
                 getSegmentedClients(tid, { birth_month: new Date().getMonth() + 1 }),
                 supabase.from('appointments').select('client_id').eq('tenant_id', tid).eq('status', 'paid'),
-                supabase.from('clients').select('*').eq('tenant_id', tid).order('name')
+                supabase.from('clients').select('*').eq('tenant_id', tid).order('name'),
+                supabase.from('services').select('id, name').eq('tenant_id', tid).eq('active', true),
+                supabase.from('products').select('id, name').eq('tenant_id', tid)
             ]);
 
             const currentTarget = tenantData?.loyalty_target || 5;
             if (tenantData) {
                 setTenant(tenantData);
                 setSelectedLoyaltyTarget(currentTarget);
+                setRewardService(tenantData.loyalty_reward_service_id);
+                setRewardProduct(tenantData.loyalty_reward_product_id);
             }
+
+            if (servicesResult.data) setServices(servicesResult.data);
+            if (productsResult.data) setProducts(productsResult.data);
 
             const countsMap: Record<string, number> = {};
             if (appointments) {
@@ -179,19 +191,27 @@ function CRMContent() {
         try {
             const { error } = await supabase
                 .from('tenants')
-                .update({ loyalty_target: selectedLoyaltyTarget })
+                .update({
+                    loyalty_target: selectedLoyaltyTarget,
+                    loyalty_reward_service_id: rewardService,
+                    loyalty_reward_product_id: rewardProduct
+                })
                 .eq('id', tenant.id);
 
             if (!error) {
-                setTenant((prev: any) => ({ ...prev, loyalty_target: selectedLoyaltyTarget }));
-                alert('Configurações de fidelidade salvas com sucesso!');
-                // Re-fetch to update the pending rewards based on new target
+                setTenant((prev: any) => ({
+                    ...prev,
+                    loyalty_target: selectedLoyaltyTarget,
+                    loyalty_reward_service_id: rewardService,
+                    loyalty_reward_product_id: rewardProduct
+                }));
+                alert('Configurações de fidelidade e prêmios salvas!');
                 fetchData(tenant.id);
             } else {
                 throw error;
             }
         } catch (err: any) {
-            console.error('Save loyalty target failed:', err);
+            console.error('Save loyalty configuration failed:', err);
             alert('Erro ao salvar: ' + err.message);
         } finally {
             setSavingLoyalty(false);
@@ -595,8 +615,9 @@ function CRMContent() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 md:gap-8">
-                {/* FIDELITY CENTER - State of the Art UI */}
-                <div className="xl:col-span-5 space-y-6">
+                {/* FIDELITY CENTER - Layout 50/50 */}
+                <div className="xl:col-span-12 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    {/* CARTÃO FIDELIDADE */}
                     <div className="rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
                         style={{ backgroundColor: colors?.cardBg }}
                     >
@@ -642,7 +663,7 @@ function CRMContent() {
                             </div>
 
                             {/* Intelligence Audit Preview */}
-                            <div className="rounded-3xl p-6 relative overflow-hidden mb-8" style={{ backgroundColor: `${colors?.secondaryBg}40` }}>
+                            <div className="rounded-3xl p-6 relative overflow-hidden" style={{ backgroundColor: `${colors?.secondaryBg}40` }}>
                                 <p className="text-[8px] font-black uppercase tracking-widest mb-4 opacity-70" style={{ color: colors?.textMuted }}>Visualização do App do Cliente</p>
                                 <div className="flex flex-wrap gap-2.5 justify-center py-4">
                                     {loyaltyPreviewCircles.map((_, i) => (
@@ -666,67 +687,109 @@ function CRMContent() {
                                         <span className="material-symbols-outlined text-[18px]">redeem</span>
                                     </div>
                                 </div>
-                                <p className="text-[9px] text-center mt-4 italic font-medium" style={{ color: colors?.textMuted }}>Recompensa: 1 {tenant?.business_type === 'barber' ? 'Corte' : 'Serviço'} Grátis</p>
-                            </div>
-
-                            {/* Unificado: Botão SALVAR - Sempre Ativo e Visível */}
-                            <div className="mt-8">
-                                <button
-                                    onClick={handleSaveLoyalty}
-                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black italic uppercase text-xs tracking-widest py-5 rounded-2xl shadow-2xl shadow-[#f2b90d]/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3"
-                                >
-                                    <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : 'save'}</span>
-                                    {savingLoyalty ? 'SALVANDO...' : 'SALVAR'}
-                                </button>
+                                <p className="text-[9px] text-center mt-4 italic font-medium" style={{ color: colors?.textMuted }}>
+                                    Recompensa: 1 {rewardService ? services.find(s => s.id === rewardService)?.name : (tenant?.business_type === 'barber' ? 'Corte' : 'Serviço')} Grátis
+                                </p>
                             </div>
                         </div>
+                    </div>
 
-                        {/* Status Footer */}
-                        <div className="mt-8 pt-6 flex items-center justify-between opacity-60">
-                            <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-xs text-emerald-500">lock_open</span>
-                                <span className="text-[8px] font-black uppercase tracking-widest text-white">Status: Ativo</span>
+                    {/* PRÊMIOS DE FIDELIDADE (NEW) */}
+                    <div className="rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl"
+                        style={{ backgroundColor: colors?.cardBg }}
+                    >
+                        <div className="relative z-10">
+                            <div className="flex items-center justify-between mb-8">
+                                <div>
+                                    <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Prêmios de Fidelidade</h3>
+                                    <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Catálogo de Recompensas</p>
+                                </div>
+                                <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
+                                    style={{ backgroundColor: `${colors?.text}0d` }}
+                                >
+                                    <span className="material-symbols-outlined" style={{ color: colors?.primary }}>redeem</span>
+                                </div>
                             </div>
-                            <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">FastBeauty Loyalty Engine</span>
+
+                            <div className="space-y-6">
+                                {/* Serviço de Recompensa */}
+                                <div className="space-y-3">
+                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Serviço de Recompensa</label>
+                                    <select
+                                        value={rewardService || ''}
+                                        onChange={(e) => setRewardService(e.target.value || null)}
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white focus:border-[#f2b90d] outline-none transition-all appearance-none"
+                                        style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}40`, color: colors?.text }}
+                                    >
+                                        <option value="">Selecione um Serviço...</option>
+                                        {services.map(s => (
+                                            <option key={s.id} value={s.id}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Produto de Recompensa */}
+                                <div className="space-y-3">
+                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Produto de Recompensa</label>
+                                    <select
+                                        value={rewardProduct || ''}
+                                        onChange={(e) => setRewardProduct(e.target.value || null)}
+                                        className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white focus:border-[#f2b90d] outline-none transition-all appearance-none"
+                                        style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}40`, color: colors?.text }}
+                                    >
+                                        <option value="">Selecione um Produto...</option>
+                                        {products.map(p => (
+                                            <option key={p.id} value={p.id}>{p.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {/* Botão SALVAR Unificado */}
+                                <button
+                                    onClick={handleSaveLoyalty}
+                                    disabled={savingLoyalty}
+                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black italic uppercase text-xs tracking-widest py-5 rounded-2xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
+                                >
+                                    <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : 'save'}</span>
+                                    {savingLoyalty ? 'SALVANDO...' : 'SALVAR CONFIGURAÇÕES'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* CAMPAIGN CENTER & ANNOTATIONS */}
-                <div className="xl:col-span-7 space-y-6">
-                    <div className="rounded-[2.5rem] p-8 md:p-10 h-full flex flex-col shadow-2xl"
+                {/* CENTRAL DE ENGAJAMENTO - Horizontal Full Width */}
+                <div className="xl:col-span-12">
+                    <div className="rounded-[2.5rem] p-8 md:p-10 shadow-2xl"
                         style={{ backgroundColor: colors?.cardBg }}
                     >
-                        <div className="flex items-center justify-between mb-10">
-                            <div className="flex items-center gap-6">
+                        <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-4">
+                            <div className="flex flex-col md:flex-row items-center gap-6">
                                 <div>
                                     <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Central de Engajamento</h3>
                                     <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Motor de Retenção Ativo</p>
                                 </div>
                                 <button
                                     onClick={() => window.location.href = `/admin/crm/nova-campanha?segment=${activeFilter}`}
-                                    className="bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[9px] tracking-widest px-4 py-2 rounded-xl transition-all shadow-lg active:scale-95"
+                                    className="bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[9px] tracking-widest px-6 py-3 rounded-xl transition-all shadow-lg active:scale-95 whitespace-nowrap"
                                 >
                                     CRIAR ESTA CAMPANHA
                                 </button>
                             </div>
-                            <div className="flex gap-4">
-
-                                <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
-                                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                    Filtros Dinâmicos OK
-                                </div>
+                            <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
+                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                Filtros Dinâmicos OK
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-x-auto">
+                        <div className="overflow-x-auto">
                             <table className="w-full text-left border-separate border-spacing-y-2">
                                 <thead>
                                     <tr className="text-[8px] font-black uppercase tracking-widest text-slate-500">
-                                        <th className="px-6 py-2">Cliente</th>
+                                        <th className="px-10 py-2">Cliente</th>
                                         <th className="px-6 py-2 text-center">Última Visita</th>
                                         <th className="px-6 py-2 text-center">Último Contato</th>
-                                        <th className="px-6 py-2 text-right">Ação</th>
+                                        <th className="px-10 py-2 text-right">Ação</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -738,45 +801,45 @@ function CRMContent() {
                                             </td>
                                         </tr>
                                     ) : (
-                                        engagementData[activeFilter].slice(0, 5).map((client) => (
+                                        engagementData[activeFilter].slice(0, 10).map((client) => (
                                             <tr key={client.id} className="group/row transition-all"
                                                 style={{ backgroundColor: `${colors?.cardBg}40` }}
                                             >
-                                                <td className="px-6 py-4 rounded-l-2xl">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black italic"
+                                                <td className="px-10 py-6 rounded-l-2xl">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="size-10 rounded-full flex items-center justify-center text-[12px] font-black italic"
                                                             style={{ backgroundColor: `${colors?.text}0d`, color: colors?.primary }}
                                                         >
                                                             {client.name.charAt(0)}
                                                         </div>
                                                         <div>
-                                                            <p className="text-[13px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
-                                                            <p className="text-[10px] font-bold mt-1.5 uppercase tracking-tighter" style={{ color: colors?.textMuted }}>LTV: R$ {client.total_spent || '0,00'}</p>
+                                                            <p className="text-[14px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
+                                                            <p className="text-[11px] font-bold mt-2 uppercase tracking-tighter" style={{ color: colors?.textMuted }}>LTV: R$ {client.total_spent || '0,00'}</p>
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
-                                                    <p className="text-[12px] font-bold" style={{ color: colors?.textMuted }}>
+                                                    <p className="text-[13px] font-bold" style={{ color: colors?.textMuted }}>
                                                         {client.last_visit ? new Date(client.last_visit).toLocaleDateString() : '--'}
                                                     </p>
                                                 </td>
                                                 <td className="px-6 py-4 text-center">
                                                     <div className="flex flex-col items-center">
-                                                        <span className={`text-[10px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : ''}`} style={{ color: client.last_contact_at ? undefined : colors?.textMuted }}>
+                                                        <span className={`text-[11px] font-black uppercase tracking-tighter ${client.last_contact_at ? 'text-emerald-500' : ''}`} style={{ color: client.last_contact_at ? undefined : colors?.textMuted }}>
                                                             {client.last_contact_at ? 'Abordado' : 'Aguardando'}
                                                         </span>
-                                                        <span className="text-[9px]" style={{ color: colors?.textMuted }}>
+                                                        <span className="text-[10px]" style={{ color: colors?.textMuted }}>
                                                             {client.last_contact_at ? new Date(client.last_contact_at).toLocaleDateString() : 'NUNCA'}
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="px-6 py-4 rounded-r-2xl text-right">
+                                                <td className="px-10 py-6 rounded-r-2xl text-right">
                                                     <button
                                                         onClick={() => openCampaignModal(client, (activeFilter === 'churn' ? 'recovery' : activeFilter === 'loyalty' ? 'loyalty' : 'manual'))}
                                                         disabled={updatingContact === client.id}
-                                                        className="size-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white transition-all flex items-center justify-center group/btn active:scale-90 disabled:opacity-30"
+                                                        className="size-11 rounded-xl bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white transition-all mx-auto md:ml-auto flex items-center justify-center group/btn active:scale-90 disabled:opacity-30 shadow-lg shadow-emerald-500/5"
                                                     >
-                                                        <span className="material-symbols-outlined text-lg">{updatingContact === client.id ? 'sync' : 'chat'}</span>
+                                                        <span className="material-symbols-outlined text-xl">{updatingContact === client.id ? 'sync' : 'chat'}</span>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -784,8 +847,8 @@ function CRMContent() {
                                     )}
                                 </tbody>
                             </table>
-                            {engagementData[activeFilter].length > 5 && (
-                                <p className="text-center text-[8px] font-black uppercase tracking-widest mt-4 italic" style={{ color: colors?.textMuted }}>+ {engagementData[activeFilter].length - 5} clientes ocultos. Use filtros para refinar.</p>
+                            {engagementData[activeFilter].length > 10 && (
+                                <p className="text-center text-[10px] font-black uppercase tracking-widest mt-6 italic" style={{ color: colors?.textMuted }}>+ {engagementData[activeFilter].length - 10} clientes ocultos. Use filtros para refinar ou lance uma campanha.</p>
                             )}
                         </div>
                     </div>
@@ -1024,6 +1087,42 @@ function CRMContent() {
                                     <span className="material-symbols-outlined group-hover:scale-110 transition-transform">loyalty</span>
                                     <span className="text-[8px] font-black uppercase">Fidelidade</span>
                                 </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Incentivo de Prêmio</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => {
+                                            if (rewardService) {
+                                                const serviceName = services.find(s => s.id === rewardService)?.name;
+                                                setCampaignMessage(prev => prev + ` 🎉 Você ganhou um(a) ${serviceName} grátis!`);
+                                            } else {
+                                                alert('Configure um serviço de prêmio primeiro.');
+                                            }
+                                        }}
+                                        disabled={!rewardService}
+                                        className="p-2.5 rounded-xl border border-dashed border-[#f2b90d]/30 text-[#f2b90d] hover:bg-[#f2b90d]/10 transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">content_cut</span>
+                                        Serviço de Prêmio
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (rewardProduct) {
+                                                const productName = products.find(p => p.id === rewardProduct)?.name;
+                                                setCampaignMessage(prev => prev + ` 🎁 Ganhe um(a) ${productName} em sua próxima visita!`);
+                                            } else {
+                                                alert('Configure um produto de prêmio primeiro.');
+                                            }
+                                        }}
+                                        disabled={!rewardProduct}
+                                        className="p-2.5 rounded-xl border border-dashed border-[#f2b90d]/30 text-[#f2b90d] hover:bg-[#f2b90d]/10 transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">shopping_bag</span>
+                                        Produto de Prêmio
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="space-y-3">

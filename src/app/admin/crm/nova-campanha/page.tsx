@@ -33,6 +33,9 @@ function NewCampaignContent() {
         birth_month: 0
     });
     const [template, setTemplate] = useState('');
+    const [rewardService, setRewardService] = useState<any>(null);
+    const [rewardProduct, setRewardProduct] = useState<any>(null);
+    const [selectedIncentive, setSelectedIncentive] = useState<'none' | 'service' | 'product'>('none');
 
     useEffect(() => {
         const loadContext = async () => {
@@ -54,11 +57,23 @@ function NewCampaignContent() {
 
             const { data: tenantData } = await supabase
                 .from('tenants')
-                .select('name, phone, loyalty_target')
+                .select('name, phone, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id')
                 .eq('id', tenantId)
                 .single();
 
-            if (tenantData) setTenant(tenantData);
+            if (tenantData) {
+                setTenant(tenantData);
+
+                // Fetch Reward Names if set
+                if (tenantData.loyalty_reward_service_id) {
+                    const { data: s } = await supabase.from('services').select('name').eq('id', tenantData.loyalty_reward_service_id).single();
+                    if (s) setRewardService({ id: tenantData.loyalty_reward_service_id, name: s.name });
+                }
+                if (tenantData.loyalty_reward_product_id) {
+                    const { data: p } = await supabase.from('products').select('name').eq('id', tenantData.loyalty_reward_product_id).single();
+                    if (p) setRewardProduct({ id: tenantData.loyalty_reward_product_id, name: p.name });
+                }
+            }
 
             // Presets based on Segment
             const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -310,6 +325,58 @@ function NewCampaignContent() {
                         <div className="absolute bottom-4 right-4 text-xs text-slate-500 bg-black/50 px-2 py-1 rounded">
                             Variáveis: {'{name}'} será substituído pelo primeiro nome.
                         </div>
+                    </div>
+                </section>
+
+                {/* STEP 4: INCENTIVO (RECOMPENSA DE FIDELIDADE) */}
+                <section>
+                    <h3 className="text-lg font-bold text-white mb-4 border-b border-white/5 pb-2">4. Incentivo da Campanha (Opcional)</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button
+                            onClick={() => setSelectedIncentive('none')}
+                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${selectedIncentive === 'none' ? 'bg-[#f2b90d]/5 border-[#f2b90d] text-[#f2b90d]' : 'bg-black/20 border-white/10 text-slate-500'}`}
+                        >
+                            <span className="material-symbols-outlined italic">block</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-center">Nenhum Prêmio</span>
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                setSelectedIncentive('service');
+                                if (rewardService) {
+                                    const textToAdd = ` 🎉 Você terá direito a um(a) ${rewardService.name} grátis!`;
+                                    if (!template.includes(rewardService.name)) setTemplate(prev => prev + textToAdd);
+                                } else {
+                                    alert('Configure um serviço de prêmio no painel de fidelidade primeiro.');
+                                }
+                            }}
+                            disabled={!rewardService}
+                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 disabled:opacity-30 ${selectedIncentive === 'service' ? 'bg-[#f2b90d]/5 border-[#f2b90d] text-[#f2b90d]' : 'bg-black/20 border-white/10 text-slate-500'}`}
+                        >
+                            <span className="material-symbols-outlined italic">content_cut</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-center">
+                                {rewardService ? `Serviço: ${rewardService.name}` : 'Sem Serviço de Prêmio'}
+                            </span>
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                setSelectedIncentive('product');
+                                if (rewardProduct) {
+                                    const textToAdd = ` 🎁 Ganhe um(a) ${rewardProduct.name} em sua próxima visita!`;
+                                    if (!template.includes(rewardProduct.name)) setTemplate(prev => prev + textToAdd);
+                                } else {
+                                    alert('Configure um produto de prêmio no painel de fidelidade primeiro.');
+                                }
+                            }}
+                            disabled={!rewardProduct}
+                            className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 disabled:opacity-30 ${selectedIncentive === 'product' ? 'bg-[#f2b90d]/5 border-[#f2b90d] text-[#f2b90d]' : 'bg-black/20 border-white/10 text-slate-500'}`}
+                        >
+                            <span className="material-symbols-outlined italic">shopping_bag</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-center">
+                                {rewardProduct ? `Produto: ${rewardProduct.name}` : 'Sem Produto de Prêmio'}
+                            </span>
+                        </button>
                     </div>
                 </section>
 
