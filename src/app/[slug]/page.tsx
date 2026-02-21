@@ -208,13 +208,11 @@ Gostaria de agendar o seguinte serviço:
 Aguardo sua confirmação! 😊`;
 
             // 6. Abrir WhatsApp do profissional
-            const cleanBarberPhone = selection.barber.phone?.replace(/\D/g, '') || '';
-            const phoneNumber = cleanBarberPhone.startsWith('55') ? cleanBarberPhone : `55${cleanBarberPhone}`;
-            const whatsappLink = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-
-            console.log('✅ Agendamento salvo! Abrindo WhatsApp:', { phoneNumber });
-
-            window.open(whatsappLink, '_blank');
+            import('@/lib/whatsapp').then(({ WhatsAppService }) => {
+                const phoneNumber = selection.barber.phone || '';
+                WhatsAppService.open(phoneNumber, message);
+                console.log('✅ Agendamento salvo! Abrindo WhatsApp:', { phoneNumber });
+            });
 
             // 7. Move to Success Screen instead of resetting
             setStep(6);

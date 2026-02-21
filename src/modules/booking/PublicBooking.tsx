@@ -7,7 +7,7 @@ const PublicBooking: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const isSalon = businessType === 'salon';
-  
+
   const theme = useMemo(() => {
     const saved = localStorage.getItem('elite_tenant_theme');
     if (saved) return JSON.parse(saved);
@@ -24,7 +24,9 @@ const PublicBooking: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
 
   const finishBooking = () => {
     const message = `Olá! Gostaria de confirmar meu agendamento: ${selection.service} com ${selection.barber} no dia ${selection.date} às ${selection.time}. Nome: ${selection.name}`;
-    window.open(`https://wa.me/5500000000000?text=${encodeURIComponent(message)}`, '_blank');
+    import('@/lib/whatsapp').then(({ WhatsAppService }) => {
+      WhatsAppService.open('5500000000000', message);
+    });
     navigate(`/${slug}/confirmed`, { state: selection });
   };
 
@@ -39,8 +41,8 @@ const PublicBooking: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
           FASTBEAUTY <span style={{ color: theme.primary }}>PRO</span>
         </h1>
         <div className="flex items-center gap-2">
-           <span className="material-symbols-outlined text-[14px]" style={{ color: theme.primary }}>location_on</span>
-           <span className="text-[10px] uppercase font-black tracking-widest opacity-60">Unidade {slug?.replace('-', ' ')}</span>
+          <span className="material-symbols-outlined text-[14px]" style={{ color: theme.primary }}>location_on</span>
+          <span className="text-[10px] uppercase font-black tracking-widest opacity-60">Unidade {slug?.replace('-', ' ')}</span>
         </div>
       </header>
       <main className="max-w-xl mx-auto p-6 py-12 relative z-10">
@@ -51,7 +53,7 @@ const PublicBooking: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
         </div>
         {step === 1 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-4xl font-black italic uppercase tracking-tight">O que vamos <br/> fazer <span style={{ color: theme.primary }}>hoje?</span></h2>
+            <h2 className="text-4xl font-black italic uppercase tracking-tight">O que vamos <br /> fazer <span style={{ color: theme.primary }}>hoje?</span></h2>
             <div className="grid gap-4">
               {services.map(s => (
                 <button key={s.id} onClick={() => { setSelection({ ...selection, service: s.name }); nextStep(); }} className="p-6 rounded-[2rem] border-2 text-left flex justify-between items-center transition-all group bg-white/5 backdrop-blur-md relative overflow-hidden" style={{ borderColor: selection.service === s.name ? theme.primary : 'rgba(255,255,255,0.05)' }}>
@@ -64,7 +66,7 @@ const PublicBooking: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
         )}
         {step === 4 && (
           <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-            <h2 className="text-4xl font-black italic uppercase tracking-tight">Quase <br/> <span style={{ color: theme.primary }}>lá!</span></h2>
+            <h2 className="text-4xl font-black italic uppercase tracking-tight">Quase <br /> <span style={{ color: theme.primary }}>lá!</span></h2>
             <div className="space-y-4 bg-white/5 backdrop-blur-md p-8 rounded-[2.5rem] border border-white/5">
               <input type="text" placeholder="Nome Completo" className="w-full bg-black/40 border-2 border-white/5 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20" value={selection.name} onChange={(e) => setSelection({ ...selection, name: e.target.value })} />
               <input type="tel" placeholder="WhatsApp" className="w-full bg-black/40 border-2 border-white/5 rounded-2xl p-5 text-white font-bold focus:outline-none focus:border-white/20 transition-all placeholder:text-white/20" value={selection.phone} onChange={(e) => setSelection({ ...selection, phone: e.target.value })} />
@@ -76,7 +78,7 @@ const PublicBooking: React.FC<{ businessType: 'barber' | 'salon' }> = ({ busines
         {(step === 2 || step === 3) && <button onClick={nextStep} className="w-full bg-primary py-4 rounded-xl font-bold uppercase">PRÓXIMO PASSO</button>}
       </main>
       <footer className="p-12 text-center opacity-20 mt-auto">
-         <p className="text-[10px] font-black uppercase tracking-[0.5em]">Powered by FastBeauty Pro</p>
+        <p className="text-[10px] font-black uppercase tracking-[0.5em]">Powered by FastBeauty Pro</p>
       </footer>
     </div>
   );

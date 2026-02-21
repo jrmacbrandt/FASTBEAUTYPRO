@@ -216,13 +216,13 @@ export default function DynamicBookingPage() {
             if (apptError) throw apptError;
 
             // WhatsApp Redirect
-            const targetPhone = selection.barber.phone ? selection.barber.phone.replace(/\D/g, '') : (tenant.phone?.replace(/\D/g, '') || '5500000000000');
-            const targetPhoneFull = targetPhone.startsWith('55') ? targetPhone : `55${targetPhone}`;
+            import('@/lib/whatsapp').then(({ WhatsAppService }) => {
+                const targetPhone = selection.barber.phone || tenant.phone || '00000000000';
 
-            // Format Date for Message
-            const dateFormatted = format(selectedDateObj, "dd/MM (EEEE)", { locale: ptBR });
-            const message = `🗓️ *AGENDAMENTO CONFIRMADO*
-            
+                // Format Date for Message
+                const dateFormatted = format(selectedDateObj, "dd/MM (EEEE)", { locale: ptBR });
+                const message = `🗓️ *AGENDAMENTO CONFIRMADO*
+                
 Olá! Sou o ${selection.name}. 
 Gostaria de agendar: ${selection.service.name} 
 Com: ${selection.barber.full_name} 
@@ -231,7 +231,8 @@ Dia: ${dateFormatted} às ${selection.time}.
 
 Até lá! 👋`;
 
-            window.open(`https://wa.me/${targetPhoneFull}?text=${encodeURIComponent(message)}`, '_blank');
+                WhatsAppService.open(targetPhone, message);
+            });
 
             // 7. Success Step
             setStep(5);
@@ -489,8 +490,8 @@ Até lá! 👋`;
                                                     <div
                                                         key={i}
                                                         className={`size-9 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${i < (clientLoyalty?.stamps_count || 0)
-                                                                ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-500 scale-105 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                                                                : 'border-white/5 bg-white/5 opacity-30'
+                                                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-500 scale-105 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
+                                                            : 'border-white/5 bg-white/5 opacity-30'
                                                             }`}
                                                     >
                                                         {i < (clientLoyalty?.stamps_count || 0) ? (
@@ -503,8 +504,8 @@ Até lá! 👋`;
 
                                                 {/* Final Reward Slot */}
                                                 <div className={`size-9 rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-700 ${(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
-                                                        ? 'bg-[#f2b90d] border-[#f2b90d] text-black scale-110 shadow-[0_0_20px_rgba(242,185,13,0.4)] animate-pulse'
-                                                        : 'border-white/20 bg-white/5 opacity-50'
+                                                    ? 'bg-[#f2b90d] border-[#f2b90d] text-black scale-110 shadow-[0_0_20px_rgba(242,185,13,0.4)] animate-pulse'
+                                                    : 'border-white/20 bg-white/5 opacity-50'
                                                     }`}>
                                                     <span className="material-symbols-outlined text-lg">redeem</span>
                                                 </div>

@@ -169,8 +169,8 @@ function NewCampaignContent() {
                     const firstName = client.name.split(' ')[0];
                     const msg = template.replace('{name}', firstName);
                     const encodedMsg = encodeURIComponent(msg);
-                    let cleanPhone = client.phone.replace(/\D/g, '');
-                    if (cleanPhone.length <= 11) cleanPhone = `55${cleanPhone}`;
+                    const { WhatsAppService } = require('@/lib/whatsapp');
+                    const cleanPhone = WhatsAppService.formatPhone(client.phone);
 
                     return {
                         campaign_id: campaign.id,

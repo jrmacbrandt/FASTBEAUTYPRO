@@ -740,11 +740,8 @@ function CRMContent() {
                 .update({ last_contact_at: new Date().toISOString() })
                 .eq('id', campaignClient.id);
 
-            const phone = campaignClient.phone.replace(/\D/g, '');
-            const encodedMsg = encodeURIComponent(campaignMessage);
-            const url = `https://wa.me/${phone}?text=${encodedMsg}`;
-
-            window.open(url, '_blank');
+            const { WhatsAppService } = await import('@/lib/whatsapp');
+            WhatsAppService.open(campaignClient.phone, campaignMessage);
             setIsCampaignModalOpen(false);
 
             // Log the communication
@@ -797,10 +794,8 @@ function CRMContent() {
                 msg = `Olá, ${firstName}! 👋 Como você está? Passando para convidar você para uma nova visita à ${storeName}. Temos horários disponíveis para esta semana! ✂️`;
             }
 
-            const phone = client.phone.replace(/\D/g, '');
-            const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
-
-            window.open(url, '_blank');
+            const { WhatsAppService } = await import('@/lib/whatsapp');
+            WhatsAppService.open(client.phone, msg);
 
             // Log the communication
             await logManualSend(client, msg);
