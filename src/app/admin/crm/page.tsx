@@ -279,10 +279,10 @@ function CRMContent() {
                     loyalty_reward_service_id: rewardService,
                     loyalty_reward_product_id: rewardProduct
                 }));
-                alert('Configurações salvas!');
-                // Evitamos fetchData total aqui para prevenir reversão de estado local por dados cacheados
-                // O estado local 'tenant' já foi sincronizado acima.
+                alert('Configurações salvas no servidor!');
             } else {
+                console.error('ERRO CRÍTICO RLS/DATABASE:', error);
+                alert(`Erro ao salvar: ${error.message}. Verifique as permissões de banco de dados (RLS).`);
                 throw error;
             }
         } catch (err: any) {
@@ -975,13 +975,13 @@ function CRMContent() {
                                             className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed`}
                                             style={{
                                                 backgroundColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : 'transparent',
-                                                borderColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : `${colors?.primary}20`,
+                                                borderColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : `${colors?.primary}30`,
                                                 color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.text,
                                                 boxShadow: Number(selectedLoyaltyTarget) === Number(val) ? `0 10px 40px -10px ${colors?.primary}40` : 'none'
                                             }}
                                         >
-                                            <span style={{ color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.text }}>{val}</span>
-                                            <span className="text-[7px] font-black tracking-[0.2em] opacity-60 uppercase" style={{ color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.textMuted }}>Selos</span>
+                                            <span className="text-2xl" style={{ color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.text }}>{val}</span>
+                                            <span className="text-[8px] font-black tracking-[0.2em] opacity-70 uppercase" style={{ color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.textMuted }}>Selos</span>
                                         </button>
                                     ))}
                                 </div>
