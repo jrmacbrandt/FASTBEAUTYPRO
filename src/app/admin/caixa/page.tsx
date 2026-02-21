@@ -28,6 +28,7 @@ export default function CashierCheckoutPage() {
                 appointments!appointment_id (
                     id, 
                     customer_name,
+                    customer_whatsapp,
                     scheduled_at, 
                     client_id,
                     profiles(full_name),
@@ -49,6 +50,7 @@ export default function CashierCheckoutPage() {
                 total_price: o.total_value,
                 commission: o.commission_amount,
                 client_id: o.appointments?.client_id,
+                client_phone: o.appointments?.customer_whatsapp,
                 raw: o
             }));
             setOrders(formatted);
@@ -59,16 +61,22 @@ export default function CashierCheckoutPage() {
     const checkLoyaltyVoucher = async (clientId: string) => {
         if (!clientId) return;
         const { data: client } = await supabase.from('clients').select('phone').eq('id', clientId).single();
-        if (!client?.phone) return;
+        if (!client?.phone || !profile?.tenant_id) return;
 
-        const { data: vouchers } = await supabase
-            .from('loyalty_vouchers')
-            .select('*')
-            .eq('client_phone', client.phone)
-            .eq('status', 'active')
-            .limit(1);
+        // Check stamps via LoyaltyService
+        try {
+            const { LoyaltyService } = await import('@/lib/loyalty');
+            const hasReward = await LoyaltyService.checkReward(profile.tenant_id, client.phone);
 
-        setVoucher(vouchers?.[0] || null);
+            if (hasReward) {
+                setVoucher({ type: 'loyalty_reward', phone: client.phone }); // Minimal object for UI
+            } else {
+                setVoucher(null);
+            }
+        } catch (err) {
+            console.error('Error checking loyalty reward:', err);
+            setVoucher(null);
+        }
     };
 
     useEffect(() => {
@@ -124,6 +132,26 @@ export default function CashierCheckoutPage() {
             alert('Erro ao processar pagamento: ' + orderError.message);
             return;
         }
+
+        // --- Loyalty System Integration (Added) ---
+        if (selected.client_phone && profile?.tenant_id) {
+            try {
+                const { LoyaltyService } = await import('@/lib/loyalty');
+
+                // Add Stamp
+                await LoyaltyService.addStamp(profile.tenant_id, selected.client_phone);
+
+                // Check if Reward Earned
+                const hasReward = await LoyaltyService.checkReward(profile.tenant_id, selected.client_phone);
+
+                if (hasReward) {
+                    alert(`🎉 PARABÉNS! ${selected.customer_name} acaba de completar o cartão fidelidade!\nPrêmio liberado para uso agora ou na próxima visita.`);
+                }
+            } catch (lError) {
+                console.error('Error updating loyalty:', lError);
+            }
+        }
+        // ------------------------------------------
 
         await supabase
             .from('appointments')
@@ -243,13 +271,23 @@ export default function CashierCheckoutPage() {
                                     </div>
                                     <button
                                         onClick={async () => {
-                                            if (!selected) return;
-                                            if (confirm('Confirmar uso do Voucher? O total será zerado.')) {
-                                                await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
-                                                await supabase.from('loyalty_vouchers').update({ status: 'used', used_at: new Date().toISOString() }).eq('id', voucher.id);
-                                                setSelected({ ...selected, total_price: 0 });
-                                                setVoucher(null);
-                                                alert('Voucher aplicado com sucesso!');
+                                            if (!selected || !profile?.tenant_id) return;
+                                            if (confirm('Confirmar uso do cartão fidelidade? O total será zerado e o cartão será reiniciado.')) {
+                                                try {
+                                                    const { LoyaltyService } = await import('@/lib/loyalty');
+                                                    const success = await LoyaltyService.redeemReward(profile.tenant_id, selected.client_phone);
+
+                                                    if (success) {
+                                                        await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
+                                                        setSelected({ ...selected, total_price: 0 });
+                                                        setVoucher(null);
+                                                        alert('Cortesia aplicada e cartão reiniciado!');
+                                                    } else {
+                                                        alert('Erro ao resgatar recompensa. Verifique o saldo de selos.');
+                                                    }
+                                                } catch (err) {
+                                                    console.error('Redeem Error:', err);
+                                                }
                                             }
                                         }}
                                         className="bg-emerald-500 text-black text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg hover:bg-emerald-400"
