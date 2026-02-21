@@ -832,11 +832,26 @@ function CRMContent() {
                                 </div>
                             </div>
 
-                            <div className="space-y-6">
+                            <div className="space-y-8 mt-2">
                                 {/* Serviço de Recompensa */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Serviço de Recompensa</label>
+                                <div className="space-y-4">
+                                    <div className="flex flex-col gap-4">
+                                        <label className="text-sm font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Serviço de Recompensa</label>
+
+                                        {rewardService && (
+                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
+                                                            {services.find(s => s.id === rewardService)?.name || 'Serviço Selecionado'}
+                                                        </p>
+                                                        <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <button
                                             onClick={() => {
                                                 const currentReward = services.find(s => s.id === rewardService);
@@ -854,28 +869,33 @@ function CRMContent() {
                                                 }
                                                 setIsServiceModalOpen(true);
                                             }}
-                                            className="text-[8px] font-black text-emerald-400 border border-emerald-400/20 px-2 py-1 rounded hover:bg-emerald-400 hover:text-black transition-all"
+                                            className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2"
                                         >
-                                            {rewardService ? 'EDITAR' : '+ CRIAR'}
+                                            <span className="material-symbols-outlined text-sm">{rewardService ? 'edit' : 'add_circle'}</span>
+                                            {rewardService ? 'EDITAR' : 'CRIAR'}
                                         </button>
                                     </div>
-                                    <select
-                                        value={rewardService || ''}
-                                        onChange={(e) => setRewardService(e.target.value || null)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white focus:border-[#f2b90d] outline-none transition-all appearance-none"
-                                        style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}40`, color: colors?.text }}
-                                    >
-                                        <option value="">Selecione um Serviço...</option>
-                                        {services.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name}</option>
-                                        ))}
-                                    </select>
                                 </div>
 
                                 {/* Produto de Recompensa */}
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Produto de Recompensa</label>
+                                <div className="space-y-4">
+                                    <div className="flex flex-col gap-4">
+                                        <label className="text-sm font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Produto de Recompensa</label>
+
+                                        {rewardProduct && (
+                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
+                                                            {products.find(p => p.id === rewardProduct)?.name || 'Produto Selecionado'}
+                                                        </p>
+                                                        <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <button
                                             onClick={() => {
                                                 const currentReward = products.find(p => p.id === rewardProduct);
@@ -898,33 +918,13 @@ function CRMContent() {
                                                 }
                                                 setIsProductModalOpen(true);
                                             }}
-                                            className="text-[8px] font-black text-emerald-400 border border-emerald-400/20 px-2 py-1 rounded hover:bg-emerald-400 hover:text-black transition-all"
+                                            className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2"
                                         >
-                                            {rewardProduct ? 'EDITAR' : '+ CRIAR'}
+                                            <span className="material-symbols-outlined text-sm">{rewardProduct ? 'edit' : 'add_circle'}</span>
+                                            {rewardProduct ? 'EDITAR' : 'CRIAR'}
                                         </button>
                                     </div>
-                                    <select
-                                        value={rewardProduct || ''}
-                                        onChange={(e) => setRewardProduct(e.target.value || null)}
-                                        className="w-full bg-black/20 border border-white/10 rounded-xl p-4 text-xs text-white focus:border-[#f2b90d] outline-none transition-all appearance-none"
-                                        style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}40`, color: colors?.text }}
-                                    >
-                                        <option value="">Selecione um Produto...</option>
-                                        {products.map(p => (
-                                            <option key={p.id} value={p.id}>{p.name}</option>
-                                        ))}
-                                    </select>
                                 </div>
-
-                                {/* Botão SALVAR Unificado */}
-                                <button
-                                    onClick={handleSaveLoyalty}
-                                    disabled={savingLoyalty}
-                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black italic uppercase text-xs tracking-widest py-5 rounded-2xl shadow-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
-                                >
-                                    <span className="material-symbols-outlined text-lg">{savingLoyalty ? 'sync' : 'save'}</span>
-                                    {savingLoyalty ? 'SALVANDO...' : 'SALVAR CONFIGURAÇÕES'}
-                                </button>
                             </div>
                         </div>
                     </div>
