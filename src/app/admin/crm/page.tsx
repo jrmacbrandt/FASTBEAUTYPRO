@@ -40,7 +40,8 @@ function CRMContent() {
         name: '',
         price: '',
         duration_minutes: '',
-        image_url: ''
+        image_url: '',
+        file: null as File | null
     });
 
     // Product Form State
@@ -53,7 +54,8 @@ function CRMContent() {
         current_stock: '',
         min_threshold: '',
         unit_type: 'un',
-        image_url: ''
+        image_url: '',
+        file: null as File | null
     });
 
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
@@ -269,11 +271,29 @@ function CRMContent() {
         if (!tenant?.id) return;
         setSavingRewards(true);
         try {
+            let finalImageUrl = newService.image_url;
+
+            // 1. Upload file if exists
+            if (newService.file) {
+                const fileName = `${tenant.id}/${Date.now()}-reward-service.webp`;
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('services')
+                    .upload(fileName, newService.file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('services')
+                    .getPublicUrl(fileName);
+
+                finalImageUrl = publicUrl;
+            }
+
             const payload = {
                 tenant_id: tenant.id,
                 name: newService.name,
                 duration_minutes: parseInt(newService.duration_minutes) || 0,
-                image_url: newService.image_url,
+                image_url: finalImageUrl,
                 active: true
             };
 
@@ -294,6 +314,7 @@ function CRMContent() {
             setRewardService(serviceId);
             setIsServiceModalOpen(false);
             setEditingRewardService(null);
+            setNewService({ name: '', price: '', duration_minutes: '', image_url: '', file: null });
             alert('Serviço de prêmio salvo com sucesso!');
             fetchData(tenant.id);
         } catch (err: any) {
@@ -318,7 +339,7 @@ function CRMContent() {
             if (imageUrl && imageUrl.includes('storage')) {
                 const path = imageUrl.split('/').pop();
                 if (path) {
-                    await supabase.storage.from('products').remove([path]);
+                    await supabase.storage.from('services').remove([path]);
                 }
             }
 
@@ -335,6 +356,24 @@ function CRMContent() {
         if (!tenant?.id) return;
         setSavingRewards(true);
         try {
+            let finalImageUrl = newProduct.image_url;
+
+            // 1. Upload file if exists
+            if (newProduct.file) {
+                const fileName = `${tenant.id}/${Date.now()}-reward-product.webp`;
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('products')
+                    .upload(fileName, newProduct.file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('products')
+                    .getPublicUrl(fileName);
+
+                finalImageUrl = publicUrl;
+            }
+
             const payload = {
                 tenant_id: tenant.id,
                 name: newProduct.name,
@@ -343,7 +382,7 @@ function CRMContent() {
                 current_stock: parseInt(newProduct.current_stock) || 0,
                 min_threshold: parseInt(newProduct.min_threshold) || 0,
                 unit_type: newProduct.unit_type,
-                image_url: newProduct.image_url,
+                image_url: finalImageUrl,
                 active: true
             };
 
@@ -364,6 +403,7 @@ function CRMContent() {
             setRewardProduct(productId);
             setIsProductModalOpen(false);
             setEditingRewardProduct(null);
+            setNewProduct({ name: '', description: '', barcode: '', cost_price: '', sale_price: '', current_stock: '', min_threshold: '', unit_type: 'un', image_url: '', file: null });
             alert('Produto de prêmio salvo com sucesso!');
             fetchData(tenant.id);
         } catch (err: any) {
@@ -1653,7 +1693,7 @@ function CRMContent() {
                                 <div className="flex justify-center mb-6">
                                     <ImageUpload
                                         currentImage={newService.image_url}
-                                        onImageSelect={(file, preview) => setNewService(prev => ({ ...prev, image_url: preview }))}
+                                        onImageSelect={(file, preview) => setNewService(prev => ({ ...prev, image_url: preview, file }))}
                                         helperText="Foto do Serviço"
                                         bucket="services"
                                     />
@@ -1723,7 +1763,7 @@ function CRMContent() {
                                 <div className="flex justify-center mb-6">
                                     <ImageUpload
                                         currentImage={newProduct.image_url}
-                                        onImageSelect={(file, preview) => setNewProduct(prev => ({ ...prev, image_url: preview }))}
+                                        onImageSelect={(file, preview) => setNewProduct(prev => ({ ...prev, image_url: preview, file }))}
                                         helperText="Foto do Produto"
                                         bucket="products"
                                     />
