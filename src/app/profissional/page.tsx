@@ -149,9 +149,24 @@ export default function ProfessionalAgendaPage() {
             .eq('appointment_id', selectedClient.id)
             .single();
 
+        // Fetch professional commission rates
+        const { data: profileData } = await supabase
+            .from('profiles')
+            .select('service_commission, product_commission')
+            .eq('id', session.user.id)
+            .single();
+
+        const serviceRate = (profileData?.service_commission || 50) / 100;
+        const productRate = (profileData?.product_commission || 10) / 100;
+
+        const commissionAmount = (serviceTotal * serviceRate) + (productTotal * productRate);
+
         if (existingOrder) {
             await supabase.from('orders').update({
+                service_total: serviceTotal,
+                product_total: productTotal,
                 total_value: totalValue,
+                commission_amount: commissionAmount,
                 items: cart
             }).eq('id', existingOrder.id);
         } else {
@@ -159,7 +174,10 @@ export default function ProfessionalAgendaPage() {
                 tenant_id: barberProfile.tenant_id,
                 appointment_id: selectedClient.id,
                 barber_id: session.user.id,
+                service_total: serviceTotal,
+                product_total: productTotal,
                 total_value: totalValue,
+                commission_amount: commissionAmount,
                 status: 'draft',
                 items: cart
             });

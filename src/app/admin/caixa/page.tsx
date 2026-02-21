@@ -158,6 +158,46 @@ export default function CashierCheckoutPage() {
             .update({ status: 'paid' })
             .eq('id', selected.appointment_id);
 
+        // --- Stock Depletion Integration ---
+        const cartItems = selected.raw.items || [];
+        const productsInCart = cartItems.filter((i: any) => i.type === 'product');
+
+        if (productsInCart.length > 0) {
+            for (const item of productsInCart) {
+                try {
+                    // 1. Get current stock safely
+                    const { data: pData } = await supabase
+                        .from('products')
+                        .select('current_stock')
+                        .eq('id', item.id)
+                        .single();
+
+                    const newStock = Math.max(0, (pData?.current_stock || 0) - item.qty);
+
+                    // 2. Update stock
+                    await supabase
+                        .from('products')
+                        .update({ current_stock: newStock })
+                        .eq('id', item.id);
+
+                    // 3. Log transaction
+                    await supabase
+                        .from('stock_transactions')
+                        .insert({
+                            tenant_id: profile.tenant_id,
+                            product_id: item.id,
+                            type: 'OUT',
+                            quantity: item.qty,
+                            reason: `Venda Comanda #${selected.id}`,
+                            created_by: profile.id
+                        });
+                } catch (sError) {
+                    console.error('Error depleting stock for item:', item.id, sError);
+                }
+            }
+        }
+        // ------------------------------------
+
         alert(`Pagamento de R$ ${selected.total_price.toFixed(2)} confirmado!\nEstoque atualizado.`);
         setSelected(null);
         if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
