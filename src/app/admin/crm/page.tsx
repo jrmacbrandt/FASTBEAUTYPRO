@@ -277,7 +277,8 @@ function CRMContent() {
                     loyalty_reward_product_id: rewardProduct
                 }));
                 alert('Configurações salvas!');
-                fetchData(tenant.id);
+                // Evitamos fetchData total aqui para prevenir reversão de estado local por dados cacheados
+                // O estado local 'tenant' já foi sincronizado acima.
             } else {
                 throw error;
             }
@@ -982,17 +983,19 @@ function CRMContent() {
                                     ))}
                                 </div>
 
-                                {hasChanges && (
-                                    <button
-                                        onClick={handleSaveLoyalty}
-                                        disabled={savingLoyalty}
-                                        className="w-full mt-4 bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[10px] tracking-[0.2em] py-4 rounded-2xl transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2 animate-in fade-in slide-in-from-top-2 duration-300"
-                                        style={{ backgroundColor: colors?.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
-                                    >
-                                        <span className="material-symbols-outlined text-sm">{savingLoyalty ? 'sync' : 'save'}</span>
-                                        {savingLoyalty ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
-                                    </button>
-                                )}
+                                <button
+                                    onClick={handleSaveLoyalty}
+                                    disabled={!hasChanges || savingLoyalty}
+                                    className={`w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-2xl transition-all shadow-xl font-black uppercase text-[10px] tracking-[0.2em] active:scale-95 ${!hasChanges ? 'opacity-40 grayscale cursor-not-allowed' : 'animate-in fade-in slide-in-from-top-2 duration-500'}`}
+                                    style={{
+                                        backgroundColor: !hasChanges ? `${colors?.primary}20` : colors?.primary,
+                                        color: !hasChanges ? colors?.textMuted : (businessType === 'salon' ? '#fff' : '#000'),
+                                        border: `1px solid ${!hasChanges ? `${colors?.primary}20` : 'transparent'}`
+                                    }}
+                                >
+                                    <span className="material-symbols-outlined text-sm">{savingLoyalty ? 'sync' : 'save'}</span>
+                                    {savingLoyalty ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                                </button>
                             </div>
 
                             {/* Intelligence Audit Preview */}
