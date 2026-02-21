@@ -10,7 +10,7 @@ BEGIN;
 -- 1. Tabela Separada para Serviços de Recompensa
 CREATE TABLE IF NOT EXISTS public.loyalty_rewards_services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE UNIQUE,
     name TEXT NOT NULL,
     duration_minutes INTEGER DEFAULT 0,
     image_url TEXT,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS public.loyalty_rewards_services (
 -- 2. Tabela Separada para Produtos de Recompensa
 CREATE TABLE IF NOT EXISTS public.loyalty_rewards_products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES public.tenants(id) ON DELETE CASCADE UNIQUE,
     name TEXT NOT NULL,
     description TEXT,
     barcode TEXT,

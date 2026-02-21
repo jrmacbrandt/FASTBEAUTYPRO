@@ -137,7 +137,9 @@ function CRMContent() {
                 vipClients,
                 bdayClients,
                 { data: appointments },
-                { data: allClients }
+                { data: allClients },
+                servicesResult,
+                productsResult
             ] = await Promise.all([
                 supabase.from('tenants').select('id, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone').eq('id', tid).single(),
                 supabase.from('clients').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
@@ -263,16 +265,15 @@ function CRMContent() {
                 active: true
             };
 
-            let serviceId = editingRewardService?.id;
+            // Upsert reward (singleton by tenant_id)
+            const { data, error } = await supabase
+                .from('loyalty_rewards_services')
+                .upsert(payload, { onConflict: 'tenant_id' })
+                .select()
+                .single();
 
-            if (serviceId) {
-                const { error } = await supabase.from('loyalty_rewards_services').update(payload).eq('id', serviceId);
-                if (error) throw error;
-            } else {
-                const { data, error } = await supabase.from('loyalty_rewards_services').insert([payload]).select().single();
-                if (error) throw error;
-                serviceId = data.id;
-            }
+            if (error) throw error;
+            const serviceId = data.id;
 
             // Link to tenant
             const { error: tError } = await supabase.from('tenants').update({ loyalty_reward_service_id: serviceId }).eq('id', tenant.id);
@@ -287,6 +288,33 @@ function CRMContent() {
             alert('Erro ao salvar serviço: ' + err.message);
         } finally {
             setSavingRewards(false);
+        }
+    };
+
+    const handleDeleteRewardService = async (id: string, imageUrl?: string) => {
+        if (!confirm('Deseja realmente excluir este serviço de recompensa permanentemente?')) return;
+
+        try {
+            // 1. Unlink from tenant
+            await supabase.from('tenants').update({ loyalty_reward_service_id: null }).eq('id', tenant.id);
+
+            // 2. Delete the record
+            const { error } = await supabase.from('loyalty_rewards_services').delete().eq('id', id);
+            if (error) throw error;
+
+            // 3. Cleanup image if exists (attempt)
+            if (imageUrl && imageUrl.includes('storage')) {
+                const path = imageUrl.split('/').pop();
+                if (path) {
+                    await supabase.storage.from('products').remove([path]);
+                }
+            }
+
+            setRewardService(null);
+            alert('Serviço de prêmio removido!');
+            fetchData(tenant.id);
+        } catch (err: any) {
+            alert('Erro ao excluir: ' + err.message);
         }
     };
 
@@ -307,16 +335,15 @@ function CRMContent() {
                 active: true
             };
 
-            let productId = editingRewardProduct?.id;
+            // Upsert reward (singleton by tenant_id)
+            const { data, error } = await supabase
+                .from('loyalty_rewards_products')
+                .upsert(payload, { onConflict: 'tenant_id' })
+                .select()
+                .single();
 
-            if (productId) {
-                const { error } = await supabase.from('loyalty_rewards_products').update(payload).eq('id', productId);
-                if (error) throw error;
-            } else {
-                const { data, error } = await supabase.from('loyalty_rewards_products').insert([payload]).select().single();
-                if (error) throw error;
-                productId = data.id;
-            }
+            if (error) throw error;
+            const productId = data.id;
 
             // Link to tenant
             const { error: tError } = await supabase.from('tenants').update({ loyalty_reward_product_id: productId }).eq('id', tenant.id);
@@ -331,6 +358,33 @@ function CRMContent() {
             alert('Erro ao salvar produto: ' + err.message);
         } finally {
             setSavingRewards(false);
+        }
+    };
+
+    const handleDeleteRewardProduct = async (id: string, imageUrl?: string) => {
+        if (!confirm('Deseja realmente excluir este produto de recompensa permanentemente?')) return;
+
+        try {
+            // 1. Unlink from tenant
+            await supabase.from('tenants').update({ loyalty_reward_product_id: null }).eq('id', tenant.id);
+
+            // 2. Delete the record
+            const { error } = await supabase.from('loyalty_rewards_products').delete().eq('id', id);
+            if (error) throw error;
+
+            // 3. Cleanup image if exists (attempt)
+            if (imageUrl && imageUrl.includes('storage')) {
+                const path = imageUrl.split('/').pop();
+                if (path) {
+                    await supabase.storage.from('products').remove([path]);
+                }
+            }
+
+            setRewardProduct(null);
+            alert('Produto de prêmio removido!');
+            fetchData(tenant.id);
+        } catch (err: any) {
+            alert('Erro ao excluir: ' + err.message);
         }
     };
 
@@ -833,46 +887,63 @@ function CRMContent() {
                                     <div className="flex flex-col gap-4">
                                         <label className="text-sm font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Serviço de Recompensa</label>
 
-                                        {rewardService && (
-                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-emerald-400">check_circle</span>
-                                                    <div>
-                                                        <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
-                                                            {services.find(s => s.id === rewardService)?.name || 'Serviço Selecionado'}
-                                                        </p>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
-                                                            <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                                                            <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                        {rewardService && (() => {
+                                            const current = services.find(s => s.id === rewardService);
+                                            return current ? (
+                                                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                                                        <div>
+                                                            <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
+                                                                {current.name}
+                                                            </p>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
+                                                                <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                                                                <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingRewardService(current);
+                                                                setNewService({
+                                                                    name: current.name,
+                                                                    price: '0,00',
+                                                                    duration_minutes: current.duration_minutes?.toString() || '',
+                                                                    image_url: current.image_url || ''
+                                                                });
+                                                                setIsServiceModalOpen(true);
+                                                            }}
+                                                            className="size-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">edit</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteRewardService(current.id, current.image_url)}
+                                                            className="size-8 rounded-lg flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            ) : null;
+                                        })()}
 
-                                        <button
-                                            onClick={() => {
-                                                const currentReward = services.find(s => s.id === rewardService);
-                                                if (currentReward) {
-                                                    setEditingRewardService(currentReward);
-                                                    setNewService({
-                                                        name: currentReward.name,
-                                                        price: currentReward.price?.toFixed(2).replace('.', ',') || '',
-                                                        duration_minutes: currentReward.duration_minutes?.toString() || '',
-                                                        image_url: currentReward.image_url || ''
-                                                    });
-                                                } else {
+                                        {!rewardService && (
+                                            <button
+                                                onClick={() => {
                                                     setEditingRewardService(null);
                                                     setNewService({ name: '', price: '', duration_minutes: '', image_url: '' });
-                                                }
-                                                setIsServiceModalOpen(true);
-                                            }}
-                                            className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">{rewardService ? 'edit' : 'add_circle'}</span>
-                                            {rewardService ? 'EDITAR' : 'CRIAR'}
-                                        </button>
+                                                    setIsServiceModalOpen(true);
+                                                }}
+                                                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">add_circle</span>
+                                                CRIAR
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
 
@@ -881,51 +952,68 @@ function CRMContent() {
                                     <div className="flex flex-col gap-4">
                                         <label className="text-sm font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Produto de Recompensa</label>
 
-                                        {rewardProduct && (
-                                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
-                                                <div className="flex items-center gap-3">
-                                                    <span className="material-symbols-outlined text-emerald-400">check_circle</span>
-                                                    <div>
-                                                        <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
-                                                            {products.find(p => p.id === rewardProduct)?.name || 'Produto Selecionado'}
-                                                        </p>
-                                                        <div className="flex items-center gap-1.5">
-                                                            <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
-                                                            <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                                                            <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                        {rewardProduct && (() => {
+                                            const current = products.find(p => p.id === rewardProduct);
+                                            return current ? (
+                                                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                                                        <div>
+                                                            <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
+                                                                {current.name}
+                                                            </p>
+                                                            <div className="flex items-center gap-1.5">
+                                                                <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
+                                                                <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                                                                <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                            </div>
                                                         </div>
                                                     </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingRewardProduct(current);
+                                                                setNewProduct({
+                                                                    name: current.name,
+                                                                    description: current.description || '',
+                                                                    barcode: current.barcode || '',
+                                                                    cost_price: '0,00',
+                                                                    sale_price: '0,00',
+                                                                    current_stock: current.current_stock?.toString() || '',
+                                                                    min_threshold: current.min_threshold?.toString() || '',
+                                                                    unit_type: current.unit_type || 'un',
+                                                                    image_url: current.image_url || ''
+                                                                });
+                                                                setIsProductModalOpen(true);
+                                                            }}
+                                                            className="size-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">edit</span>
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteRewardProduct(current.id, current.image_url)}
+                                                            className="size-8 rounded-lg flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all"
+                                                        >
+                                                            <span className="material-symbols-outlined text-sm">delete</span>
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        )}
+                                            ) : null;
+                                        })()}
 
-                                        <button
-                                            onClick={() => {
-                                                const currentReward = products.find(p => p.id === rewardProduct);
-                                                if (currentReward) {
-                                                    setEditingRewardProduct(currentReward);
-                                                    setNewProduct({
-                                                        name: currentReward.name,
-                                                        description: currentReward.description || '',
-                                                        barcode: currentReward.barcode || '',
-                                                        cost_price: currentReward.cost_price?.toFixed(2).replace('.', ',') || '',
-                                                        sale_price: currentReward.sale_price?.toFixed(2).replace('.', ',') || '',
-                                                        current_stock: currentReward.current_stock?.toString() || '',
-                                                        min_threshold: currentReward.min_threshold?.toString() || '',
-                                                        unit_type: currentReward.unit_type || 'un',
-                                                        image_url: currentReward.image_url || ''
-                                                    });
-                                                } else {
+                                        {!rewardProduct && (
+                                            <button
+                                                onClick={() => {
                                                     setEditingRewardProduct(null);
                                                     setNewProduct({ name: '', description: '', barcode: '', cost_price: '', sale_price: '', current_stock: '', min_threshold: '', unit_type: 'un', image_url: '' });
-                                                }
-                                                setIsProductModalOpen(true);
-                                            }}
-                                            className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2"
-                                        >
-                                            <span className="material-symbols-outlined text-sm">{rewardProduct ? 'edit' : 'add_circle'}</span>
-                                            {rewardProduct ? 'EDITAR' : 'CRIAR'}
-                                        </button>
+                                                    setIsProductModalOpen(true);
+                                                }}
+                                                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2"
+                                            >
+                                                <span className="material-symbols-outlined text-sm">add_circle</span>
+                                                CRIAR
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
