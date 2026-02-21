@@ -160,8 +160,20 @@ function CRMContent() {
                 setRewardProduct(tenantData.loyalty_reward_product_id);
             }
 
-            if (servicesResult.data) setServices(servicesResult.data);
-            if (productsResult.data) setProducts(productsResult.data);
+            if (servicesResult.data) {
+                setServices(servicesResult.data);
+                // Define reward ID from the table itself (ref 2)
+                if (servicesResult.data.length > 0) {
+                    setRewardService(servicesResult.data[0].id);
+                }
+            }
+            if (productsResult.data) {
+                setProducts(productsResult.data);
+                // Define reward ID from the table itself (ref 2)
+                if (productsResult.data.length > 0) {
+                    setRewardProduct(productsResult.data[0].id);
+                }
+            }
 
             const countsMap: Record<string, number> = {};
             if (appointments) {
