@@ -160,7 +160,10 @@ function CRMContent() {
             const currentTarget = tenantData?.loyalty_target || 5;
             if (tenantData) {
                 setTenant(tenantData);
-                setSelectedLoyaltyTarget(currentTarget);
+                // CRM v5.1: Só inicializamos se ainda não houver seleção do usuário para evitar reversão após save local
+                if (selectedLoyaltyTarget === null) {
+                    setSelectedLoyaltyTarget(currentTarget);
+                }
                 setLoyaltyEnabled(tenantData.loyalty_enabled ?? true);
                 setRewardService(tenantData.loyalty_reward_service_id);
                 setRewardProduct(tenantData.loyalty_reward_product_id);
@@ -971,14 +974,14 @@ function CRMContent() {
                                             onClick={() => setSelectedLoyaltyTarget(Number(val))}
                                             className={`py-5 rounded-[1.5rem] border-2 font-black italic uppercase tracking-tighter text-lg transition-all flex flex-col items-center justify-center gap-1 active:scale-[0.97] disabled:opacity-30 disabled:cursor-not-allowed`}
                                             style={{
-                                                backgroundColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : `${colors?.cardBg}40`,
-                                                borderColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : `${colors?.border}40`,
-                                                color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#fff' : '#000') : colors?.textMuted,
-                                                boxShadow: Number(selectedLoyaltyTarget) === Number(val) ? `0 10px 30px -10px ${colors?.primary}60` : undefined
+                                                backgroundColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : 'transparent',
+                                                borderColor: Number(selectedLoyaltyTarget) === Number(val) ? colors?.primary : `${colors?.primary}20`,
+                                                color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.text,
+                                                boxShadow: Number(selectedLoyaltyTarget) === Number(val) ? `0 10px 40px -10px ${colors?.primary}40` : 'none'
                                             }}
                                         >
-                                            <span>{val}</span>
-                                            <span className="text-[7px] font-black tracking-[0.2em] opacity-60 uppercase">Selos</span>
+                                            <span style={{ color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.text }}>{val}</span>
+                                            <span className="text-[7px] font-black tracking-[0.2em] opacity-60 uppercase" style={{ color: Number(selectedLoyaltyTarget) === Number(val) ? (businessType === 'salon' ? '#ffffff' : '#000000') : colors?.textMuted }}>Selos</span>
                                         </button>
                                     ))}
                                 </div>
@@ -986,7 +989,7 @@ function CRMContent() {
                                 <button
                                     onClick={handleSaveLoyalty}
                                     disabled={!hasChanges || savingLoyalty}
-                                    className={`w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-2xl transition-all shadow-xl font-black uppercase text-[10px] tracking-[0.2em] active:scale-95 ${!hasChanges ? 'opacity-40 grayscale cursor-not-allowed' : 'animate-in fade-in slide-in-from-top-2 duration-500'}`}
+                                    className={`w-full mt-4 flex items-center justify-center gap-2 py-4 rounded-2xl transition-all shadow-xl font-black uppercase text-[10px] tracking-[0.2em] active:scale-95 ${!hasChanges || savingLoyalty ? 'opacity-40 grayscale cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95 shadow-amber-500/10'}`}
                                     style={{
                                         backgroundColor: !hasChanges ? `${colors?.primary}20` : colors?.primary,
                                         color: !hasChanges ? colors?.textMuted : (businessType === 'salon' ? '#fff' : '#000'),
