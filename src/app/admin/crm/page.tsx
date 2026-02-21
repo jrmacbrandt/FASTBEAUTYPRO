@@ -262,7 +262,7 @@ function CRMContent() {
                 duration_minutes: parseInt(newService.duration_minutes) || 0,
                 image_url: newService.image_url,
                 active: true,
-                is_reward: true // Optional flag for internal control
+                // is_reward: true // Removido para evitar erro de schema
             };
 
             let serviceId = editingRewardService?.id;
@@ -307,9 +307,9 @@ function CRMContent() {
                 min_threshold: parseInt(newProduct.min_threshold) || 0,
                 current_stock: parseInt(newProduct.current_stock) || 0,
                 unit_type: newProduct.unit_type,
-                image_url: newProduct.image_url,
+                // image_url: newProduct.image_url, // Removido para evitar erro de schema
                 active: true,
-                is_reward: true
+                // is_reward: true // Removido para evitar erro de schema
             };
 
             let productId = editingRewardProduct?.id;
