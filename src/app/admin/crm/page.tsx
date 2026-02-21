@@ -146,8 +146,8 @@ function CRMContent() {
                 getSegmentedClients(tid, { birth_month: new Date().getMonth() + 1 }),
                 supabase.from('appointments').select('client_id').eq('tenant_id', tid).eq('status', 'paid'),
                 supabase.from('clients').select('*').eq('tenant_id', tid).order('name'),
-                supabase.from('services').select('id, name').eq('tenant_id', tid).eq('active', true),
-                supabase.from('products').select('id, name').eq('tenant_id', tid)
+                supabase.from('loyalty_rewards_services').select('id, name, duration_minutes, image_url').eq('tenant_id', tid).eq('active', true),
+                supabase.from('loyalty_rewards_products').select('id, name, description, barcode, current_stock, min_threshold, unit_type, image_url').eq('tenant_id', tid)
             ]);
 
             const currentTarget = tenantData?.loyalty_target || 5;
@@ -258,20 +258,18 @@ function CRMContent() {
             const payload = {
                 tenant_id: tenant.id,
                 name: newService.name,
-                price: 0, // Cortesia para prêmios de fidelidade
                 duration_minutes: parseInt(newService.duration_minutes) || 0,
                 image_url: newService.image_url,
-                active: true,
-                // is_reward: true // Removido para evitar erro de schema
+                active: true
             };
 
             let serviceId = editingRewardService?.id;
 
             if (serviceId) {
-                const { error } = await supabase.from('services').update(payload).eq('id', serviceId);
+                const { error } = await supabase.from('loyalty_rewards_services').update(payload).eq('id', serviceId);
                 if (error) throw error;
             } else {
-                const { data, error } = await supabase.from('services').insert([payload]).select().single();
+                const { data, error } = await supabase.from('loyalty_rewards_services').insert([payload]).select().single();
                 if (error) throw error;
                 serviceId = data.id;
             }
@@ -302,23 +300,20 @@ function CRMContent() {
                 name: newProduct.name,
                 description: newProduct.description,
                 barcode: newProduct.barcode,
-                cost_price: 0,
-                sale_price: 0, // Cortesia para prêmios de fidelidade
-                min_threshold: parseInt(newProduct.min_threshold) || 0,
                 current_stock: parseInt(newProduct.current_stock) || 0,
+                min_threshold: parseInt(newProduct.min_threshold) || 0,
                 unit_type: newProduct.unit_type,
-                // image_url: newProduct.image_url, // Removido para evitar erro de schema
-                active: true,
-                // is_reward: true // Removido para evitar erro de schema
+                image_url: newProduct.image_url,
+                active: true
             };
 
             let productId = editingRewardProduct?.id;
 
             if (productId) {
-                const { error } = await supabase.from('products').update(payload).eq('id', productId);
+                const { error } = await supabase.from('loyalty_rewards_products').update(payload).eq('id', productId);
                 if (error) throw error;
             } else {
-                const { data, error } = await supabase.from('products').insert([payload]).select().single();
+                const { data, error } = await supabase.from('loyalty_rewards_products').insert([payload]).select().single();
                 if (error) throw error;
                 productId = data.id;
             }

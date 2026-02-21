@@ -66,11 +66,11 @@ function NewCampaignContent() {
 
                 // Fetch Reward Names if set
                 if (tenantData.loyalty_reward_service_id) {
-                    const { data: s } = await supabase.from('services').select('name').eq('id', tenantData.loyalty_reward_service_id).single();
+                    const { data: s } = await supabase.from('loyalty_rewards_services').select('name').eq('id', tenantData.loyalty_reward_service_id).single();
                     if (s) setRewardService({ id: tenantData.loyalty_reward_service_id, name: s.name });
                 }
                 if (tenantData.loyalty_reward_product_id) {
-                    const { data: p } = await supabase.from('products').select('name').eq('id', tenantData.loyalty_reward_product_id).single();
+                    const { data: p } = await supabase.from('loyalty_rewards_products').select('name').eq('id', tenantData.loyalty_reward_product_id).single();
                     if (p) setRewardProduct({ id: tenantData.loyalty_reward_product_id, name: p.name });
                 }
             }
