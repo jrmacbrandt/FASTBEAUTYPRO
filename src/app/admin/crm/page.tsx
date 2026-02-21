@@ -168,15 +168,14 @@ function CRMContent() {
 
             if (servicesResult.data) {
                 setServices(servicesResult.data);
-                // Define reward ID from the table itself (ref 2)
-                if (servicesResult.data.length > 0) {
+                // Define reward ID from the table itself ONLY if tenant has none
+                if (servicesResult.data.length > 0 && !tenantData?.loyalty_reward_service_id) {
                     setRewardService(servicesResult.data[0].id);
                 }
             }
             if (productsResult.data) {
                 setProducts(productsResult.data);
-                // Define reward ID from the table itself (ref 2)
-                if (productsResult.data.length > 0) {
+                if (productsResult.data.length > 0 && !tenantData?.loyalty_reward_product_id) {
                     setRewardProduct(productsResult.data[0].id);
                 }
             }
@@ -943,28 +942,26 @@ function CRMContent() {
                             style={{ backgroundColor: `${colors?.primary}0d` }}></div>
 
                         <div className="relative z-10">
-                            <div className="flex items-center justify-between mb-8">
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
                                 <div>
-                                    <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Cartão Fidelidade</h3>
+                                    <h3 className="text-2xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Cartão Fidelidade</h3>
                                     <div className="flex items-center gap-2">
-                                        <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Configuração de Recompensa</p>
-                                        <div className="size-1 rounded-full bg-white/20"></div>
-                                        <button
-                                            onClick={handleToggleLoyalty}
-                                            className={`flex items-center gap-1.5 transition-all px-2 py-0.5 rounded-full border ${loyaltyEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}
-                                        >
-                                            <span className="size-1.5 rounded-full animate-pulse bg-current"></span>
-                                            <span className="text-[8px] font-black uppercase tracking-widest">{loyaltyEnabled ? 'Ativo' : 'Pausado'}</span>
-                                        </button>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Configuração de Recompensa</p>
+                                        <div className={`size-2 rounded-full ${loyaltyEnabled ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
                                     </div>
                                 </div>
-                                <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform relative"
-                                    style={{ backgroundColor: `${colors?.text}0d` }}
+
+                                <button
+                                    onClick={handleToggleLoyalty}
+                                    className={`group/status flex items-center gap-4 transition-all px-6 py-4 rounded-[1.5rem] border-2 shadow-2xl active:scale-95 ${loyaltyEnabled ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500 hover:bg-emerald-500 hover:text-black' : 'bg-rose-500/10 border-rose-500/30 text-rose-500 hover:bg-rose-500 hover:text-white'}`}
                                 >
-                                    <span className="material-symbols-outlined" style={{ color: colors?.primary }}>loyalty</span>
-                                    {/* Small floating toggle indicator */}
-                                    <div className={`absolute -top-1 -right-1 size-3 rounded-full border-2 border-black ${loyaltyEnabled ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
-                                </div>
+                                    <span className="text-[11px] font-black uppercase tracking-[0.2em]">{loyaltyEnabled ? 'PAUSAR CAMPANHA' : 'ATIVAR CAMPANHA'}</span>
+                                    <span className="material-symbols-outlined text-2xl">{loyaltyEnabled ? 'pause_circle' : 'play_circle'}</span>
+                                </button>
+                            </div>
+
+                            <div className="absolute right-10 top-10 opacity-[0.03] rotate-12 pointer-events-none group-hover:opacity-[0.07] transition-all duration-1000">
+                                <span className="material-symbols-outlined text-[12rem]" style={{ color: colors?.primary }}>loyalty</span>
                             </div>
 
                             {/* Fidelity Target Selector */}
