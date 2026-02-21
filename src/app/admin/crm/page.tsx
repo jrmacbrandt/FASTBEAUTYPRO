@@ -258,7 +258,7 @@ function CRMContent() {
             const payload = {
                 tenant_id: tenant.id,
                 name: newService.name,
-                price: parseFloat(newService.price.replace(',', '.')) || 0,
+                price: 0, // Cortesia para prêmios de fidelidade
                 duration_minutes: parseInt(newService.duration_minutes) || 0,
                 image_url: newService.image_url,
                 active: true,
@@ -302,8 +302,8 @@ function CRMContent() {
                 name: newProduct.name,
                 description: newProduct.description,
                 barcode: newProduct.barcode,
-                cost_price: parseFloat(newProduct.cost_price.replace(',', '.')) || 0,
-                sale_price: parseFloat(newProduct.sale_price.replace(',', '.')) || 0,
+                cost_price: 0,
+                sale_price: 0, // Cortesia para prêmios de fidelidade
                 min_threshold: parseInt(newProduct.min_threshold) || 0,
                 current_stock: parseInt(newProduct.current_stock) || 0,
                 unit_type: newProduct.unit_type,
@@ -846,7 +846,11 @@ function CRMContent() {
                                                         <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
                                                             {services.find(s => s.id === rewardService)?.name || 'Serviço Selecionado'}
                                                         </p>
-                                                        <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
+                                                            <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                                                            <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -890,7 +894,11 @@ function CRMContent() {
                                                         <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
                                                             {products.find(p => p.id === rewardProduct)?.name || 'Produto Selecionado'}
                                                         </p>
-                                                        <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
+                                                            <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
+                                                            <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1546,15 +1554,11 @@ function CRMContent() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO (R$)</label>
-                                        <input
-                                            required
-                                            type="text"
-                                            value={newService.price}
-                                            onChange={e => setNewService({ ...newService, price: maskCurrency(e.target.value) })}
-                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
-                                            placeholder="0,00"
-                                        />
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO</label>
+                                        <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm font-black text-emerald-500 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">redeem</span>
+                                            CORTESIA
+                                        </div>
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DURAÇÃO (MIN)</label>
@@ -1630,6 +1634,13 @@ function CRMContent() {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO</label>
+                                        <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm font-black text-emerald-500 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">redeem</span>
+                                            CORTESIA
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">ESTOQUE ATUAL</label>
                                         <input
                                             required
@@ -1639,18 +1650,6 @@ function CRMContent() {
                                             className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
                                             placeholder="0"
                                         />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">UNIDADE</label>
-                                        <select
-                                            value={newProduct.unit_type}
-                                            onChange={e => setNewProduct({ ...newProduct, unit_type: e.target.value })}
-                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all appearance-none"
-                                        >
-                                            <option value="un">Unidade (un)</option>
-                                            <option value="ml">Mililitros (ml)</option>
-                                            <option value="g">Gramas (g)</option>
-                                        </select>
                                     </div>
                                 </div>
 
