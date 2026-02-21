@@ -75,6 +75,8 @@ function CRMContent() {
     const [isCampaignModalOpen, setIsCampaignModalOpen] = useState(false);
     const [campaignClient, setCampaignClient] = useState<any>(null);
     const [campaignMessage, setCampaignMessage] = useState('');
+    const [selectedCampaignType, setSelectedCampaignType] = useState<'recovery' | 'birthday' | 'loyalty' | 'manual' | null>(null);
+    const [selectedIncentiveType, setSelectedIncentiveType] = useState<'service' | 'product' | null>(null);
     const [updatingContact, setUpdatingContact] = useState<string | null>(null);
 
     // CRM v5.0 Queue State
@@ -493,9 +495,12 @@ function CRMContent() {
 
     const openCampaignModal = (client: any, type: 'recovery' | 'birthday' | 'loyalty' | 'manual') => {
         setCampaignClient(client);
-        let template = '';
+        setSelectedCampaignType(type);
+        setSelectedIncentiveType(null);
+
         const firstName = client.name.split(' ')[0];
         const storeName = tenant?.name || 'nossa loja';
+        let template = '';
 
         if (type === 'recovery') {
             template = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
@@ -504,10 +509,73 @@ function CRMContent() {
         } else if (type === 'loyalty') {
             const stamps = client.stamps_count || 0;
             template = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
+        } else {
+            template = `Olá, ${firstName}! 👋 Como você está?`;
         }
 
         setCampaignMessage(template);
         setIsCampaignModalOpen(true);
+    };
+
+    const handleToggleCampaignType = (type: 'recovery' | 'birthday' | 'loyalty') => {
+        setSelectedCampaignType(type);
+        const firstName = campaignClient.name.split(' ')[0];
+        const storeName = tenant?.name || 'nossa loja';
+
+        let baseTemplate = '';
+        if (type === 'recovery') {
+            baseTemplate = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
+        } else if (type === 'birthday') {
+            baseTemplate = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
+        } else if (type === 'loyalty') {
+            const stamps = campaignClient.stamps_count || 0;
+            baseTemplate = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
+        }
+
+        let incentivePart = '';
+        if (selectedIncentiveType === 'service' && rewardService) {
+            const serviceName = services.find(s => s.id === rewardService)?.name;
+            incentivePart = ` 🎉 Você ganhou um(a) ${serviceName} grátis!`;
+        } else if (selectedIncentiveType === 'product' && rewardProduct) {
+            const productName = products.find(p => p.id === rewardProduct)?.name;
+            incentivePart = ` 🎁 Ganhe um(a) ${productName} em sua próxima visita!`;
+        }
+
+        setCampaignMessage(baseTemplate + incentivePart);
+    };
+
+    const handleToggleIncentive = (type: 'service' | 'product') => {
+        const isDeselecting = selectedIncentiveType === type;
+        const newIncentive = isDeselecting ? null : type;
+        setSelectedIncentiveType(newIncentive);
+
+        // Reconstruct message from base
+        const firstName = campaignClient.name.split(' ')[0];
+        const storeName = tenant?.name || 'nossa loja';
+
+        let baseTemplate = '';
+        const campType = selectedCampaignType || 'manual';
+        if (campType === 'recovery') {
+            baseTemplate = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
+        } else if (campType === 'birthday') {
+            baseTemplate = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
+        } else if (campType === 'loyalty') {
+            const stamps = campaignClient.stamps_count || 0;
+            baseTemplate = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
+        } else {
+            baseTemplate = `Olá, ${firstName}! 👋 Como você está?`;
+        }
+
+        let incentivePart = '';
+        if (newIncentive === 'service' && rewardService) {
+            const serviceName = services.find(s => s.id === rewardService)?.name;
+            incentivePart = ` 🎉 Você ganhou um(a) ${serviceName} grátis!`;
+        } else if (newIncentive === 'product' && rewardProduct) {
+            const productName = products.find(p => p.id === rewardProduct)?.name;
+            incentivePart = ` 🎁 Ganhe um(a) ${productName} em sua próxima visita!`;
+        }
+
+        setCampaignMessage(baseTemplate + incentivePart);
     };
 
     const openCampaignDetails = async (campaign: any) => {
@@ -1406,24 +1474,33 @@ function CRMContent() {
                         <div className="p-8 space-y-6">
                             <div className="grid grid-cols-3 gap-3">
                                 <button
-                                    onClick={() => openCampaignModal(campaignClient, 'recovery')}
-                                    className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 hover:bg-rose-500 hover:text-white transition-all flex flex-col items-center gap-1 group"
+                                    onClick={() => handleToggleCampaignType('recovery')}
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border ${selectedCampaignType === 'recovery'
+                                            ? 'bg-rose-500 border-rose-500 text-white'
+                                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                                        }`}
                                 >
-                                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform">person_remove</span>
+                                    <span className={`material-symbols-outlined ${selectedCampaignType === 'recovery' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>person_remove</span>
                                     <span className="text-[8px] font-black uppercase">Recuperar</span>
                                 </button>
                                 <button
-                                    onClick={() => openCampaignModal(campaignClient, 'birthday')}
-                                    className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-white transition-all flex flex-col items-center gap-1 group"
+                                    onClick={() => handleToggleCampaignType('birthday')}
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border ${selectedCampaignType === 'birthday'
+                                            ? 'bg-emerald-500 border-emerald-500 text-white'
+                                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                                        }`}
                                 >
-                                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform">celebration</span>
+                                    <span className={`material-symbols-outlined ${selectedCampaignType === 'birthday' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>celebration</span>
                                     <span className="text-[8px] font-black uppercase">Aniversário</span>
                                 </button>
                                 <button
-                                    onClick={() => openCampaignModal(campaignClient, 'loyalty')}
-                                    className="p-3 rounded-2xl bg-[#f2b90d]/10 border border-[#f2b90d]/20 text-[#f2b90d] hover:bg-[#f2b90d] hover:text-black transition-all flex flex-col items-center gap-1 group"
+                                    onClick={() => handleToggleCampaignType('loyalty')}
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border ${selectedCampaignType === 'loyalty'
+                                            ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                            : 'bg-white/5 border-white/10 text-white/40 hover:border-white/20'
+                                        }`}
                                 >
-                                    <span className="material-symbols-outlined group-hover:scale-110 transition-transform">loyalty</span>
+                                    <span className={`material-symbols-outlined ${selectedCampaignType === 'loyalty' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>loyalty</span>
                                     <span className="text-[8px] font-black uppercase">Fidelidade</span>
                                 </button>
                             </div>
@@ -1432,33 +1509,25 @@ function CRMContent() {
                                 <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Incentivo de Prêmio</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
-                                        onClick={() => {
-                                            if (rewardService) {
-                                                const serviceName = services.find(s => s.id === rewardService)?.name;
-                                                setCampaignMessage(prev => prev + ` 🎉 Você ganhou um(a) ${serviceName} grátis!`);
-                                            } else {
-                                                alert('Configure um serviço de prêmio primeiro.');
-                                            }
-                                        }}
+                                        onClick={() => handleToggleIncentive('service')}
                                         disabled={!rewardService}
-                                        className="p-2.5 rounded-xl border border-dashed border-[#f2b90d]/30 text-[#f2b90d] hover:bg-[#f2b90d]/10 transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30"
+                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 ${selectedIncentiveType === 'service'
+                                                ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                                : 'bg-white/5 border-white/10 border-dashed text-white/40 hover:border-white/20'
+                                            }`}
                                     >
-                                        <span className="material-symbols-outlined text-sm">content_cut</span>
+                                        <span className={`material-symbols-outlined text-sm ${selectedIncentiveType === 'service' ? '' : 'text-white/20'}`}>content_cut</span>
                                         Serviço de Prêmio
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            if (rewardProduct) {
-                                                const productName = products.find(p => p.id === rewardProduct)?.name;
-                                                setCampaignMessage(prev => prev + ` 🎁 Ganhe um(a) ${productName} em sua próxima visita!`);
-                                            } else {
-                                                alert('Configure um produto de prêmio primeiro.');
-                                            }
-                                        }}
+                                        onClick={() => handleToggleIncentive('product')}
                                         disabled={!rewardProduct}
-                                        className="p-2.5 rounded-xl border border-dashed border-[#f2b90d]/30 text-[#f2b90d] hover:bg-[#f2b90d]/10 transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30"
+                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 ${selectedIncentiveType === 'product'
+                                                ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                                : 'bg-white/5 border-white/10 border-dashed text-white/40 hover:border-white/20'
+                                            }`}
                                     >
-                                        <span className="material-symbols-outlined text-sm">shopping_bag</span>
+                                        <span className={`material-symbols-outlined text-sm ${selectedIncentiveType === 'product' ? '' : 'text-white/20'}`}>shopping_bag</span>
                                         Produto de Prêmio
                                     </button>
                                 </div>
