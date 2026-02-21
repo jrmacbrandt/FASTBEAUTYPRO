@@ -902,17 +902,29 @@ function CRMContent() {
                                         {rewardService && (() => {
                                             const current = services.find(s => s.id === rewardService);
                                             return current ? (
-                                                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                                                <div className="bg-[#1a1a1b] border border-white/5 rounded-3xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500 shadow-xl group/card">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="size-14 rounded-2xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                                                            {current.image_url ? (
+                                                                <img src={current.image_url} alt={current.name} className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-500" />
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-zinc-700 text-2xl">content_cut</span>
+                                                            )}
+                                                        </div>
                                                         <div>
-                                                            <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
-                                                                {current.name}
-                                                            </p>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
-                                                                <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                                                                <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                                <p className="text-[11px] font-black uppercase text-white tracking-tight leading-none">
+                                                                    {current.name}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                                                    <p className="text-[8px] font-black uppercase text-emerald-400 leading-none">Cortesia</p>
+                                                                </div>
+                                                                <div className="px-2 py-0.5 rounded-full bg-white/5 border border-white/5">
+                                                                    <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-500 leading-none">{current.duration_minutes} min</p>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -967,17 +979,29 @@ function CRMContent() {
                                         {rewardProduct && (() => {
                                             const current = products.find(p => p.id === rewardProduct);
                                             return current ? (
-                                                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="material-symbols-outlined text-emerald-400">check_circle</span>
+                                                <div className="bg-[#1a1a1b] border border-white/5 rounded-3xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500 shadow-xl group/card">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="size-14 rounded-2xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                                                            {current.image_url ? (
+                                                                <img src={current.image_url} alt={current.name} className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-500" />
+                                                            ) : (
+                                                                <span className="material-symbols-outlined text-zinc-700 text-2xl">shopping_bag</span>
+                                                            )}
+                                                        </div>
                                                         <div>
-                                                            <p className="text-[10px] font-black uppercase text-white leading-none mb-1">
-                                                                {current.name}
-                                                            </p>
-                                                            <div className="flex items-center gap-1.5">
-                                                                <p className="text-[8px] font-black uppercase text-emerald-400">Cortesia</p>
-                                                                <span className="w-1 h-1 rounded-full bg-zinc-700"></span>
-                                                                <p className="text-[8px] font-bold uppercase tracking-tighter text-zinc-500 italic">Prêmio Ativo</p>
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                                <p className="text-[11px] font-black uppercase text-white tracking-tight leading-none">
+                                                                    {current.name}
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                                                    <p className="text-[8px] font-black uppercase text-emerald-400 leading-none">Cortesia</p>
+                                                                </div>
+                                                                <div className="px-2 py-0.5 rounded-full bg-white/5 border border-white/5">
+                                                                    <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-500 leading-none">Estoque: {current.current_stock}</p>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
