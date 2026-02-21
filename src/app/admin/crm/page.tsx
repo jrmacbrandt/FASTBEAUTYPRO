@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase';
 import { getSegmentedClients } from '@/lib/crm';
 
 import { useProfile } from '@/hooks/useProfile';
+import { maskCurrency, maskNumber } from '@/lib/masks';
+import ImageUpload from '@/components/ui/ImageUpload';
 
 function CRMContent() {
     const { profile, loading: profileLoading, businessType, theme: colors } = useProfile();
@@ -26,6 +28,34 @@ function CRMContent() {
     const [services, setServices] = useState<any[]>([]);
     const [products, setProducts] = useState<any[]>([]);
     const [savingRewards, setSavingRewards] = useState(false);
+
+    // Reward Modals State
+    const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+    const [isProductModalOpen, setIsProductModalOpen] = useState(false);
+    const [editingRewardService, setEditingRewardService] = useState<any>(null);
+    const [editingRewardProduct, setEditingRewardProduct] = useState<any>(null);
+
+    // Service Form State
+    const [newService, setNewService] = useState({
+        name: '',
+        price: '',
+        duration_minutes: '',
+        image_url: ''
+    });
+
+    // Product Form State
+    const [newProduct, setNewProduct] = useState({
+        name: '',
+        description: '',
+        barcode: '',
+        cost_price: '',
+        sale_price: '',
+        current_stock: '',
+        min_threshold: '',
+        unit_type: 'un',
+        image_url: ''
+    });
+
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [clientsList, setClientsList] = useState<any[]>([]);
     const [selectedClients, setSelectedClients] = useState<string[]>([]);
@@ -185,6 +215,8 @@ function CRMContent() {
     };
 
     const handleSaveLoyalty = async () => {
+        // ... (existing logic) rest handled in specific reward functions if needed, 
+        // but this button still saves the general config (target)
         if (!tenant || selectedLoyaltyTarget === null) return;
 
         setSavingLoyalty(true);
@@ -205,7 +237,7 @@ function CRMContent() {
                     loyalty_reward_service_id: rewardService,
                     loyalty_reward_product_id: rewardProduct
                 }));
-                alert('Configurações de fidelidade e prêmios salvas!');
+                alert('Configurações salvas!');
                 fetchData(tenant.id);
             } else {
                 throw error;
@@ -215,6 +247,95 @@ function CRMContent() {
             alert('Erro ao salvar: ' + err.message);
         } finally {
             setSavingLoyalty(false);
+        }
+    };
+
+    const handleSaveRewardService = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!tenant?.id) return;
+        setSavingRewards(true);
+        try {
+            const payload = {
+                tenant_id: tenant.id,
+                name: newService.name,
+                price: parseFloat(newService.price.replace(',', '.')) || 0,
+                duration_minutes: parseInt(newService.duration_minutes) || 0,
+                image_url: newService.image_url,
+                active: true,
+                is_reward: true // Optional flag for internal control
+            };
+
+            let serviceId = editingRewardService?.id;
+
+            if (serviceId) {
+                const { error } = await supabase.from('services').update(payload).eq('id', serviceId);
+                if (error) throw error;
+            } else {
+                const { data, error } = await supabase.from('services').insert([payload]).select().single();
+                if (error) throw error;
+                serviceId = data.id;
+            }
+
+            // Link to tenant
+            const { error: tError } = await supabase.from('tenants').update({ loyalty_reward_service_id: serviceId }).eq('id', tenant.id);
+            if (tError) throw tError;
+
+            setRewardService(serviceId);
+            setIsServiceModalOpen(false);
+            setEditingRewardService(null);
+            alert('Serviço de prêmio salvo com sucesso!');
+            fetchData(tenant.id);
+        } catch (err: any) {
+            alert('Erro ao salvar serviço: ' + err.message);
+        } finally {
+            setSavingRewards(false);
+        }
+    };
+
+    const handleSaveRewardProduct = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!tenant?.id) return;
+        setSavingRewards(true);
+        try {
+            const payload = {
+                tenant_id: tenant.id,
+                name: newProduct.name,
+                description: newProduct.description,
+                barcode: newProduct.barcode,
+                cost_price: parseFloat(newProduct.cost_price.replace(',', '.')) || 0,
+                sale_price: parseFloat(newProduct.sale_price.replace(',', '.')) || 0,
+                min_threshold: parseInt(newProduct.min_threshold) || 0,
+                current_stock: parseInt(newProduct.current_stock) || 0,
+                unit_type: newProduct.unit_type,
+                image_url: newProduct.image_url,
+                active: true,
+                is_reward: true
+            };
+
+            let productId = editingRewardProduct?.id;
+
+            if (productId) {
+                const { error } = await supabase.from('products').update(payload).eq('id', productId);
+                if (error) throw error;
+            } else {
+                const { data, error } = await supabase.from('products').insert([payload]).select().single();
+                if (error) throw error;
+                productId = data.id;
+            }
+
+            // Link to tenant
+            const { error: tError } = await supabase.from('tenants').update({ loyalty_reward_product_id: productId }).eq('id', tenant.id);
+            if (tError) throw tError;
+
+            setRewardProduct(productId);
+            setIsProductModalOpen(false);
+            setEditingRewardProduct(null);
+            alert('Produto de prêmio salvo com sucesso!');
+            fetchData(tenant.id);
+        } catch (err: any) {
+            alert('Erro ao salvar produto: ' + err.message);
+        } finally {
+            setSavingRewards(false);
         }
     };
 
@@ -714,7 +835,30 @@ function CRMContent() {
                             <div className="space-y-6">
                                 {/* Serviço de Recompensa */}
                                 <div className="space-y-3">
-                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Serviço de Recompensa</label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Serviço de Recompensa</label>
+                                        <button
+                                            onClick={() => {
+                                                const currentReward = services.find(s => s.id === rewardService);
+                                                if (currentReward) {
+                                                    setEditingRewardService(currentReward);
+                                                    setNewService({
+                                                        name: currentReward.name,
+                                                        price: currentReward.price?.toFixed(2).replace('.', ',') || '',
+                                                        duration_minutes: currentReward.duration_minutes?.toString() || '',
+                                                        image_url: currentReward.image_url || ''
+                                                    });
+                                                } else {
+                                                    setEditingRewardService(null);
+                                                    setNewService({ name: '', price: '', duration_minutes: '', image_url: '' });
+                                                }
+                                                setIsServiceModalOpen(true);
+                                            }}
+                                            className="text-[8px] font-black text-emerald-400 border border-emerald-400/20 px-2 py-1 rounded hover:bg-emerald-400 hover:text-black transition-all"
+                                        >
+                                            {rewardService ? 'EDITAR' : '+ CRIAR'}
+                                        </button>
+                                    </div>
                                     <select
                                         value={rewardService || ''}
                                         onChange={(e) => setRewardService(e.target.value || null)}
@@ -730,7 +874,35 @@ function CRMContent() {
 
                                 {/* Produto de Recompensa */}
                                 <div className="space-y-3">
-                                    <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Produto de Recompensa</label>
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[9px] font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Produto de Recompensa</label>
+                                        <button
+                                            onClick={() => {
+                                                const currentReward = products.find(p => p.id === rewardProduct);
+                                                if (currentReward) {
+                                                    setEditingRewardProduct(currentReward);
+                                                    setNewProduct({
+                                                        name: currentReward.name,
+                                                        description: currentReward.description || '',
+                                                        barcode: currentReward.barcode || '',
+                                                        cost_price: currentReward.cost_price?.toFixed(2).replace('.', ',') || '',
+                                                        sale_price: currentReward.sale_price?.toFixed(2).replace('.', ',') || '',
+                                                        current_stock: currentReward.current_stock?.toString() || '',
+                                                        min_threshold: currentReward.min_threshold?.toString() || '',
+                                                        unit_type: currentReward.unit_type || 'un',
+                                                        image_url: currentReward.image_url || ''
+                                                    });
+                                                } else {
+                                                    setEditingRewardProduct(null);
+                                                    setNewProduct({ name: '', description: '', barcode: '', cost_price: '', sale_price: '', current_stock: '', min_threshold: '', unit_type: 'un', image_url: '' });
+                                                }
+                                                setIsProductModalOpen(true);
+                                            }}
+                                            className="text-[8px] font-black text-emerald-400 border border-emerald-400/20 px-2 py-1 rounded hover:bg-emerald-400 hover:text-black transition-all"
+                                        >
+                                            {rewardProduct ? 'EDITAR' : '+ CRIAR'}
+                                        </button>
+                                    </div>
                                     <select
                                         value={rewardProduct || ''}
                                         onChange={(e) => setRewardProduct(e.target.value || null)}
@@ -1332,6 +1504,165 @@ function CRMContent() {
                                 </div>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Serviço de Recompensa */}
+            {isServiceModalOpen && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4 user-select-none">
+                    <div className="bg-[#18181b] border border-white/10 w-full max-w-xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
+                        <div className="p-8 md:p-10">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
+                                    {editingRewardService ? 'EDITAR' : 'NOVO'} SERVIÇO DE PRÊMIO
+                                </h3>
+                                <button onClick={() => setIsServiceModalOpen(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                                    <span className="material-symbols-outlined text-zinc-400">close</span>
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSaveRewardService} className="space-y-6">
+                                <div className="flex justify-center mb-6">
+                                    <ImageUpload
+                                        currentImage={newService.image_url}
+                                        onImageSelect={(file, preview) => setNewService(prev => ({ ...prev, image_url: preview }))}
+                                        helperText="Foto do Serviço"
+                                        bucket="services"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO SERVIÇO</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={newService.name}
+                                        onChange={e => setNewService({ ...newService, name: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all placeholder:text-zinc-800"
+                                        placeholder="Ex: Corte de Brinde"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO (R$)</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={newService.price}
+                                            onChange={e => setNewService({ ...newService, price: maskCurrency(e.target.value) })}
+                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
+                                            placeholder="0,00"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DURAÇÃO (MIN)</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={newService.duration_minutes}
+                                            onChange={e => setNewService({ ...newService, duration_minutes: maskNumber(e.target.value) })}
+                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
+                                            placeholder="30"
+                                        />
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={savingRewards}
+                                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {savingRewards ? 'SALVANDO...' : (editingRewardService ? 'ATUALIZAR' : 'SALVAR') + ' SERVIÇO DE PRÊMIO'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal de Produto de Recompensa */}
+            {isProductModalOpen && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4 user-select-none">
+                    <div className="bg-[#18181b] border border-white/10 w-full max-w-xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
+                        <div className="p-8 md:p-10">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
+                                    {editingRewardProduct ? 'EDITAR' : 'NOVO'} PRODUTO DE PRÊMIO
+                                </h3>
+                                <button onClick={() => setIsProductModalOpen(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                                    <span className="material-symbols-outlined text-zinc-400">close</span>
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSaveRewardProduct} className="space-y-6">
+                                <div className="flex justify-center mb-6">
+                                    <ImageUpload
+                                        currentImage={newProduct.image_url}
+                                        onImageSelect={(file, preview) => setNewProduct(prev => ({ ...prev, image_url: preview }))}
+                                        helperText="Foto do Produto"
+                                        bucket="products"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO PRODUTO</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={newProduct.name}
+                                        onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all placeholder:text-zinc-800"
+                                        placeholder="Ex: Pomada de Brinde"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DESCRIÇÃO</label>
+                                    <textarea
+                                        value={newProduct.description}
+                                        onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all h-20 resize-none"
+                                        placeholder="Breve descrição do prêmio..."
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">ESTOQUE ATUAL</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            value={newProduct.current_stock}
+                                            onChange={e => setNewProduct({ ...newProduct, current_stock: maskNumber(e.target.value) })}
+                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
+                                            placeholder="0"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">UNIDADE</label>
+                                        <select
+                                            value={newProduct.unit_type}
+                                            onChange={e => setNewProduct({ ...newProduct, unit_type: e.target.value })}
+                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all appearance-none"
+                                        >
+                                            <option value="un">Unidade (un)</option>
+                                            <option value="ml">Mililitros (ml)</option>
+                                            <option value="g">Gramas (g)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={savingRewards}
+                                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {savingRewards ? 'SALVANDO...' : (editingRewardProduct ? 'ATUALIZAR' : 'SALVAR') + ' PRODUTO DE PRÊMIO'}
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
