@@ -21,6 +21,7 @@ function CRMContent() {
         birthdays: 0,
         loyaltyPending: 0
     });
+    const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
     const [savingLoyalty, setSavingLoyalty] = useState(false);
     const [selectedLoyaltyTarget, setSelectedLoyaltyTarget] = useState<number | null>(null);
     const [rewardService, setRewardService] = useState<string | null>(null);
@@ -145,7 +146,7 @@ function CRMContent() {
                 servicesResult,
                 productsResult
             ] = await Promise.all([
-                supabase.from('tenants').select('id, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone').eq('id', tid).single(),
+                supabase.from('tenants').select('id, loyalty_enabled, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone').eq('id', tid).single(),
                 supabase.from('clients').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
                 getSegmentedClients(tid, { days_inactive: 45 }),
                 getSegmentedClients(tid, { min_spent: 500 }),
@@ -160,6 +161,7 @@ function CRMContent() {
             if (tenantData) {
                 setTenant(tenantData);
                 setSelectedLoyaltyTarget(currentTarget);
+                setLoyaltyEnabled(tenantData.loyalty_enabled ?? true);
                 setRewardService(tenantData.loyalty_reward_service_id);
                 setRewardProduct(tenantData.loyalty_reward_product_id);
             }
@@ -232,6 +234,25 @@ function CRMContent() {
         }
     };
 
+    const handleToggleLoyalty = async () => {
+        if (!tenant) return;
+        const newState = !loyaltyEnabled;
+        setLoyaltyEnabled(newState);
+
+        try {
+            const { error } = await supabase
+                .from('tenants')
+                .update({ loyalty_enabled: newState })
+                .eq('id', tenant.id);
+
+            if (error) throw error;
+        } catch (err: any) {
+            console.error('Failed to toggle loyalty:', err);
+            setLoyaltyEnabled(!newState); // Revert
+            alert('Erro ao alterar status da fidelidade: ' + err.message);
+        }
+    };
+
     const handleSaveLoyalty = async () => {
         // ... (existing logic) rest handled in specific reward functions if needed, 
         // but this button still saves the general config (target)
@@ -243,6 +264,7 @@ function CRMContent() {
                 .from('tenants')
                 .update({
                     loyalty_target: selectedLoyaltyTarget,
+                    loyalty_enabled: loyaltyEnabled,
                     loyalty_reward_service_id: rewardService,
                     loyalty_reward_product_id: rewardProduct
                 })
@@ -924,12 +946,24 @@ function CRMContent() {
                             <div className="flex items-center justify-between mb-8">
                                 <div>
                                     <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Cartão Fidelidade</h3>
-                                    <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Configuração de Recompensa</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Configuração de Recompensa</p>
+                                        <div className="size-1 rounded-full bg-white/20"></div>
+                                        <button
+                                            onClick={handleToggleLoyalty}
+                                            className={`flex items-center gap-1.5 transition-all px-2 py-0.5 rounded-full border ${loyaltyEnabled ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500' : 'bg-rose-500/10 border-rose-500/20 text-rose-500'}`}
+                                        >
+                                            <span className="size-1.5 rounded-full animate-pulse bg-current"></span>
+                                            <span className="text-[8px] font-black uppercase tracking-widest">{loyaltyEnabled ? 'Ativo' : 'Pausado'}</span>
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
+                                <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform relative"
                                     style={{ backgroundColor: `${colors?.text}0d` }}
                                 >
                                     <span className="material-symbols-outlined" style={{ color: colors?.primary }}>loyalty</span>
+                                    {/* Small floating toggle indicator */}
+                                    <div className={`absolute -top-1 -right-1 size-3 rounded-full border-2 border-black ${loyaltyEnabled ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
                                 </div>
                             </div>
 
