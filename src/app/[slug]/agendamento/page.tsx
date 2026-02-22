@@ -234,7 +234,16 @@ Até lá! 👋`;
                 WhatsAppService.open(targetPhone, message);
             });
 
-            // 7. Success Step
+            // 7. Success Step — refresh loyalty state so card shows updated stamps
+            const cleanPhoneSuccess = selection.phone.replace(/\D/g, '');
+            const { data: loyaltyAfter } = await supabase
+                .from('client_loyalty')
+                .select('stamps_count')
+                .eq('tenant_id', tenant.id)
+                .eq('client_phone', cleanPhoneSuccess)
+                .maybeSingle();
+            if (loyaltyAfter) setClientLoyalty(loyaltyAfter);
+
             setStep(5);
         } catch (err: any) {
             alert('Erro ao finalizar agendamento: ' + err.message);
@@ -571,6 +580,70 @@ Até lá! 👋`;
                                     )}
                                 </div>
                             </div>
+
+                            {/* Loyalty Card on Success Screen */}
+                            {(tenant.loyalty_enabled || (clientLoyalty && clientLoyalty.stamps_count > 0)) && (
+                                <div className="mb-8 p-6 rounded-[2rem] bg-black/40 border border-white/10 relative overflow-hidden group text-left">
+                                    <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12 transition-transform group-hover:scale-110 duration-700">
+                                        <span className="material-symbols-outlined text-8xl" style={{ color: primaryColor }}>loyalty</span>
+                                    </div>
+                                    <div className="relative z-10 space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Seu Cartão Fidelidade</p>
+                                                <h3 className="text-xl font-black italic uppercase tracking-tighter">
+                                                    {clientLoyalty && clientLoyalty.stamps_count >= loyaltyTarget
+                                                        ? '🔥 PRÊMIO LIBERADO!'
+                                                        : `${loyaltyTarget} Selos + 1 Grátis`}
+                                                </h3>
+                                            </div>
+                                            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] font-black uppercase tracking-widest">
+                                                {clientLoyalty?.stamps_count || 0} / {loyaltyTarget}
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 flex-wrap">
+                                            {[...Array(loyaltyTarget)].map((_, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={`size-9 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${i < (clientLoyalty?.stamps_count || 0)
+                                                            ? 'border-white/5 flex items-center justify-center transition-all duration-500'
+                                                            : 'border-white/5 bg-white/5 opacity-30'
+                                                        }`}
+                                                    style={i < (clientLoyalty?.stamps_count || 0) ? {
+                                                        backgroundColor: `${primaryColor}30`,
+                                                        borderColor: `${primaryColor}80`,
+                                                        boxShadow: `0 0 15px ${primaryColor}30`
+                                                    } : {}}
+                                                >
+                                                    {i < (clientLoyalty?.stamps_count || 0) ? (
+                                                        <span className="material-symbols-outlined text-sm font-bold" style={{ color: primaryColor }}>star</span>
+                                                    ) : (
+                                                        <span className="text-[10px] font-black opacity-30">{i + 1}</span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                            {/* Final Reward Slot */}
+                                            <div className={`size-9 rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-700 ${(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
+                                                    ? 'text-black scale-110 animate-pulse'
+                                                    : 'border-white/20 bg-white/5 opacity-50'
+                                                }`}
+                                                style={(clientLoyalty?.stamps_count || 0) >= loyaltyTarget ? {
+                                                    backgroundColor: primaryColor,
+                                                    borderColor: primaryColor,
+                                                    boxShadow: `0 0 20px ${primaryColor}60`
+                                                } : {}}
+                                            >
+                                                <span className="material-symbols-outlined text-lg">redeem</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 leading-relaxed italic">
+                                            {clientLoyalty && clientLoyalty.stamps_count >= loyaltyTarget
+                                                ? 'Você completou o cartão! Apresente ao profissional para resgatar.'
+                                                : `Faltam ${Math.max(0, loyaltyTarget - (clientLoyalty?.stamps_count || 0))} selos para sua próxima cortesia.`}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             <button
                                 onClick={() => {
