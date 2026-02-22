@@ -52,7 +52,6 @@ export default function ShopLandingPage() {
                 .single();
 
             if (tenantData) {
-                // 🛡️ [LOCKOUT] Check Maintenance Mode
                 if (tenantData.maintenance_mode) {
                     router.push('/manutencao');
                     return;
@@ -60,7 +59,21 @@ export default function ShopLandingPage() {
 
                 setTenant(tenantData);
 
-                // Load Services
+                // Realtime block for active customers on the store
+                const channel = supabase
+                    .channel(`public_store_maintenance_${tenantData.id}`)
+                    .on(
+                        'postgres_changes',
+                        { event: 'UPDATE', schema: 'public', table: 'tenants', filter: `id=eq.${tenantData.id}` },
+                        (payload) => {
+                            if (payload.new.maintenance_mode) {
+                                router.push('/manutencao');
+                            }
+                        }
+                    )
+                    .subscribe();
+
+                // Store channel so we can cleanup if needed...
                 const { data: svs } = await supabase
                     .from('services')
                     .select('*')
