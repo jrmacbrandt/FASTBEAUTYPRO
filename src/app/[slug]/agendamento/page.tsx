@@ -240,15 +240,32 @@ Até lá! 👋`;
                 WhatsAppService.open(targetPhone, message);
             });
 
-            // 7. Success Step — refresh loyalty state so card shows updated stamps
+            // 7. Success Step — ENSURE loyalty record exists and refresh state
             const cleanPhoneSuccess = selection.phone.replace(/\D/g, '');
+
+            // Explicitly UPSERT loyalty record so even new clients have one
+            const { data: loyaltyUpsert, error: loyaltyErr } = await supabase
+                .from('client_loyalty')
+                .upsert({
+                    tenant_id: tenant.id,
+                    client_phone: cleanPhoneSuccess,
+                    stamps_count: 0 // Initialize at 0 if not exists
+                }, { onConflict: 'tenant_id,client_phone' })
+                .select('stamps_count')
+                .single();
+
+            if (loyaltyErr) console.error('Loyalty Upsert Error:', loyaltyErr);
+
+            // Fetch latest state to be 100% sure we have the correct count
             const { data: loyaltyAfter } = await supabase
                 .from('client_loyalty')
                 .select('stamps_count')
                 .eq('tenant_id', tenant.id)
                 .eq('client_phone', cleanPhoneSuccess)
                 .maybeSingle();
-            if (loyaltyAfter) setClientLoyalty(loyaltyAfter);
+
+            console.log('Final Loyalty Sync:', loyaltyAfter);
+            setClientLoyalty(loyaltyAfter || { stamps_count: 0 });
 
             setStep(5);
         } catch (err: any) {
