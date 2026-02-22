@@ -128,6 +128,7 @@ export default function DynamicBookingPage() {
     const primaryColor = theme.primary;
     const isPrimaryLight = ['#ffffff', '#f2b90d', '#fbbf24'].includes(primaryColor.toLowerCase());
     const buttonTextColor = isPrimaryLight ? '#000000' : '#ffffff';
+    const loyaltyTarget = tenant?.loyalty_target || 10;
 
     const nextStep = () => setStep(step + 1);
     const prevStep = () => setStep(prev => Math.max(1, prev - 1));
