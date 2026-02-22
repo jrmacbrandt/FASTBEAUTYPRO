@@ -476,9 +476,11 @@ Até lá! 👋`;
                             </div>
                         </div>
                     )}
+
                     {/* Step 5: Success */}
                     {step === 5 && (
                         <div className="animate-in fade-in zoom-in duration-700 max-w-2xl mx-auto text-center py-4">
+                            {/* SUCCESS HEADER */}
                             <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-10 text-left">
                                 <span className="material-symbols-outlined text-6xl md:text-7xl text-emerald-500 bg-emerald-500/10 p-3 rounded-[1.5rem] border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">check_circle</span>
                                 <div>
@@ -491,7 +493,92 @@ Até lá! 👋`;
                                 </div>
                             </div>
 
-                            <div className="bg-white/[0.03] border border-white/5 rounded-[2rem] p-6 mb-10 text-left relative overflow-hidden">
+                            {/* Loyalty Card on Success Screen - FORCED VISIBILITY */}
+                            <div key="loyalty-card-success-forced" id="loyalty-card-box" className="mb-10 p-8 rounded-[2.5rem] bg-black/80 border-2 border-white/20 relative overflow-hidden group text-left shadow-[0_0_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                                <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12 transition-transform group-hover:scale-110 duration-700">
+                                    <span className="material-symbols-outlined text-9xl" style={{ color: primaryColor || '#f2b90d' }}>loyalty</span>
+                                </div>
+                                <div className="relative z-10 space-y-6">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <div className="size-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">Cartão de Fidelidade Ativo</p>
+                                            </div>
+                                            <h3 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-none">
+                                                {(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
+                                                    ? '🔥 PRÊMIO LIBERADO!'
+                                                    : `${loyaltyTarget} Selos + 1 Grátis`}
+                                            </h3>
+                                        </div>
+                                        <div className="px-4 py-2 rounded-full bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-widest shadow-inner">
+                                            {clientLoyalty?.stamps_count || 0} / {loyaltyTarget}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-2.5 flex-wrap">
+                                        {[...Array(loyaltyTarget)].map((_, i) => {
+                                            const isEarned = i < (clientLoyalty?.stamps_count || 0);
+                                            const isProvisional = i === (clientLoyalty?.stamps_count || 0);
+
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className={`size-10 md:size-12 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${(isEarned || isProvisional)
+                                                        ? 'border-white/10'
+                                                        : 'border-white/5 bg-white/5 opacity-20'
+                                                        } ${isProvisional ? 'animate-pulse' : ''}`}
+                                                    style={isEarned ? {
+                                                        backgroundColor: `${primaryColor || '#f2b90d'}30`,
+                                                        borderColor: `${primaryColor || '#f2b90d'}80`,
+                                                        boxShadow: `0 0 20px ${primaryColor || '#f2b90d'}40`
+                                                    } : isProvisional ? {
+                                                        borderColor: `${primaryColor || '#f2b90d'}50`,
+                                                        borderStyle: 'dashed'
+                                                    } : {}}
+                                                >
+                                                    {isEarned ? (
+                                                        <span className="material-symbols-outlined text-xl font-bold" style={{ color: primaryColor || '#f2b90d' }}>star</span>
+                                                    ) : isProvisional ? (
+                                                        <span className="material-symbols-outlined text-base opacity-60" style={{ color: primaryColor || '#f2b90d' }}>star_half</span>
+                                                    ) : (
+                                                        <span className="text-[12px] font-black opacity-30">{i + 1}</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                        {/* Final Reward Slot */}
+                                        <div className={`size-10 md:size-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-700 ${(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
+                                            ? 'text-black scale-110 animate-pulse'
+                                            : 'border-white/20 bg-white/5 opacity-50'
+                                            }`}
+                                            style={(clientLoyalty?.stamps_count || 0) >= loyaltyTarget ? {
+                                                backgroundColor: primaryColor || '#f2b90d',
+                                                borderColor: primaryColor || '#f2b90d',
+                                                boxShadow: `0 0-30px ${primaryColor || '#f2b90d'}80`
+                                            } : {}}
+                                        >
+                                            <span className="material-symbols-outlined text-xl">redeem</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2 border-t border-white/5 pt-4">
+                                        <p className="text-[11px] font-bold uppercase tracking-widest text-white/40 leading-relaxed italic">
+                                            {(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
+                                                ? 'Parabéns! Você completou o cartão. Apresente ao profissional para resgatar.'
+                                                : `Faltam ${Math.max(0, loyaltyTarget - (clientLoyalty?.stamps_count || 0))} selos para sua próxima cortesia.`}
+                                        </p>
+                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 w-fit">
+                                            <div className="size-1.5 rounded-full bg-amber-500 animate-pulse"></div>
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-amber-500 italic">
+                                                Selo pontilhado: Pendente de confirmação pós-pagamento
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-white/[0.03] border border-white/5 rounded-[2rem] p-6 mb-10 text-left relative overflow-hidden shadow-2xl backdrop-blur-3xl">
                                 <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 blur-3xl rounded-full"></div>
 
                                 <div className="flex items-start gap-4 mb-6 p-4 bg-amber-500/5 border border-amber-500/10 rounded-xl">
@@ -502,7 +589,6 @@ Até lá! 👋`;
                                 </div>
 
                                 <div className="space-y-3">
-                                    {/* Store Contact - Always show name */}
                                     <div className="w-full p-5 px-6 rounded-xl bg-white/5 border border-white/5">
                                         <p className="text-[11px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Loja: {tenant.name}</p>
                                         {tenant.phone ? (
@@ -512,7 +598,6 @@ Até lá! 👋`;
                                         )}
                                     </div>
 
-                                    {/* Professional Contact - Show only if barber is selected */}
                                     {selection.barber && (
                                         <div className="w-full p-5 px-6 rounded-xl bg-white/5 border border-white/5">
                                             <p className="text-[11px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Profissional: {selection.barber?.full_name}</p>
@@ -525,88 +610,6 @@ Até lá! 👋`;
                                     )}
                                 </div>
                             </div>
-
-                            {/* Loyalty Card on Success Screen - Forced Visibility if not explicitly disabled */}
-                            {tenant && (tenant.loyalty_enabled !== false) && (
-                                <div key="loyalty-card-success" id="loyalty-card-box" className="mb-8 p-6 rounded-[2rem] bg-black/60 border border-white/20 relative overflow-hidden group text-left shadow-2xl backdrop-blur-md">
-                                    <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12 transition-transform group-hover:scale-110 duration-700">
-                                        <span className="material-symbols-outlined text-8xl" style={{ color: primaryColor }}>loyalty</span>
-                                    </div>
-                                    <div className="relative z-10 space-y-4">
-                                        <div className="flex justify-between items-center">
-                                            <div>
-                                                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Seu Cartão Fidelidade</p>
-                                                <h3 className="text-xl font-black italic uppercase tracking-tighter">
-                                                    {(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
-                                                        ? '🔥 PRÊMIO LIBERADO!'
-                                                        : `${loyaltyTarget} Selos + 1 Grátis`}
-                                                </h3>
-                                            </div>
-                                            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] font-black uppercase tracking-widest">
-                                                {clientLoyalty?.stamps_count || 0} / {loyaltyTarget}
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2 flex-wrap">
-                                            {[...Array(loyaltyTarget)].map((_, i) => {
-                                                const isEarned = i < (clientLoyalty?.stamps_count || 0);
-                                                const isProvisional = i === (clientLoyalty?.stamps_count || 0);
-
-                                                return (
-                                                    <div
-                                                        key={i}
-                                                        className={`size-9 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${(isEarned || isProvisional)
-                                                            ? 'border-white/5'
-                                                            : 'border-white/5 bg-white/5 opacity-30'
-                                                            } ${isProvisional ? 'animate-pulse' : ''}`}
-                                                        style={isEarned ? {
-                                                            backgroundColor: `${primaryColor}30`,
-                                                            borderColor: `${primaryColor}80`,
-                                                            boxShadow: `0 0 15px ${primaryColor}30`
-                                                        } : isProvisional ? {
-                                                            borderColor: `${primaryColor}40`,
-                                                            borderStyle: 'dashed'
-                                                        } : {}}
-                                                    >
-                                                        {isEarned ? (
-                                                            <span className="material-symbols-outlined text-sm font-bold" style={{ color: primaryColor }}>star</span>
-                                                        ) : isProvisional ? (
-                                                            <span className="material-symbols-outlined text-[10px] opacity-40" style={{ color: primaryColor }}>star_half</span>
-                                                        ) : (
-                                                            <span className="text-[10px] font-black opacity-30">{i + 1}</span>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
-                                            {/* Final Reward Slot */}
-                                            <div className={`size-9 rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-700 ${(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
-                                                ? 'text-black scale-110 animate-pulse'
-                                                : 'border-white/20 bg-white/5 opacity-50'
-                                                }`}
-                                                style={(clientLoyalty?.stamps_count || 0) >= loyaltyTarget ? {
-                                                    backgroundColor: primaryColor,
-                                                    borderColor: primaryColor,
-                                                    boxShadow: `0 0 20px ${primaryColor}60`
-                                                } : {}}
-                                            >
-                                                <span className="material-symbols-outlined text-lg">redeem</span>
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 leading-relaxed italic">
-                                                {(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
-                                                    ? 'Você completou o cartão! Apresente ao profissional para resgatar.'
-                                                    : `Faltam ${Math.max(0, loyaltyTarget - (clientLoyalty?.stamps_count || 0))} selos para sua próxima cortesia.`}
-                                            </p>
-                                            <div className="flex items-center gap-1.5 opacity-60">
-                                                <div className="size-1.5 rounded-full bg-amber-500 animate-pulse"></div>
-                                                <p className="text-[8px] font-black uppercase tracking-widest text-amber-500/80 italic">
-                                                    Estrela pontilhada: pendente de confirmação (pós-pagamento)
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
                             <button
                                 onClick={() => {
