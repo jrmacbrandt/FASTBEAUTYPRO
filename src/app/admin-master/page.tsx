@@ -316,7 +316,13 @@ export default function MasterDashboardPage() {
                     report += `- Comandas Órfãs: ${db.deleted_orders || 0}\n`;
                     report += `- Produtos: ${db.deleted_products || 0}\n`;
                     report += `- Serviços: ${db.deleted_services || 0}\n`;
-                    report += `- Clientes: ${db.deleted_customers || 0}\n`;
+                    report += `- Clientes: ${db.deleted_customers || 0}\n\n`;
+
+                    if (db.smart_purge) {
+                        report += '📊 RETENÇÃO 3 MESES (Smart Purge):\n';
+                        report += `- Comissões Arquivadas: ${db.smart_purge.archived_commissions || 0}\n`;
+                        report += `- Registros Antigos Removidos: ${db.smart_purge.deleted_appointments + db.smart_purge.deleted_orders}\n`;
+                    }
                 } else if (errors.some((e: string) => e.includes('Database Clean Failed'))) {
                     report += '⚠️ AVISO: A limpeza do banco de dados falhou (Verifique se a função SQL foi criada).\n';
                 } else {

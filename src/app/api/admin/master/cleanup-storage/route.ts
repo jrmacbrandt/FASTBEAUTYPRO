@@ -37,6 +37,17 @@ export async function POST(req: NextRequest) {
                 dbStats = data || {};
                 console.log('[SystemCleanup] Database Stats:', dbStats);
             }
+
+            // NEW: Smart Purge (History 3 months retention)
+            const { data: purgeData, error: purgeError } = await supabaseAdmin.rpc('admin_perform_smart_purge');
+            if (purgeError) {
+                console.warn('[SystemCleanup] Smart Purge RPC failed:', purgeError.message);
+                errors.push(`Smart Purge Failed: ${purgeError.message}`);
+            } else {
+                dbStats = { ...dbStats, smart_purge: purgeData };
+                console.log('[SystemCleanup] Smart Purge Stats:', purgeData);
+            }
+
         } catch (dbErr: any) {
             console.error('[SystemCleanup] Unexpected DB error:', dbErr);
             errors.push(`DB Clean Error: ${dbErr.message}`);

@@ -141,7 +141,6 @@ function CRMContent() {
                 churnClients,
                 vipClients,
                 bdayClients,
-                { data: appointments },
                 { data: allClients },
                 servicesResult,
                 productsResult
@@ -151,7 +150,6 @@ function CRMContent() {
                 getSegmentedClients(tid, { days_inactive: 45 }),
                 getSegmentedClients(tid, { min_spent: 500 }),
                 getSegmentedClients(tid, { birth_month: new Date().getMonth() + 1 }),
-                supabase.from('appointments').select('client_id').eq('tenant_id', tid).eq('status', 'paid'),
                 supabase.from('clients').select('*').eq('tenant_id', tid).order('name'),
                 supabase.from('loyalty_rewards_services').select('id, name, duration_minutes, image_url').eq('tenant_id', tid).eq('active', true),
                 supabase.from('loyalty_rewards_products').select('id, name, description, barcode, current_stock, min_threshold, unit_type, image_url').eq('tenant_id', tid)
@@ -160,7 +158,6 @@ function CRMContent() {
             const currentTarget = tenantData?.loyalty_target || 5;
             if (tenantData) {
                 setTenant(tenantData);
-                // CRM v5.1: Só inicializamos se ainda não houver seleção do usuário para evitar reversão após save local
                 if (selectedLoyaltyTarget === null) {
                     setSelectedLoyaltyTarget(currentTarget);
                 }
@@ -170,32 +167,16 @@ function CRMContent() {
             }
 
             if (servicesResult.data) {
-                setServices(servicesResult.data);
-                // Define reward ID from the table itself ONLY if tenant has none
-                if (servicesResult.data.length > 0 && !tenantData?.loyalty_reward_service_id) {
-                    setRewardService(servicesResult.data[0].id);
-                }
+                setServices(servicesResult.data || []);
             }
             if (productsResult.data) {
-                setProducts(productsResult.data);
-                if (productsResult.data.length > 0 && !tenantData?.loyalty_reward_product_id) {
-                    setRewardProduct(productsResult.data[0].id);
-                }
-            }
-
-            const countsMap: Record<string, number> = {};
-            if (appointments) {
-                appointments.forEach(ap => {
-                    if (ap.client_id) {
-                        countsMap[ap.client_id] = (countsMap[ap.client_id] || 0) + 1;
-                    }
-                });
+                setProducts(productsResult.data || []);
             }
 
             const threshold = Math.ceil(currentTarget * 0.7);
             const loyaltyClientsList: any[] = [];
             (allClients || []).forEach(c => {
-                const count = countsMap[c.id] || 0;
+                const count = c.total_visits || 0;
                 if (count >= threshold && count < currentTarget) {
                     loyaltyClientsList.push({ ...c, stamps_count: count });
                 }
