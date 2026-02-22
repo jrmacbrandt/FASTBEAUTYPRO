@@ -144,42 +144,91 @@ export default function ScannerPage() {
 
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <h2 className="text-2xl font-black italic" style={{ color: colors.text }}>{clientData.name}</h2>
-                                    <p className="font-bold text-sm" style={{ color: colors.textMuted }}>{clientData.phone}</p>
+                                    <h2 className="text-2xl font-black italic italic uppercase tracking-tighter" style={{ color: colors.text }}>{clientData.name}</h2>
+                                    <p className="font-bold text-sm tracking-widest opacity-60" style={{ color: colors.textMuted }}>{clientData.phone}</p>
                                 </div>
-                                <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest border border-emerald-500/20">
-                                    Cliente Ativo
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-2xl border transition-colors" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border }}>
-                                    <p className="text-[10px] uppercase font-black tracking-widest mb-1" style={{ color: colors.textMuted }}>Fidelidade</p>
-                                    <div className="flex items-end gap-1">
-                                        <span className="text-3xl font-black" style={{ color: colors.primary }}>{clientData.client_loyalty?.[0]?.stamps_count || 0}</span>
-                                        <span className="text-xs font-bold mb-1" style={{ color: colors.textMuted }}>/ 5 selos</span>
-                                    </div>
-                                </div>
-                                <div className="p-4 rounded-2xl border transition-colors" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border }}>
-                                    <p className="text-[10px] uppercase font-black tracking-widest mb-1" style={{ color: colors.textMuted }}>Vouchers</p>
-                                    <div className="flex items-end gap-1">
-                                        <span className="text-3xl font-black" style={{ color: colors.text }}>{clientData.client_loyalty?.[0]?.total_vouchers_earned || 0}</span>
-                                        <span className="text-xs font-bold mb-1" style={{ color: colors.textMuted }}>ganhos</span>
-                                    </div>
+                                <div className="bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 italic">
+                                    Identificado
                                 </div>
                             </div>
 
-                            <div className="pt-6 border-t" style={{ borderColor: colors.border }}>
+                            {/* Loyalty Card Grid (Scanner Version) */}
+                            {(() => {
+                                const stampsCount = clientData.client_loyalty?.[0]?.stamps_count || 0;
+                                const loyaltyTarget = profile?.tenant?.loyalty_target || 10;
+                                const isRewardReady = stampsCount >= loyaltyTarget;
+
+                                return (
+                                    <div className="p-6 rounded-3xl border relative overflow-hidden group" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border }}>
+                                        <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12">
+                                            <span className="material-symbols-outlined text-7xl" style={{ color: colors.primary }}>loyalty</span>
+                                        </div>
+
+                                        <div className="relative z-10 space-y-4">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: colors.textMuted }}>Cartão Fidelidade</h4>
+                                                <div className="bg-black/40 px-3 py-1 rounded-full border border-white/5 text-[10px] font-bold">
+                                                    {stampsCount} / {loyaltyTarget}
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-2 flex-wrap">
+                                                {[...Array(loyaltyTarget)].map((_, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className={`size-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 ${i < stampsCount
+                                                                ? 'border-white/5'
+                                                                : 'border-white/5 bg-white/5 opacity-20'
+                                                            }`}
+                                                        style={i < stampsCount ? {
+                                                            backgroundColor: `${colors.primary}30`,
+                                                            borderColor: `${colors.primary}60`,
+                                                            boxShadow: `0 0 10px ${colors.primary}20`
+                                                        } : {}}
+                                                    >
+                                                        {i < stampsCount ? (
+                                                            <span className="material-symbols-outlined text-sm font-bold" style={{ color: colors.primary }}>star</span>
+                                                        ) : (
+                                                            <span className="text-[10px] font-black opacity-30">{i + 1}</span>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                                {/* Final Reward Slot */}
+                                                <div className={`size-10 rounded-xl border-2 border-dashed flex items-center justify-center transition-all ${isRewardReady
+                                                        ? 'scale-110 animate-pulse'
+                                                        : 'border-white/20 bg-white/5 opacity-50'
+                                                    }`}
+                                                    style={isRewardReady ? {
+                                                        backgroundColor: colors.primary,
+                                                        borderColor: colors.primary,
+                                                        color: businessType === 'salon' ? 'white' : 'black'
+                                                    } : {}}
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">{isRewardReady ? 'workspace_premium' : 'redeem'}</span>
+                                                </div>
+                                            </div>
+
+                                            <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed italic" style={{ color: isRewardReady ? colors.primary : colors.textMuted }}>
+                                                {isRewardReady
+                                                    ? '🔥 PRÊMIO LIBERADO! VALIDAR AGORA.'
+                                                    : `Faltam ${Math.max(0, loyaltyTarget - stampsCount)} selos para a próxima cortesia.`}
+                                            </p>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="pt-4 border-t" style={{ borderColor: colors.border }}>
                                 <button
                                     onClick={() => {
-                                        alert('Check-in registrado! (Simulação)');
                                         setClientData(null);
                                         setPhone('');
+                                        setError('');
                                     }}
-                                    className="w-full border font-bold py-3 rounded-xl uppercase text-xs tracking-widest transition-all hover:bg-opacity-10"
-                                    style={{ borderColor: colors.border, color: colors.text, backgroundColor: `${colors.primary}1a` }}
+                                    className="w-full font-black py-4 rounded-xl uppercase text-xs tracking-widest transition-all active:scale-95 shadow-xl"
+                                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}
                                 >
-                                    Confirmar Presença
+                                    CONFIRMAR PRESENÇA
                                 </button>
                             </div>
                         </div>

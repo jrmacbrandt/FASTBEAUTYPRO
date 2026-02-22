@@ -107,12 +107,32 @@ export default function ProfessionalAgendaPage() {
     };
 
     const handleMarkAbsent = async (id: string) => {
-        if (confirm('Marcar ausência?')) {
-            const { error } = await supabase
-                .from('appointments')
-                .update({ status: 'absent' })
-                .eq('id', id);
-            if (!error) fetchAgenda();
+        if (confirm('Marcar ausência? (Isso removerá 1 selo do cartão fidelidade do cliente)')) {
+            setLoading(true);
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('tenant_id')
+                    .eq('id', session.user.id)
+                    .single();
+
+                if (!profile?.tenant_id) return;
+
+                const { error } = await supabase.rpc('mark_appointment_no_show', {
+                    p_appointment_id: id,
+                    p_tenant_id: profile.tenant_id
+                });
+
+                if (error) throw error;
+                fetchAgenda();
+            } catch (err: any) {
+                alert('Erro ao marcar ausência: ' + err.message);
+            } finally {
+                setLoading(false);
+            }
         }
     };
 

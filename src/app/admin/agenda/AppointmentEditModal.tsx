@@ -76,6 +76,25 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
         }
     };
 
+    const handleMarkNoShow = async () => {
+        if (!confirm('Deseja marcar este cliente como AUSENTE? (Isso removerá 1 selo do cartão fidelidade)')) return;
+        setSaving(true);
+        try {
+            const { error } = await supabase.rpc('mark_appointment_no_show', {
+                p_appointment_id: appointment.id,
+                p_tenant_id: appointment.tenant_id
+            });
+
+            if (error) throw error;
+            onSave();
+            onClose();
+        } catch (err: any) {
+            alert('Erro ao marcar ausência: ' + err.message);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const handleCancelAppointment = async () => {
         if (!confirm('Tem certeza que deseja cancelar este agendamento?')) return;
         setSaving(true);
@@ -186,6 +205,16 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                         </div>
 
                         <div className="pt-4 space-y-3 pb-2">
+                            {appointment.status === 'scheduled' && (
+                                <button
+                                    type="button"
+                                    onClick={handleMarkNoShow}
+                                    disabled={saving}
+                                    className="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-4 rounded-xl uppercase tracking-widest transition-all shadow-xl active:scale-95 text-xs"
+                                >
+                                    {saving ? 'PROCESSANDO...' : 'MARCAR AUSENTE'}
+                                </button>
+                            )}
                             <button
                                 type="submit"
                                 disabled={saving}
@@ -197,7 +226,7 @@ export default function AppointmentEditModal({ appointment, onClose, onSave, col
                                 type="button"
                                 onClick={handleCancelAppointment}
                                 disabled={saving}
-                                className="w-full bg-red-500/5 hover:bg-red-500/10 text-red-500 font-bold py-4 rounded-xl uppercase tracking-widest transition-all text-[10px] border border-red-500/10"
+                                className="w-full bg-white/5 hover:bg-white/10 text-zinc-500 font-bold py-4 rounded-xl uppercase tracking-widest transition-all text-[10px] border border-white/5"
                             >
                                 CANCELAR AGENDAMENTO
                             </button>
