@@ -313,6 +313,7 @@ export default function MasterDashboardPage() {
                     report += '💾 BANCO DE DADOS (Registros Removidos):\n';
                     report += `- Perfis: ${db.deleted_profiles || 0}\n`;
                     report += `- Agendamentos: ${db.deleted_appointments || 0}\n`;
+                    report += `- Comandas Órfãs: ${db.deleted_orders || 0}\n`;
                     report += `- Produtos: ${db.deleted_products || 0}\n`;
                     report += `- Serviços: ${db.deleted_services || 0}\n`;
                     report += `- Clientes: ${db.deleted_customers || 0}\n`;
