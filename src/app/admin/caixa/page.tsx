@@ -107,7 +107,7 @@ export default function CashierCheckoutPage() {
     }, [selected]);
 
     const handleConfirmPayment = async () => {
-        if (!selected) return;
+        if (!selected || !profile?.tenant_id) return;
 
         const feeKey = paymentMethod === 'PIX' ? 'pix' : paymentMethod === 'CARTÃO' ? 'credit' : paymentMethod === 'DÉBITO' ? 'debit' : 'cash';
         const feeRate = (tenantFees[feeKey] || 0) / 100;
@@ -118,45 +118,26 @@ export default function CashierCheckoutPage() {
         const feeAmountServices = serviceTotal * feeRate;
         const feeAmountProducts = productTotal * feeRate;
 
-        const { error: orderError } = await supabase
-            .from('orders')
-            .update({
-                status: 'paid',
-                payment_method: paymentMethod,
-                fee_amount_services: feeAmountServices,
-                fee_amount_products: feeAmountProducts
-            })
-            .eq('id', selected.id);
+        // ── Transação atômica: pagamento + CRM + fidelidade em uma única chamada ──
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('process_payment_and_loyalty', {
+            p_order_id: selected.id,
+            p_appointment_id: selected.appointment_id,
+            p_tenant_id: profile.tenant_id,
+            p_payment_method: paymentMethod,
+            p_fee_services: feeAmountServices,
+            p_fee_products: feeAmountProducts,
+        });
 
-        if (orderError) {
-            alert('Erro ao processar pagamento: ' + orderError.message);
+        if (rpcError || !rpcResult?.success) {
+            const msg = rpcError?.message || rpcResult?.error || 'Erro desconhecido';
+            alert('Erro ao processar pagamento: ' + msg);
             return;
         }
 
-        // --- Loyalty System Integration (Added) ---
-        if (selected.client_phone && profile?.tenant_id) {
-            try {
-                const { LoyaltyService } = await import('@/lib/loyalty');
-
-                // Add Stamp
-                await LoyaltyService.addStamp(profile.tenant_id, selected.client_phone);
-
-                // Check if Reward Earned
-                const hasReward = await LoyaltyService.checkReward(profile.tenant_id, selected.client_phone);
-
-                if (hasReward) {
-                    alert(`🎉 PARABÉNS! ${selected.customer_name} acaba de completar o cartão fidelidade!\nPrêmio liberado para uso agora ou na próxima visita.`);
-                }
-            } catch (lError) {
-                console.error('Error updating loyalty:', lError);
-            }
+        // Notificar recompensa de fidelidade se conquistada
+        if (rpcResult.reward_granted) {
+            alert(`🎉 PARABÉNS! ${selected.customer_name} completou o cartão fidelidade!\nPrêmio liberado.`);
         }
-        // ------------------------------------------
-
-        await supabase
-            .from('appointments')
-            .update({ status: 'paid' })
-            .eq('id', selected.appointment_id);
 
         // --- Stock Depletion Integration ---
         const cartItems = selected.raw.items || [];

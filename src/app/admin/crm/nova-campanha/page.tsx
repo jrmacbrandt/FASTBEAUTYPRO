@@ -248,7 +248,7 @@ function NewCampaignContent() {
                             <div>
                                 <h2 className="text-2xl font-black italic uppercase text-white mb-2">Campanha Preparada!</h2>
                                 <p className="text-slate-400 text-sm">
-                                    A estratégia "{name}" foi consolidada com <span className="text-white font-bold">{count} clientes</span> na fila de disparo.
+                                    A estratégia &ldquo;{name}&rdquo; foi consolidada com <span className="text-white font-bold">{count} clientes</span> na fila de disparo.
                                 </p>
                             </div>
 

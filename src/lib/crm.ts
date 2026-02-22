@@ -6,10 +6,12 @@ export interface Client {
     name: string;
     phone: string;
     birth_date?: string;
+    birth_month?: number;
     metadata: Record<string, any>;
     origin_source?: string;
     last_visit?: string;
     total_spent: number;
+    stamps_count?: number;
     created_at: string;
 }
 
@@ -24,6 +26,8 @@ export interface SegmentationFilters {
  * Sincroniza dados do cliente a partir de um agendamento.
  * Se o cliente já existir (por telefone), atualiza a última visita.
  * Se não, cria um novo registro.
+ * NOTA: Prefira usar a RPC `process_payment_and_loyalty` ao confirmar pagamento —
+ * ela atualiza last_visit e total_spent atomicamente.
  */
 export async function syncClientFromAppointment(
     tenantId: string,
@@ -33,13 +37,11 @@ export async function syncClientFromAppointment(
 ) {
     if (!customerPhone) return null;
 
-    // Normalizar telefone (apenas números)
     const normalizedPhone = customerPhone.replace(/\D/g, '');
 
-    // 1. Tentar encontrar cliente existente
-    const { data: existingClient, error: fetchError } = await supabase
+    const { data: existingClient } = await supabase
         .from('clients')
-        .select('id, metadata, total_spent')
+        .select('id')
         .eq('tenant_id', tenantId)
         .eq('phone', normalizedPhone)
         .single();
@@ -47,19 +49,12 @@ export async function syncClientFromAppointment(
     const now = new Date().toISOString();
 
     if (existingClient) {
-        // Atualizar última visita
-        const { error: updateError } = await supabase
+        await supabase
             .from('clients')
-            .update({
-                last_visit: now,
-                name: customerName, // Atualiza nome caso tenha mudado
-            })
+            .update({ last_visit: now, name: customerName })
             .eq('id', existingClient.id);
-
-        if (updateError) console.error('Error updating client:', updateError);
         return existingClient.id;
     } else {
-        // Criar novo cliente
         const { data: newClient, error: insertError } = await supabase
             .from('clients')
             .insert({
@@ -82,63 +77,102 @@ export async function syncClientFromAppointment(
     }
 }
 
+// ─────────────────────────────────────────────────────────────────
+//  SEGMENTAÇÃO VIA RPC (banco de dados — escala corretamente)
+// ─────────────────────────────────────────────────────────────────
+
 /**
- * Busca clientes segmentados com base em filtros.
- * Usado pelo Motor de Campanhas.
+ * Filtro 1 — Base total de clientes, paginada.
  */
-export async function getSegmentedClients(tenantId: string, filters: SegmentationFilters) {
-    let query = supabase
-        .from('clients')
-        .select('*')
-        .eq('tenant_id', tenantId);
+export async function getAllClients(
+    tenantId: string,
+    page = 0,
+    pageSize = 50
+): Promise<{ clients: Client[]; totalCount: number }> {
+    const { data, error } = await supabase.rpc('get_crm_clients', {
+        p_tenant_id: tenantId,
+        p_page: page,
+        p_page_size: pageSize,
+    });
 
-    // Filtro: Inatividade (Churn Risk)
-    if (filters.days_inactive) {
-        const dateLimit = new Date();
-        dateLimit.setDate(dateLimit.getDate() - filters.days_inactive);
-        query = query.lt('last_visit', dateLimit.toISOString());
-    }
+    if (error) { console.error('getAllClients error:', error); throw error; }
 
-    // Filtro: Gasto Mínimo (VIP)
-    if (filters.min_spent) {
-        query = query.gte('total_spent', filters.min_spent);
-    }
-
-    // Filtro: Aniversariantes do Mês
-    if (filters.birth_month) {
-        // Nota: Filtrar por mês em campo DATE no Supabase requer function ou range query.
-        // Solução simples via client-side para MVP ou raw SQL se permitido.
-        // Vamos usar uma abordagem mista: trazer dados e filtrar aqui se a base for pequena (<10k),
-        // ou a melhor prática: criar uma View ou RPC. Para MVP v4.0, vamos assumir load aceitável.
-        // TODO: Mover para RPC 'get_birthdays' em v4.1 se escalar.
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-        console.error('Error fetching segmented clients:', error);
-        throw error;
-    }
-
-    // Filtro extra de memória para casos complexos não suportados diretamente na API simples
-    let result = data as Client[];
-
-    if (filters.birth_month) {
-        result = result.filter(c => {
-            if (!c.birth_date) return false;
-            const month = new Date(c.birth_date).getMonth() + 1; // 0-indexed
-            return month === filters.birth_month;
-        });
-    }
-
-    return result;
+    const clients = (data || []) as Client[];
+    const totalCount = clients.length > 0 ? Number((data as any)[0]?.total_count ?? clients.length) : 0;
+    return { clients, totalCount };
 }
 
 /**
- * Atualiza o LTV do cliente após fechar uma comanda.
+ * Filtro 2 — Aniversariantes do mês (null = mês atual).
+ */
+export async function getBirthdayClients(
+    tenantId: string,
+    month?: number
+): Promise<Client[]> {
+    const { data, error } = await supabase.rpc('get_birthday_clients', {
+        p_tenant_id: tenantId,
+        p_month: month ?? null,
+    });
+
+    if (error) { console.error('getBirthdayClients error:', error); throw error; }
+    return (data || []) as Client[];
+}
+
+/**
+ * Filtro 3 — Risco de Evasão (Churn Risk). Usa crm_churn_days do tenant.
+ */
+export async function getChurnRiskClients(
+    tenantId: string,
+    days?: number
+): Promise<(Client & { days_inactive: number })[]> {
+    const { data, error } = await supabase.rpc('get_churn_risk_clients', {
+        p_tenant_id: tenantId,
+        p_days: days ?? null,
+    });
+
+    if (error) { console.error('getChurnRiskClients error:', error); throw error; }
+    return (data || []) as (Client & { days_inactive: number })[];
+}
+
+/**
+ * Filtro 4 — Clientes VIP: top 20% ou acima do threshold.
+ */
+export async function getVipClients(
+    tenantId: string,
+    threshold?: number
+): Promise<(Client & { vip_rank: number })[]> {
+    const { data, error } = await supabase.rpc('get_vip_clients', {
+        p_tenant_id: tenantId,
+        p_threshold: threshold ?? null,
+    });
+
+    if (error) { console.error('getVipClients error:', error); throw error; }
+    return (data || []) as (Client & { vip_rank: number })[];
+}
+
+/**
+ * @deprecated Use getAllClients / getBirthdayClients / getChurnRiskClients / getVipClients.
+ * Mantido para compatibilidade com código legado do CRM modal.
+ */
+export async function getSegmentedClients(tenantId: string, filters: SegmentationFilters): Promise<Client[]> {
+    if (filters.birth_month) {
+        return getBirthdayClients(tenantId, filters.birth_month);
+    }
+    if (filters.days_inactive) {
+        return getChurnRiskClients(tenantId, filters.days_inactive);
+    }
+    if (filters.min_spent) {
+        return getVipClients(tenantId, filters.min_spent);
+    }
+    const { clients } = await getAllClients(tenantId);
+    return clients;
+}
+
+/**
+ * @deprecated A RPC process_payment_and_loyalty já atualiza total_spent atomicamente.
+ * Mantido para compatibilidade.
  */
 export async function updateClientLTV(clientId: string, amount: number) {
-    // RPC seria ideal para atomic update, mas vamos de read-write para MVP
     const { data: client } = await supabase
         .from('clients')
         .select('total_spent')
