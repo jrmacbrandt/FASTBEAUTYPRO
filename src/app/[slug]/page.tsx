@@ -52,6 +52,12 @@ export default function ShopLandingPage() {
                 .single();
 
             if (tenantData) {
+                // 🛡️ [LOCKOUT] Check Maintenance Mode
+                if (tenantData.maintenance_mode) {
+                    router.push('/manutencao');
+                    return;
+                }
+
                 setTenant(tenantData);
 
                 // Load Services

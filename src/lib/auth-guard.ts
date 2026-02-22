@@ -21,7 +21,7 @@ export interface AccessStatus {
  * Isolado do Next.js para facilitar testes unitários.
  */
 export class AuthGuard {
-    private static MASTER_EMAILS = ['jrmacbrandt@gmail.com', 'admin@fastbeauty.com'];
+    private static MASTER_EMAILS = ['jrmacbrandt@gmail.com'];
 
     /**
      * Verifica se o usuário é um Master Admin Supremo.

@@ -48,8 +48,13 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
     const handleLogout = async () => {
         await supabase.auth.signOut();
+        // Clear all session/local data
         localStorage.removeItem('elite_user');
         sessionStorage.removeItem('elite_sidebar_scroll');
+
+        // 🛡️ CRITICAL: Clear Support Mode Cookie
+        document.cookie = "support_tenant_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
         router.push('/login');
     };
 

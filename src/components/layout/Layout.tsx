@@ -55,13 +55,48 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             const maintenanceActive = profile.tenant?.maintenance_mode === true;
             setIsMaintenance(maintenanceActive);
 
-            if (maintenanceActive) {
-                const isMasterUser = profile.email === 'jrmacbrandt@gmail.com' || profile.role === 'master';
-                const hasSupportCookie = document.cookie.includes('support_tenant_id=');
+            // 🚀 CRITICAL: STRICT LOCKOUT LOGIC
+            const isMasterUser = profile.role === 'master' || profile.email === 'jrmacbrandt@gmail.com';
 
-                if (!isMasterUser && !hasSupportCookie && !pathname.includes('/manutencao')) {
-                    window.location.href = '/manutencao';
-                }
+            // Only consider support mode if user IS a master
+            const hasSupportCookie = document.cookie.includes('support_tenant_id=') && isMasterUser;
+
+            if (maintenanceActive && !isMasterUser && !hasSupportCookie && !pathname.includes('/manutencao')) {
+                console.log('🚪 [Layout] Bloqueio de Manutenção Ativo. Redirecionando...');
+                window.location.href = '/manutencao';
+            }
+
+            // Real-time maintenance detector
+            if (profile.tenant_id) {
+                const channel = supabase
+                    .channel(`tenant_maintenance_${profile.tenant_id}`)
+                    .on(
+                        'postgres_changes',
+                        {
+                            event: 'UPDATE',
+                            schema: 'public',
+                            table: 'tenants',
+                            filter: `id=eq.${profile.tenant_id}`
+                        },
+                        (payload) => {
+                            const newMaintenanceMode = payload.new.maintenance_mode;
+                            console.log('🔔 [Realtime] Maintenance status changed:', newMaintenanceMode);
+
+                            if (newMaintenanceMode && !isMasterUser && !hasSupportCookie) {
+                                console.log('🛑 [Realtime] Maintenance started. Signing out user...');
+                                supabase.auth.signOut().then(() => {
+                                    window.location.href = '/manutencao';
+                                });
+                            } else if (!newMaintenanceMode && pathname.includes('/manutencao')) {
+                                window.location.href = profile.role === 'owner' ? '/admin' : '/profissional';
+                            }
+                        }
+                    )
+                    .subscribe();
+
+                return () => {
+                    supabase.removeChannel(channel);
+                };
             }
         }
     }, [profile, pathname, businessType]);
@@ -93,6 +128,8 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         }
     };
 
+    const isReallySupportMode = isSupportMode && (profile?.role === 'master' || profile?.email === 'jrmacbrandt@gmail.com');
+
     if (profileLoading) return null;
 
     return (
@@ -105,7 +142,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 onClose={() => setIsMobileMenuOpen(false)}
             />
             <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-                {isSupportMode && (
+                {isReallySupportMode && (
                     <div className="bg-amber-500 text-black py-2 px-4 flex items-center justify-between z-[100] shadow-lg animate-in slide-in-from-top duration-500">
                         <div className="flex items-center gap-3">
                             <span className="material-symbols-outlined font-bold animate-pulse text-xl">

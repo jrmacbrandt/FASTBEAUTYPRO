@@ -18,7 +18,7 @@ export async function getEffectiveTenantId(): Promise<string | null> {
 
         const isMaster = profile?.role === 'master' ||
             profile?.role === 'admin_master' ||
-            ['jrmacbrandt@gmail.com', 'admin@fastbeauty.com'].includes(profile?.email || '');
+            ['jrmacbrandt@gmail.com'].includes(profile?.email || '');
 
         if (isMaster) return supportId;
     }
