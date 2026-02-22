@@ -208,11 +208,11 @@ Gostaria de agendar o seguinte serviço:
 
 Aguardo sua confirmação! 😊`;
 
-            // 6. Abrir WhatsApp do profissional
+            // 6. Abrir WhatsApp da LOJA (não mais do profissional)
             import('@/lib/whatsapp').then(({ WhatsAppService }) => {
-                const phoneNumber = selection.barber.phone || '';
+                const phoneNumber = tenant.phone || '';
                 WhatsAppService.open(phoneNumber, message);
-                console.log('✅ Agendamento salvo! Abrindo WhatsApp:', { phoneNumber });
+                console.log('✅ Agendamento salvo! Abrindo WhatsApp da loja:', { phoneNumber });
             });
 
             // 7. Buscar selos REAIS existentes (sem gravar novo — o selo só é confirmado pelo profissional)
