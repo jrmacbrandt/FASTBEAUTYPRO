@@ -224,8 +224,16 @@ export default function ScannerPage() {
                                         if (!clientData || !profile?.tenant_id) return;
                                         try {
                                             const { LoyaltyService } = await import('@/lib/loyalty');
-                                            await LoyaltyService.addStamp(profile.tenant_id, clientData.phone);
-                                            alert(`✅ Selo registrado para ${clientData.name}!`);
+                                            const normalizedPhone = clientData.phone.replace(/\D/g, '');
+                                            const result = await LoyaltyService.addStamp(profile.tenant_id, normalizedPhone);
+
+                                            if (result.rewardEarned) {
+                                                alert(`🎉 BRINDE LIBERADO!\n${clientData.name} completou o cartão de fidelidade!\nCartão reiniciado — novo ciclo iniciado.`);
+                                            } else if (result.stampAdded) {
+                                                alert(`✅ Selo registrado para ${clientData.name}!\nTotal: ${result.newStampsCount} selos.`);
+                                            } else {
+                                                alert('Nenhum selo registrado (fidelidade desativada ou erro).');
+                                            }
                                         } catch (err) {
                                             alert('Erro ao registrar selo. Tente novamente.');
                                         } finally {
@@ -241,7 +249,6 @@ export default function ScannerPage() {
                                 </button>
                                 <button
                                     onClick={() => {
-                                        // Ausência: apenas fecha, sem registrar selo
                                         setClientData(null);
                                         setPhone('');
                                         setError('');
