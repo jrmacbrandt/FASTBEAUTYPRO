@@ -107,11 +107,13 @@ export default function DynamicBookingPage() {
                     .eq('tenant_id', tenant.id)
                     .eq('client_phone', cleanPhone)
                     .maybeSingle();
+
+                console.log('Loyalty Data Found:', data);
                 setClientLoyalty(data || { stamps_count: 0 });
             }, 500);
             return () => clearTimeout(timeout);
-        } else {
-            setClientLoyalty(null);
+        } else if (tenant?.id) {
+            setClientLoyalty({ stamps_count: 0 });
         }
     }, [selection.phone, tenant?.id]);
 
@@ -524,9 +526,9 @@ Até lá! 👋`;
                                 </div>
                             </div>
 
-                            {/* Loyalty Card on Success Screen */}
-                            {tenant.loyalty_enabled !== false && (
-                                <div className="mb-8 p-6 rounded-[2rem] bg-black/40 border border-white/10 relative overflow-hidden group text-left">
+                            {/* Loyalty Card on Success Screen - Forced Visibility if not explicitly disabled */}
+                            {tenant && (tenant.loyalty_enabled !== false) && (
+                                <div key="loyalty-card-success" id="loyalty-card-box" className="mb-8 p-6 rounded-[2rem] bg-black/60 border border-white/20 relative overflow-hidden group text-left shadow-2xl backdrop-blur-md">
                                     <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12 transition-transform group-hover:scale-110 duration-700">
                                         <span className="material-symbols-outlined text-8xl" style={{ color: primaryColor }}>loyalty</span>
                                     </div>
