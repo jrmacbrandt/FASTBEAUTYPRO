@@ -670,7 +670,7 @@ Aguardo sua confirmação! 😊`;
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.7rem', borderRadius: '0.5rem', backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}>
                                                 <span className="material-symbols-outlined" style={{ fontSize: '0.75rem', color: '#f59e0b' }}>hourglass_empty</span>
-                                                <p style={{ fontSize: '8px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f59e0b', fontStyle: 'italic', margin: 0 }}>Aguardando confirmação do profissional</p>
+                                                <p style={{ fontSize: '8px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f59e0b', fontStyle: 'italic', margin: 0 }}>Aguardando realização do serviço</p>
                                             </div>
                                         </div>
                                     </div>
@@ -684,7 +684,7 @@ Aguardo sua confirmação! 😊`;
                                 <div className="flex items-start gap-4 mb-8 p-4 bg-amber-500/5 border border-amber-500/10 rounded-2xl">
                                     <span className="material-symbols-outlined text-amber-500">warning</span>
                                     <p className="text-white/80 text-[11px] font-bold uppercase tracking-wider leading-relaxed">
-                                        IMPORTANTE: Caso não receba a confirmação do agendamento por parte do profissional em breve, favor entrar em contato diretamente através dos números abaixo:
+                                        IMPORTANTE: Caso não receba a confirmação do agendamento em breve, favor entrar em contato diretamente através do número abaixo:
                                     </p>
                                 </div>
 
@@ -703,17 +703,7 @@ Aguardo sua confirmação! 😊`;
                                         )}
                                     </div>
 
-                                    {/* Professional Contact - Show only if barber is selected */}
-                                    {selection.barber && (
-                                        <div className="w-full p-6 rounded-2xl bg-white/5 border border-white/5">
-                                            <p className="text-[12px] font-black uppercase tracking-widest text-amber-500/90 mb-1">Profissional: {selection.barber?.full_name}</p>
-                                            {selection.barber?.phone ? (
-                                                <p className="text-white font-black italic uppercase text-2xl select-all tracking-tighter">{selection.barber?.phone}</p>
-                                            ) : (
-                                                <p className="text-white/20 font-black italic uppercase text-xs uppercase tracking-widest">WhatsApp não cadastrado</p>
-                                            )}
-                                        </div>
-                                    )}
+
                                 </div>
                             </div>
 
