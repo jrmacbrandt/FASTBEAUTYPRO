@@ -52,6 +52,7 @@ export default function ShopLandingPage() {
                 .single();
 
             if (tenantData) {
+                // 🛡️ [BLINDADO] Protocolo de Manutenção - NÃO MODIFICAR
                 if (tenantData.maintenance_mode) {
                     router.push('/manutencao');
                     return;
@@ -59,6 +60,7 @@ export default function ShopLandingPage() {
 
                 setTenant(tenantData);
 
+                // 🛡️ [BLINDADO] Protocolo de Manutenção - NÃO MODIFICAR
                 // Realtime block for active customers on the store
                 const channel = supabase
                     .channel(`public_store_maintenance_${tenantData.id}`)

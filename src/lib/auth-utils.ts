@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 
+// 🛡️ [BLINDADO] Protocolo de Manutenção - NÃO MODIFICAR
 export async function getEffectiveTenantId(): Promise<string | null> {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return null;

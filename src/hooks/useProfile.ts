@@ -73,6 +73,7 @@ export function useProfile() {
 
             let finalProfile = { ...data };
 
+            // 🛡️ [BLINDADO] Protocolo de Manutenção - NÃO MODIFICAR
             // 🛡️ Master Impersonation Logic (V12.0)
             if (data.role === 'master' || data.role === 'admin_master' || data.email === 'jrmacbrandt@gmail.com') {
                 const cookies = document.cookie.split('; ');

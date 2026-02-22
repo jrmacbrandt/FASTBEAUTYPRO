@@ -55,20 +55,22 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             const maintenanceActive = profile.tenant?.maintenance_mode === true;
             setIsMaintenance(maintenanceActive);
 
-            if (maintenanceActive) {
-                const isMasterUser = profile.email === 'jrmacbrandt@gmail.com';
-                const hasSupportCookie = document.cookie.includes('support_tenant_id=');
+            // 🛡️ [BLINDADO] Protocolo de Manutenção - NÃO MODIFICAR
+            // 🚀 CRITICAL: STRICT LOCKOUT LOGIC
+            const isMasterUser = profile.role === 'master' || profile.email === 'jrmacbrandt@gmail.com';
 
+            // Only consider support mode if user IS a master
+            const hasSupportCookie = document.cookie.includes('support_tenant_id=') && isMasterUser;
+
+            if (maintenanceActive) {
                 if (!isMasterUser && !hasSupportCookie && !pathname.includes('/manutencao')) {
                     window.location.href = '/manutencao';
                 }
             }
 
+            // 🛡️ [BLINDADO] REALI-TIME MAINTENANCE - NÃO MODIFICAR
             // Realtime maintenance detector (kicks out non-masters instantly)
             if (profile.tenant_id) {
-                const isMasterUser = profile.email === 'jrmacbrandt@gmail.com';
-                const hasSupportCookie = document.cookie.includes('support_tenant_id=');
-
                 const channel = supabase
                     .channel(`tenant_maintenance_${profile.tenant_id}`)
                     .on(

@@ -24,6 +24,7 @@ export class AuthGuard {
     private static MASTER_EMAILS = ['jrmacbrandt@gmail.com'];
 
     /**
+     * 🛡️ [BLINDADO] Protocolo de Manutenção - NÃO MODIFICAR
      * Verifica se o usuário é um Master Admin Supremo.
      * @param email Email do usuário
      * @param role Role vinda do JWT/Profile

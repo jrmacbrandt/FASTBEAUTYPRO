@@ -130,6 +130,13 @@ When user's prompt is NOT in English:
 - Skills: `.agent/skills/` (Project)
 - Runtime Scripts: `.agent/skills/<skill>/scripts/`
 
+### 🛡️ Protocolo "BLINDAR" (Global Anti-Regression)
+
+**When the user says "blindar", "blinde", or adds a "🛡️ [BLINDADO]" tag to code:**
+1. **Absolute Lockdown**: The functionality marked as BLINDADO is considered PERFECT and FINAL.
+2. **Zero Modification**: You are strictly FORBIDDEN from modifying, refactoring, or optimizing the logic within any shielded block unless the user EXPLICITLY authorizes it by saying "desbloqueie" or offering direct permission to alter that specific shielded logic.
+3. **Surrounding Code**: You may add code *around* the shielded block to introduce new features, but the execution flow and logic of the shielded code must remain untouched. 
+
 ### 🧠 Read → Understand → Apply
 
 ```
