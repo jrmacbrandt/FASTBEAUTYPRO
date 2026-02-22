@@ -41,7 +41,7 @@ export default function ProfessionalAgendaPage() {
 
             setTodayAgenda(data.filter(a => a.scheduled_at.startsWith(todayStr) && a.status === 'scheduled'));
             setUpcomingAgenda(data.filter(a => a.scheduled_at > todayStr && a.status === 'scheduled'));
-            setHistoryAgenda(data.filter(a => a.status === 'completed' || a.status === 'absent' || a.status === 'paid').reverse());
+            setHistoryAgenda(data.filter(a => a.status === 'completed' || a.status === 'paid').reverse());
         }
         setLoading(false);
     };
@@ -192,6 +192,21 @@ export default function ProfessionalAgendaPage() {
             .update({ status: 'scheduled' })
             .eq('id', id);
         if (!error) fetchAgenda();
+    };
+
+    const handleDeleteAppointment = async (id: string) => {
+        if (confirm('Tem certeza que deseja EXCLUIR este agendamento definitivamente do banco de dados?')) {
+            setLoading(true);
+            try {
+                const { error } = await supabase.from('appointments').delete().eq('id', id);
+                if (error) throw error;
+                fetchAgendaRef.current();
+            } catch (err: any) {
+                alert('Erro ao excluir: ' + err.message);
+            } finally {
+                setLoading(false);
+            }
+        }
     };
 
     const handleSaveDraft = async () => {
@@ -400,7 +415,8 @@ export default function ProfessionalAgendaPage() {
                                     colors={colors}
                                     businessType={businessType}
                                     onAbsent={handleMarkAbsent}
-                                    onUndo={null}
+                                    onUndo={handleUndoAbsent}
+                                    onDelete={handleDeleteAppointment}
                                     onStart={handleOpenCommand}
                                     onFinalize={handleFinalizeOrder}
                                     showDate={currentTab === 'proximos'}
@@ -642,7 +658,7 @@ export default function ProfessionalAgendaPage() {
 }
 
 // PREMIUM AGENDA CARD COMPONENT
-const AgendaCard = ({ item, colors, businessType, onAbsent, onStart, onFinalize, showDate }: any) => {
+const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onDelete, onStart, onFinalize, showDate }: any) => {
     const isToday = !showDate;
     const status = item.status;
     const hasOrder = item.orders && item.orders.length > 0;
@@ -673,14 +689,23 @@ const AgendaCard = ({ item, colors, businessType, onAbsent, onStart, onFinalize,
                     <span className="text-lg font-black italic tracking-tighter" style={{ color: colors.text }}>R$ {Number(hasOrder ? item.orders[0].total_value : (item.services?.price || 0)).toFixed(2)}</span>
                 </div>
 
-                <div className="flex gap-2 w-full md:w-auto">
+                <div className="flex gap-2 w-full md:w-auto mt-4 md:mt-0">
+                    <div className="flex items-center gap-2 bg-black/20 p-2 rounded-xl border border-white/5 mr-2">
+                        <span className={`text-[8px] font-black uppercase tracking-widest ${status === 'scheduled' ? 'text-primary' : 'text-slate-500'}`}>Confirmado</span>
+                        <button
+                            onClick={() => status === 'scheduled' ? onAbsent(item.id) : (onUndo && onUndo(item.id))}
+                            className={`relative w-10 h-5 rounded-full transition-colors cursor-pointer ${status === 'scheduled' ? 'bg-primary/20' : 'bg-rose-500/20'}`}
+                        >
+                            <div className={`absolute top-0.5 bottom-0.5 w-4 rounded-full transition-all ${status === 'scheduled' ? 'left-0.5 bg-primary' : 'right-0.5 bg-rose-500'}`}></div>
+                        </button>
+                        <span className={`text-[8px] font-black uppercase tracking-widest ${status === 'absent' ? 'text-rose-500' : 'text-slate-500'}`}>Ausente</span>
+                    </div>
+
                     {status === 'scheduled' && (
                         <>
-                            {!showDate && (
-                                <button onClick={() => onAbsent(item.id)} className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all bg-rose-500/10 text-rose-500 hover:bg-rose-500/20" title="Marcar Ausente">
-                                    <span className="material-symbols-outlined text-[20px]">person_off</span>
-                                </button>
-                            )}
+                            <button onClick={() => onDelete && onDelete(item.id)} className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 shrink-0" title="Excluir Agendamento">
+                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                            </button>
                             <button
                                 onClick={() => onStart(item)}
                                 className="h-10 md:h-12 px-4 md:px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 italic border"
