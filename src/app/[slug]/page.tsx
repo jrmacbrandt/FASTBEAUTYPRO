@@ -597,17 +597,19 @@ Aguardo sua confirmação! 😊`;
                     )}
                     {step === 6 && (
                         <div className="animate-in fade-in zoom-in duration-700 max-w-2xl mx-auto text-center">
-                            <div className="flex flex-col md:flex-row items-center justify-center gap-6 mb-10 text-left">
-                                <span className="material-symbols-outlined text-7xl md:text-8xl text-emerald-500 bg-emerald-500/10 p-4 rounded-[2rem] border border-emerald-500/20 shadow-[0_0_50px_rgba(16,185,129,0.1)]">check_circle</span>
-                                <div>
-                                    <h2 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white leading-[0.8] mb-2">
-                                        AGENDAMENTO <br /><span style={{ color: theme.primary }}>REALIZADO COM SUCESSO!</span>
-                                    </h2>
-                                    <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em]">
-                                        Sua solicitação foi enviada para o WhatsApp do profissional.
-                                    </p>
-                                </div>
+                            <div className="mb-10 text-left">
+                                <h2 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white leading-[0.85] mb-3 flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-emerald-500 shrink-0" style={{ fontSize: '2.2rem' }}>check_circle</span>
+                                    AGENDAMENTO
+                                </h2>
+                                <h2 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter leading-[0.85] mb-2" style={{ color: theme.primary }}>
+                                    REALIZADO COM SUCESSO!
+                                </h2>
+                                <p className="text-white/40 text-[10px] font-black uppercase tracking-[0.2em] mt-3">
+                                    Sua solicitação foi enviada para o WhatsApp do profissional.
+                                </p>
                             </div>
+
 
                             {/* ====== LOYALTY CARD ====== */}
                             <div
