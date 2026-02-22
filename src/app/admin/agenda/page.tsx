@@ -93,13 +93,37 @@ export default function AdminAgendaPage() {
 
     const handleToggleStatus = async (id: string, newStatus: 'scheduled' | 'absent') => {
         if (!profile?.tenant_id) return;
-        setLoading(true);
-        if (newStatus === 'absent') {
-            await supabase.from('appointments').update({ status: 'absent' }).eq('id', id);
+
+        if (newStatus === 'scheduled') {
+            if (!confirm('Deseja realmente retornar este(a) cliente para a agenda do(a) profissional?')) return;
         } else {
-            await supabase.from('appointments').update({ status: 'scheduled' }).eq('id', id);
+            if (!confirm('Deseja realmente prestar a ausência deste(a) cliente?')) return;
         }
-        await fetchAgenda(profile.tenant_id);
+
+        setLoading(true);
+        try {
+            await supabase.from('appointments').update({ status: newStatus }).eq('id', id);
+            await fetchAgenda(profile.tenant_id);
+        } catch (err: any) {
+            alert('Erro ao atualizar status: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDeleteAppointment = async (id: string) => {
+        if (!confirm('Tem certeza que deseja EXCLUIR este agendamento definitivamente do banco de dados?')) return;
+
+        setLoading(true);
+        try {
+            const { error } = await supabase.from('appointments').delete().eq('id', id);
+            if (error) throw error;
+            if (profile?.tenant_id) await fetchAgenda(profile.tenant_id);
+        } catch (err: any) {
+            alert('Erro ao excluir: ' + err.message);
+        } finally {
+            setLoading(false);
+        }
     };
 
     // 🔴 REALTIME: Canal Supabase + polling de segurança como fallback
@@ -213,7 +237,15 @@ export default function AdminAgendaPage() {
                                 </div>
                                 <div className="grid gap-4">
                                     {todayItems.map(item => (
-                                        <AdminAgendaCard key={item.id} item={item} colors={colors} isToday onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }} onToggleStatus={handleToggleStatus} />
+                                        <AdminAgendaCard
+                                            key={item.id}
+                                            item={item}
+                                            colors={colors}
+                                            isToday
+                                            onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }}
+                                            onToggleStatus={handleToggleStatus}
+                                            onDelete={handleDeleteAppointment}
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -228,7 +260,14 @@ export default function AdminAgendaPage() {
                                 </div>
                                 <div className="grid gap-4">
                                     {upcomingItems.map(item => (
-                                        <AdminAgendaCard key={item.id} item={item} colors={colors} onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }} onToggleStatus={handleToggleStatus} />
+                                        <AdminAgendaCard
+                                            key={item.id}
+                                            item={item}
+                                            colors={colors}
+                                            onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }}
+                                            onToggleStatus={handleToggleStatus}
+                                            onDelete={handleDeleteAppointment}
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -249,7 +288,14 @@ export default function AdminAgendaPage() {
                             <div className="space-y-4">
                                 <div className="grid gap-4">
                                     {absentItems.map(item => (
-                                        <AdminAgendaCard key={item.id} item={item} colors={colors} onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }} onToggleStatus={handleToggleStatus} />
+                                        <AdminAgendaCard
+                                            key={item.id}
+                                            item={item}
+                                            colors={colors}
+                                            onEdit={(appt) => { setSelectedAppointment(appt); setIsEditModalOpen(true); }}
+                                            onToggleStatus={handleToggleStatus}
+                                            onDelete={handleDeleteAppointment}
+                                        />
                                     ))}
                                 </div>
                             </div>
@@ -276,7 +322,7 @@ export default function AdminAgendaPage() {
     );
 }
 
-const AdminAgendaCard = ({ item, colors, isToday, onEdit, onToggleStatus }: { item: Appointment, colors: any, isToday?: boolean, onEdit: (appt: Appointment) => void, onToggleStatus: (id: string, s: 'scheduled' | 'absent') => void }) => {
+const AdminAgendaCard = ({ item, colors, isToday, onEdit, onToggleStatus, onDelete }: { item: Appointment, colors: any, isToday?: boolean, onEdit: (appt: Appointment) => void, onToggleStatus: (id: string, s: 'scheduled' | 'absent') => void, onDelete: (id: string) => void }) => {
     const status = item.status;
     return (
         <div className="group border p-5 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
@@ -310,6 +356,14 @@ const AdminAgendaCard = ({ item, colors, isToday, onEdit, onToggleStatus }: { it
                     </button>
                     <span className={`text-[8px] font-black uppercase tracking-widest ${status === 'absent' ? 'text-rose-500' : 'text-slate-500'}`}>Ausente</span>
                 </div>
+                <button
+                    onClick={() => onDelete(item.id)}
+                    className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all shrink-0 hover:bg-rose-500/10 text-rose-500/60 hover:text-rose-500"
+                    style={{ backgroundColor: `${colors.text}0d` }}
+                    title="Excluir agendamento permanentemente"
+                >
+                    <span className="material-symbols-outlined text-[20px]">delete</span>
+                </button>
                 <button
                     onClick={() => onEdit(item)}
                     className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-all shrink-0 hover:bg-black/5 ml-2"
