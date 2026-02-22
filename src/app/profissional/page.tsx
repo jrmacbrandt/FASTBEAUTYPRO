@@ -157,7 +157,7 @@ export default function ProfessionalAgendaPage() {
     };
 
     const handleMarkAbsent = async (id: string) => {
-        if (confirm('Marcar ausência? (Isso removerá 1 selo do cartão fidelidade do cliente)')) {
+        if (confirm('Deseja realmente marcar a ausência deste(a) cliente?')) {
             setLoading(true);
             try {
                 const { data: { session } } = await supabase.auth.getSession();
