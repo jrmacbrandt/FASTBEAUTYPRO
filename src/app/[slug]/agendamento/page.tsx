@@ -262,14 +262,16 @@ Até lá! 👋`;
             // 7. Success Step — ENSURE loyalty record exists and refresh state
             const cleanPhoneSuccess = selection.phone.replace(/\D/g, '');
 
-            // Explicitly UPSERT loyalty record so even new clients have one
+            // Explicitly UPSERT loyalty record so even new clients have one.
+            // Includes client_id to link the loyalty record to the CRM profile.
             const { data: loyaltyUpsert, error: loyaltyErr } = await supabase
                 .from('client_loyalty')
                 .upsert({
                     tenant_id: tenant.id,
                     client_phone: cleanPhoneSuccess,
-                    stamps_count: 0 // Initialize at 0 if not exists
-                }, { onConflict: 'tenant_id,client_phone' })
+                    client_id: clientData?.id ?? null,
+                    stamps_count: 0 // Initialize at 0; upsert won't overwrite existing count
+                }, { onConflict: 'tenant_id,client_phone', ignoreDuplicates: false })
                 .select('stamps_count')
                 .single();
 
