@@ -152,12 +152,12 @@ function CRMContent() {
             // 1. Fetch Tenant Settings First (Need thresholds for segments)
             const { data: tenantData } = await supabase
                 .from('tenants')
-                .select('id, loyalty_enabled, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone, crm_churn_days, crm_vip_threshold')
+                .select('id, loyalty_enabled, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone')
                 .eq('id', tenantId)
                 .single();
 
-            const churnD = tenantData?.crm_churn_days || 45;
-            const vipT = tenantData?.crm_vip_threshold || 500;
+            const churnD = 45;
+            const vipT = 500;
 
             // 2. Optimized parallel fetch for data
             const [
@@ -240,14 +240,12 @@ function CRMContent() {
                 vipClients: vipClients.length,
                 birthdays: bdayClients.length,
                 loyaltyPending: loyaltyClientsList.length,
-                churnDays: tenantData?.crm_churn_days || 45,
-                vipThreshold: tenantData?.crm_vip_threshold || 500
+                churnDays: 45,
+                vipThreshold: 500
             });
 
             setCampaigns(campaignsResult.data || []);
 
-            // Background cleanup (3 months rule)
-            supabase.rpc('cleanup_old_campaigns').then(() => console.log('Cleanup trigger sent'));
 
         } catch (error) {
             console.error('Error fetching CRM stats:', error);
@@ -527,16 +525,17 @@ function CRMContent() {
             const { error } = await supabase
                 .from('tenants')
                 .update({
-                    crm_churn_days: tempChurnDays,
-                    crm_vip_threshold: tempVipThreshold
+                    loyalty_enabled: loyaltyEnabled,
+                    loyalty_target: selectedLoyaltyTarget,
+                    loyalty_reward_service_id: rewardService,
+                    loyalty_reward_product_id: rewardProduct
                 })
                 .eq('id', tenant.id);
 
             if (error) throw error;
 
-            setTenant({ ...tenant, crm_churn_days: tempChurnDays, crm_vip_threshold: tempVipThreshold });
-            fetchData(tenant.id); // Refresh counts and lists
-            alert('Configuração de segmentação atualizada!');
+            fetchData(tenant.id);
+            alert('Configuração atualizada!');
         } catch (err: any) {
             alert('Erro ao salvar configuração: ' + err.message);
         } finally {
@@ -548,8 +547,8 @@ function CRMContent() {
         setIsClientModalOpen(true);
         if (!tenant) return;
 
-        setTempChurnDays(tenant.crm_churn_days || 45);
-        setTempVipThreshold(tenant.crm_vip_threshold || 500);
+        setTempChurnDays(45);
+        setTempVipThreshold(500);
 
         try {
             const listToLoad = engagementData[activeFilter] || [];
