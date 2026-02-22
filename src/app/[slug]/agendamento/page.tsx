@@ -531,84 +531,104 @@ Até lá! 👋`;
                                 </div>
                             </div>
 
-                            {/* Loyalty Card on Success Screen - FORCED VISIBILITY */}
-                            <div key="loyalty-card-success-forced" id="loyalty-card-box" className="mb-10 p-8 rounded-[2.5rem] bg-zinc-900 border-2 border-white/10 relative overflow-hidden group text-left shadow-2xl">
-                                <div className="absolute -right-4 -bottom-4 opacity-10 rotate-12 transition-transform group-hover:scale-110 duration-700">
-                                    <span className="material-symbols-outlined text-9xl" style={{ color: primaryColor || '#f2b90d' }}>loyalty</span>
+                            {/* Loyalty Card on Success Screen - INLINE STYLES for guaranteed visibility */}
+                            <div
+                                key="loyalty-card-success-forced"
+                                id="loyalty-card-box"
+                                className="mb-10 relative overflow-hidden group text-left"
+                                style={{
+                                    padding: '2rem',
+                                    borderRadius: '2.5rem',
+                                    backgroundColor: '#18181b',
+                                    border: '2px solid rgba(255,255,255,0.12)',
+                                    boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+                                }}
+                            >
+                                <div style={{ position: 'absolute', right: '-1rem', bottom: '-1rem', opacity: 0.1, transform: 'rotate(12deg)' }}>
+                                    <span className="material-symbols-outlined" style={{ fontSize: '6rem', color: primaryColor || '#f2b90d' }}>loyalty</span>
                                 </div>
-                                <div className="relative z-10 space-y-6">
-                                    <div className="flex justify-between items-center">
+                                <div style={{ position: 'relative', zIndex: 10 }}>
+                                    {/* Header Row */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                                         <div>
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <div className="size-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                                                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500">FIDELIDADE ATIVA</p>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                                <div style={{ width: '0.5rem', height: '0.5rem', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+                                                <p style={{ fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.3em', color: '#10b981', margin: 0 }}>FIDELIDADE ATIVA</p>
                                             </div>
-                                            <h3 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-none text-white">
+                                            <h3 style={{ fontSize: '1.5rem', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.05em', color: '#ffffff', margin: 0 }}>
                                                 {(clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5)
                                                     ? '🔥 PRÊMIO LIBERADO!'
-                                                    : `${loyaltyTarget || 5} Selos + 1 Grátis`}
+                                                    : `${loyaltyTarget || 5} Selos = 1 Grátis`}
                                             </h3>
                                         </div>
-                                        <div className="px-4 py-2 rounded-full bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white">
+                                        <div style={{ padding: '0.25rem 1rem', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#ffffff', whiteSpace: 'nowrap' }}>
                                             {clientLoyalty?.stamps_count || 0} / {loyaltyTarget || 5}
                                         </div>
                                     </div>
 
-                                    <div className="flex gap-2.5 flex-wrap">
-                                        {[...Array(Number(loyaltyTarget) || 5)].map((_, i) => {
+                                    {/* Stamp Grid */}
+                                    <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+                                        {[...Array(Math.max(1, Number(loyaltyTarget) || 5))].map((_, i) => {
                                             const isEarned = i < (clientLoyalty?.stamps_count || 0);
                                             const isProvisional = i === (clientLoyalty?.stamps_count || 0);
 
                                             return (
                                                 <div
                                                     key={i}
-                                                    className={`size-10 md:size-12 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${(isEarned || isProvisional)
-                                                        ? 'border-white/20'
-                                                        : 'border-white/5 bg-white/5 opacity-10'
-                                                        } ${isProvisional ? 'animate-pulse' : ''}`}
-                                                    style={isEarned ? {
-                                                        backgroundColor: `${primaryColor || '#f2b90d'}40`,
-                                                        borderColor: `${primaryColor || '#f2b90d'}`,
-                                                        boxShadow: `0 0 15px ${primaryColor || '#f2b90d'}30`
-                                                    } : isProvisional ? {
-                                                        borderColor: `${primaryColor || '#f2b90d'}50`,
-                                                        borderStyle: 'dashed'
-                                                    } : {}}
+                                                    style={{
+                                                        width: '2.5rem',
+                                                        height: '2.5rem',
+                                                        borderRadius: '50%',
+                                                        border: `2px ${isProvisional ? 'dashed' : 'solid'} ${isEarned ? (primaryColor || '#f2b90d') : isProvisional ? `${primaryColor || '#f2b90d'}80` : 'rgba(255,255,255,0.1)'}`,
+                                                        backgroundColor: isEarned ? `${primaryColor || '#f2b90d'}40` : 'rgba(255,255,255,0.03)',
+                                                        boxShadow: isEarned ? `0 0 15px ${primaryColor || '#f2b90d'}30` : 'none',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        opacity: (!isEarned && !isProvisional) ? 0.3 : 1,
+                                                        transition: 'all 0.5s',
+                                                    }}
                                                 >
                                                     {isEarned ? (
-                                                        <span className="material-symbols-outlined text-xl font-bold" style={{ color: primaryColor || '#f2b90d' }}>star</span>
+                                                        <span className="material-symbols-outlined" style={{ fontSize: '1.25rem', fontVariationSettings: "'FILL' 1", color: primaryColor || '#f2b90d' }}>star</span>
                                                     ) : isProvisional ? (
-                                                        <span className="material-symbols-outlined text-base opacity-60" style={{ color: primaryColor || '#f2b90d' }}>star_half</span>
+                                                        <span className="material-symbols-outlined" style={{ fontSize: '1rem', opacity: 0.6, color: primaryColor || '#f2b90d' }}>star_half</span>
                                                     ) : (
-                                                        <span className="text-[12px] font-black opacity-30 text-white">{i + 1}</span>
+                                                        <span style={{ fontSize: '12px', fontWeight: 900, opacity: 0.4, color: '#ffffff' }}>{i + 1}</span>
                                                     )}
                                                 </div>
                                             );
                                         })}
                                         {/* Final Reward Slot */}
-                                        <div className={`size-10 md:size-12 rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-700 ${(clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5)
-                                            ? 'text-black scale-110 animate-pulse'
-                                            : 'border-white/10 bg-white/5 opacity-30'
-                                            }`}
-                                            style={(clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5) ? {
-                                                backgroundColor: primaryColor || '#f2b90d',
-                                                borderColor: primaryColor || '#f2b90d',
-                                                boxShadow: `0 0 30px ${primaryColor || '#f2b90d'}60`
-                                            } : {}}
+                                        <div
+                                            style={{
+                                                width: '2.5rem',
+                                                height: '2.5rem',
+                                                borderRadius: '50%',
+                                                border: `2px dashed ${(clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5) ? (primaryColor || '#f2b90d') : 'rgba(255,255,255,0.15)'}`,
+                                                backgroundColor: (clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5) ? (primaryColor || '#f2b90d') : 'rgba(255,255,255,0.03)',
+                                                boxShadow: (clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5) ? `0 0 30px ${primaryColor || '#f2b90d'}60` : 'none',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                opacity: (clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5) ? 1 : 0.3,
+                                                transition: 'all 0.7s',
+                                            }}
                                         >
-                                            <span className="material-symbols-outlined text-xl" style={(clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5) ? { color: '#000' } : { color: '#fff' }}>redeem</span>
+                                            <span className="material-symbols-outlined" style={{ fontSize: '1.25rem', color: (clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5) ? '#000' : '#fff' }}>redeem</span>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-2 border-t border-white/5 pt-4">
-                                        <p className="text-[11px] font-bold uppercase tracking-widest text-white/60 leading-relaxed italic">
+                                    {/* Footer */}
+                                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '1rem' }}>
+                                        <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, fontStyle: 'italic', margin: '0 0 0.75rem' }}>
                                             {(clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5)
                                                 ? 'Parabéns! Você completou o cartão. Apresente ao profissional para resgatar.'
                                                 : `Faltam ${Math.max(0, (loyaltyTarget || 5) - (clientLoyalty?.stamps_count || 0))} selos para sua próxima cortesia.`}
                                         </p>
-                                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 w-fit">
-                                            <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                            <p className="text-[9px] font-black uppercase tracking-widest text-emerald-500 italic">
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', width: 'fit-content' }}>
+                                            <div style={{ width: '0.375rem', height: '0.375rem', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+                                            <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#10b981', fontStyle: 'italic', margin: 0 }}>
                                                 Progresso atualizado em tempo real
                                             </p>
                                         </div>
