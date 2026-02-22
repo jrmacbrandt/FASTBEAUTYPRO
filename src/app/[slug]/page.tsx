@@ -215,36 +215,9 @@ Aguardo sua confirmação! 😊`;
                 console.log('✅ Agendamento salvo! Abrindo WhatsApp:', { phoneNumber });
             });
 
-            // 7. Loyalty Upsert: create or increment stamp for this client
+            // 7. Buscar selos REAIS existentes (sem gravar novo — o selo só é confirmado pelo profissional)
             const loyaltyPhone = cleanPhone;
             try {
-                const { data: existingLoyalty } = await supabase
-                    .from('client_loyalty')
-                    .select('*')
-                    .eq('tenant_id', tenant.id)
-                    .eq('client_phone', loyaltyPhone)
-                    .maybeSingle();
-
-                if (existingLoyalty) {
-                    await supabase
-                        .from('client_loyalty')
-                        .update({
-                            stamps_count: existingLoyalty.stamps_count + 1,
-                            last_stamp_at: new Date().toISOString()
-                        })
-                        .eq('id', existingLoyalty.id);
-                } else {
-                    await supabase
-                        .from('client_loyalty')
-                        .insert({
-                            tenant_id: tenant.id,
-                            client_phone: loyaltyPhone,
-                            stamps_count: 1,
-                            last_stamp_at: new Date().toISOString()
-                        });
-                }
-
-                // 8. Fetch updated loyalty to display on success screen
                 const { data: loyaltyRow } = await supabase
                     .from('client_loyalty')
                     .select('stamps_count')
@@ -252,13 +225,15 @@ Aguardo sua confirmação! 😊`;
                     .eq('client_phone', loyaltyPhone)
                     .maybeSingle();
 
-                setClientLoyaltyStamps(loyaltyRow?.stamps_count || 1);
-                console.log('✅ Loyalty atualizado:', loyaltyRow);
+                // Mostra os selos reais existentes. O cartão adicionará +1 provisório visualmente.
+                setClientLoyaltyStamps(loyaltyRow?.stamps_count || 0);
+                console.log('📌 Selos reais (pré-confirmação):', loyaltyRow?.stamps_count || 0);
             } catch (loyaltyErr) {
-                console.warn('⚠️ Loyalty update failed (non-critical):', loyaltyErr);
+                console.warn('⚠️ Loyalty fetch failed (non-critical):', loyaltyErr);
+                setClientLoyaltyStamps(0);
             }
 
-            // 9. Move to Success Screen
+            // 8. Move to Success Screen
             setStep(6);
 
         } catch (err: any) {
@@ -639,33 +614,39 @@ Aguardo sua confirmação! 😊`;
                                                 <p style={{ fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.3em', color: '#10b981', margin: 0 }}>FIDELIDADE ATIVA</p>
                                             </div>
                                             <h3 style={{ fontSize: '1.3rem', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.04em', color: '#ffffff', margin: 0 }}>
-                                                {clientLoyaltyStamps >= (tenant?.loyalty_target || 5)
-                                                    ? '🔥 PRÊMIO LIBERADO!'
-                                                    : `${tenant?.loyalty_target || 5} Selos = 1 Grátis`}
+                                                {tenant?.loyalty_target || 5} Selos = 1 Grátis
                                             </h3>
                                         </div>
+                                        {/* Badge: confirmed + provisional */}
                                         <div style={{ padding: '0.3rem 0.9rem', borderRadius: '9999px', backgroundColor: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', fontSize: '11px', fontWeight: 900, color: '#fff', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                                            {clientLoyaltyStamps} / {tenant?.loyalty_target || 5}
+                                            {clientLoyaltyStamps + 1} / {tenant?.loyalty_target || 5}
                                         </div>
                                     </div>
 
-                                    {/* Stamp row */}
+                                    {/* Stamp row — confirmed + 1 provisional */}
                                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
                                         {[...Array(Math.max(1, Number(tenant?.loyalty_target) || 5))].map((_, i) => {
-                                            const isEarned = i < clientLoyaltyStamps;
-                                            const isLatest = i === clientLoyaltyStamps - 1;
+                                            const isConfirmed = i < clientLoyaltyStamps;
+                                            const isProvisional = i === clientLoyaltyStamps; // next slot = the new booking
                                             return (
                                                 <div key={i} style={{
                                                     width: '2.25rem', height: '2.25rem', borderRadius: '50%',
-                                                    border: `2px solid ${isEarned ? (theme.primary) : 'rgba(255,255,255,0.1)'}`,
-                                                    backgroundColor: isEarned ? `${theme.primary}35` : 'rgba(255,255,255,0.03)',
-                                                    boxShadow: isLatest ? `0 0 14px ${theme.primary}50` : 'none',
+                                                    border: isProvisional
+                                                        ? '2px dashed #f59e0b'
+                                                        : `2px solid ${isConfirmed ? theme.primary : 'rgba(255,255,255,0.1)'}`,
+                                                    backgroundColor: isProvisional
+                                                        ? 'rgba(245,158,11,0.12)'
+                                                        : isConfirmed ? `${theme.primary}35` : 'rgba(255,255,255,0.03)',
+                                                    boxShadow: isProvisional ? '0 0 12px rgba(245,158,11,0.4)' : 'none',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    opacity: isEarned ? 1 : 0.3, transition: 'all 0.4s',
+                                                    opacity: (isConfirmed || isProvisional) ? 1 : 0.3,
+                                                    transition: 'all 0.4s',
                                                 }}>
-                                                    {isEarned
-                                                        ? <span className="material-symbols-outlined" style={{ fontSize: '1.1rem', color: theme.primary }}>star</span>
-                                                        : <span style={{ fontSize: '11px', fontWeight: 900, color: '#fff', opacity: 0.5 }}>{i + 1}</span>
+                                                    {isProvisional
+                                                        ? <span className="material-symbols-outlined" style={{ fontSize: '1rem', color: '#f59e0b' }}>hourglass_empty</span>
+                                                        : isConfirmed
+                                                            ? <span className="material-symbols-outlined" style={{ fontSize: '1.1rem', color: theme.primary }}>star</span>
+                                                            : <span style={{ fontSize: '11px', fontWeight: 900, color: '#fff', opacity: 0.5 }}>{i + 1}</span>
                                                     }
                                                 </div>
                                             );
@@ -673,25 +654,24 @@ Aguardo sua confirmação! 😊`;
                                         {/* Reward slot */}
                                         <div style={{
                                             width: '2.25rem', height: '2.25rem', borderRadius: '50%',
-                                            border: `2px dashed ${clientLoyaltyStamps >= (tenant?.loyalty_target || 5) ? theme.primary : 'rgba(255,255,255,0.15)'}`,
-                                            backgroundColor: clientLoyaltyStamps >= (tenant?.loyalty_target || 5) ? theme.primary : 'rgba(255,255,255,0.03)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            opacity: clientLoyaltyStamps >= (tenant?.loyalty_target || 5) ? 1 : 0.3,
+                                            border: `2px dashed rgba(255,255,255,0.15)`,
+                                            backgroundColor: 'rgba(255,255,255,0.03)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3,
                                         }}>
-                                            <span className="material-symbols-outlined" style={{ fontSize: '1.1rem', color: clientLoyaltyStamps >= (tenant?.loyalty_target || 5) ? '#000' : '#fff' }}>redeem</span>
+                                            <span className="material-symbols-outlined" style={{ fontSize: '1.1rem', color: '#fff' }}>redeem</span>
                                         </div>
                                     </div>
 
                                     {/* Footer */}
                                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.875rem' }}>
                                         <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.55)', fontStyle: 'italic', margin: '0 0 0.6rem', lineHeight: 1.5 }}>
-                                            {clientLoyaltyStamps >= (tenant?.loyalty_target || 5)
-                                                ? 'Parabéns! Apresente ao profissional para resgatar sua cortesia.'
-                                                : `Faltam ${Math.max(0, (tenant?.loyalty_target || 5) - clientLoyaltyStamps)} selos para sua próxima cortesia.`}
+                                            Faltam {Math.max(0, (tenant?.loyalty_target || 5) - clientLoyaltyStamps - 1)} selos confirmados para sua próxima cortesia.
                                         </p>
-                                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.7rem', borderRadius: '0.5rem', backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                                            <div style={{ width: '0.35rem', height: '0.35rem', borderRadius: '50%', backgroundColor: '#10b981' }}></div>
-                                            <p style={{ fontSize: '8px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', color: '#10b981', fontStyle: 'italic', margin: 0 }}>Progresso atualizado</p>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.3rem 0.7rem', borderRadius: '0.5rem', backgroundColor: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.25)' }}>
+                                                <span className="material-symbols-outlined" style={{ fontSize: '0.75rem', color: '#f59e0b' }}>hourglass_empty</span>
+                                                <p style={{ fontSize: '8px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#f59e0b', fontStyle: 'italic', margin: 0 }}>Aguardando confirmação do profissional</p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -177,8 +177,8 @@ export default function ScannerPage() {
                                                     <div
                                                         key={i}
                                                         className={`size-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 ${i < stampsCount
-                                                                ? 'border-white/5'
-                                                                : 'border-white/5 bg-white/5 opacity-20'
+                                                            ? 'border-white/5'
+                                                            : 'border-white/5 bg-white/5 opacity-20'
                                                             }`}
                                                         style={i < stampsCount ? {
                                                             backgroundColor: `${colors.primary}30`,
@@ -195,8 +195,8 @@ export default function ScannerPage() {
                                                 ))}
                                                 {/* Final Reward Slot */}
                                                 <div className={`size-10 rounded-xl border-2 border-dashed flex items-center justify-center transition-all ${isRewardReady
-                                                        ? 'scale-110 animate-pulse'
-                                                        : 'border-white/20 bg-white/5 opacity-50'
+                                                    ? 'scale-110 animate-pulse'
+                                                    : 'border-white/20 bg-white/5 opacity-50'
                                                     }`}
                                                     style={isRewardReady ? {
                                                         backgroundColor: colors.primary,
@@ -218,17 +218,38 @@ export default function ScannerPage() {
                                 );
                             })()}
 
-                            <div className="pt-4 border-t" style={{ borderColor: colors.border }}>
+                            <div className="pt-4 border-t space-y-3" style={{ borderColor: colors.border }}>
                                 <button
-                                    onClick={() => {
-                                        setClientData(null);
-                                        setPhone('');
-                                        setError('');
+                                    onClick={async () => {
+                                        if (!clientData || !profile?.tenant_id) return;
+                                        try {
+                                            const { LoyaltyService } = await import('@/lib/loyalty');
+                                            await LoyaltyService.addStamp(profile.tenant_id, clientData.phone);
+                                            alert(`✅ Selo registrado para ${clientData.name}!`);
+                                        } catch (err) {
+                                            alert('Erro ao registrar selo. Tente novamente.');
+                                        } finally {
+                                            setClientData(null);
+                                            setPhone('');
+                                            setError('');
+                                        }
                                     }}
                                     className="w-full font-black py-4 rounded-xl uppercase text-xs tracking-widest transition-all active:scale-95 shadow-xl"
                                     style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}
                                 >
-                                    CONFIRMAR PRESENÇA
+                                    CONFIRMAR PAGAMENTO + REGISTRAR SELO
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        // Ausência: apenas fecha, sem registrar selo
+                                        setClientData(null);
+                                        setPhone('');
+                                        setError('');
+                                    }}
+                                    className="w-full font-black py-3 rounded-xl uppercase text-xs tracking-widest transition-all active:scale-95 border"
+                                    style={{ backgroundColor: 'transparent', borderColor: 'rgba(239,68,68,0.3)', color: 'rgb(239,68,68)' }}
+                                >
+                                    MARCAR AUSÊNCIA (sem selo)
                                 </button>
                             </div>
                         </div>

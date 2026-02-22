@@ -137,5 +137,30 @@ export const LoyaltyService = {
             .maybeSingle();
 
         return data;
+    },
+
+    /**
+     * Removes (rolls back) a loyalty stamp — used when client is marked absent or does not pay.
+     */
+    async removeStamp(tenantId: string, clientPhone: string) {
+        const { data: existing } = await supabase
+            .from('client_loyalty')
+            .select('id, stamps_count')
+            .eq('tenant_id', tenantId)
+            .eq('client_phone', clientPhone)
+            .maybeSingle();
+
+        if (!existing || existing.stamps_count <= 0) {
+            console.log('removeStamp: no stamps to remove for', clientPhone);
+            return false;
+        }
+
+        await supabase
+            .from('client_loyalty')
+            .update({ stamps_count: Math.max(0, existing.stamps_count - 1) })
+            .eq('id', existing.id);
+
+        console.log('✅ Stamp removed for', clientPhone, '— new count:', existing.stamps_count - 1);
+        return true;
     }
 };
