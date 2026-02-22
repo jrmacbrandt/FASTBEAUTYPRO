@@ -19,9 +19,7 @@ function CRMContent() {
         churnRisk: 0,
         vipClients: 0,
         birthdays: 0,
-        loyaltyPending: 0,
-        churnDays: 45,
-        vipThreshold: 500
+        loyaltyPending: 0
     });
     const [loyaltyEnabled, setLoyaltyEnabled] = useState(true);
     const [savingLoyalty, setSavingLoyalty] = useState(false);
@@ -61,11 +59,6 @@ function CRMContent() {
         file: null as File | null
     });
 
-    // CRM v6.0 Segmentation Config
-    const [isSavingConfig, setIsSavingConfig] = useState(false);
-    const [tempChurnDays, setTempChurnDays] = useState(45);
-    const [tempVipThreshold, setTempVipThreshold] = useState(500);
-
     const [isClientModalOpen, setIsClientModalOpen] = useState(false);
     const [clientsList, setClientsList] = useState<any[]>([]);
     const [selectedClients, setSelectedClients] = useState<string[]>([]);
@@ -101,10 +94,6 @@ function CRMContent() {
     const [isDeletingCampaign, setIsDeletingCampaign] = useState<string | null>(null);
     const [isClearingHistory, setIsClearingHistory] = useState(false);
 
-    // Campaign v6.0 States
-    const [campaignTargetGroup, setCampaignTargetGroup] = useState<'all' | 'churn' | 'vip' | 'birthdays' | 'loyalty'>('all');
-    const [selectedCampaignClients, setSelectedCampaignClients] = useState<string[]>([]);
-
     const searchParams = useSearchParams();
 
     // CRM v5.1: Efeito para disparo automático vindo da criação de campanha
@@ -133,9 +122,6 @@ function CRMContent() {
         }
     }, [searchParams, loading, engagementData]);
 
-    // Derived: Current clients for the selected campaign segment
-    const campaignTargetClients = engagementData[campaignTargetGroup] || [];
-
 
 
     useEffect(() => {
@@ -144,23 +130,13 @@ function CRMContent() {
         }
     }, [profile]);
 
-    const fetchData = async (tid?: string) => {
-        const tenantId = tid || profile?.tenant_id;
-        if (!tenantId) return;
+    const fetchData = async (tid: string) => {
+        if (!tid) return;
         setLoading(true);
         try {
-            // 1. Fetch Tenant Settings First (Need thresholds for segments)
-            const { data: tenantData } = await supabase
-                .from('tenants')
-                .select('id, loyalty_enabled, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone')
-                .eq('id', tenantId)
-                .single();
-
-            const churnD = 45;
-            const vipT = 500;
-
-            // 2. Optimized parallel fetch for data
+            // optimized fetchData using Promise.all for parallel performance
             const [
+                { data: tenantData },
                 { count: total },
                 churnClients,
                 vipClients,
@@ -168,18 +144,17 @@ function CRMContent() {
                 { data: appointments },
                 { data: allClients },
                 servicesResult,
-                productsResult,
-                campaignsResult
+                productsResult
             ] = await Promise.all([
-                supabase.from('clients').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId),
-                getSegmentedClients(tenantId, { days_inactive: churnD }),
-                getSegmentedClients(tenantId, { min_spent: vipT }),
-                getSegmentedClients(tenantId, { birth_month: new Date().getMonth() + 1 }),
-                supabase.from('appointments').select('client_id').eq('tenant_id', tenantId).eq('status', 'paid'),
-                supabase.from('clients').select('*').eq('tenant_id', tenantId).order('name'),
-                supabase.from('loyalty_rewards_services').select('id, name, duration_minutes, image_url').eq('tenant_id', tenantId).eq('active', true),
-                supabase.from('loyalty_rewards_products').select('id, name, description, barcode, current_stock, min_threshold, unit_type, image_url').eq('tenant_id', tenantId),
-                supabase.from('campaigns').select('*, campaign_items!campaign_id(count)').eq('tenant_id', tenantId).order('created_at', { ascending: false })
+                supabase.from('tenants').select('id, loyalty_enabled, loyalty_target, loyalty_reward_service_id, loyalty_reward_product_id, name, business_type, phone').eq('id', tid).single(),
+                supabase.from('clients').select('*', { count: 'exact', head: true }).eq('tenant_id', tid),
+                getSegmentedClients(tid, { days_inactive: 45 }),
+                getSegmentedClients(tid, { min_spent: 500 }),
+                getSegmentedClients(tid, { birth_month: new Date().getMonth() + 1 }),
+                supabase.from('appointments').select('client_id').eq('tenant_id', tid).eq('status', 'paid'),
+                supabase.from('clients').select('*').eq('tenant_id', tid).order('name'),
+                supabase.from('loyalty_rewards_services').select('id, name, duration_minutes, image_url').eq('tenant_id', tid).eq('active', true),
+                supabase.from('loyalty_rewards_products').select('id, name, description, barcode, current_stock, min_threshold, unit_type, image_url').eq('tenant_id', tid)
             ]);
 
             const currentTarget = tenantData?.loyalty_target || 5;
@@ -239,13 +214,20 @@ function CRMContent() {
                 churnRisk: churnClients.length,
                 vipClients: vipClients.length,
                 birthdays: bdayClients.length,
-                loyaltyPending: loyaltyClientsList.length,
-                churnDays: 45,
-                vipThreshold: 500
+                loyaltyPending: loyaltyClientsList.length
             });
 
-            setCampaigns(campaignsResult.data || []);
+            // 7. Fetch Campaign History
+            const { data: campaignData } = await supabase
+                .from('campaigns')
+                .select(`
+                    *,
+                    campaign_items!campaign_id (count)
+                `)
+                .eq('tenant_id', tid)
+                .order('created_at', { ascending: false });
 
+            setCampaigns(campaignData || []);
 
         } catch (error) {
             console.error('Error fetching CRM stats:', error);
@@ -518,76 +500,45 @@ function CRMContent() {
         }
     };
 
-    const handleSaveCRMConfig = async () => {
-        if (!tenant) return;
-        setIsSavingConfig(true);
-        try {
-            const { error } = await supabase
-                .from('tenants')
-                .update({
-                    loyalty_enabled: loyaltyEnabled,
-                    loyalty_target: selectedLoyaltyTarget,
-                    loyalty_reward_service_id: rewardService,
-                    loyalty_reward_product_id: rewardProduct
-                })
-                .eq('id', tenant.id);
-
-            if (error) throw error;
-
-            fetchData(tenant.id);
-            alert('Configuração atualizada!');
-        } catch (err: any) {
-            alert('Erro ao salvar configuração: ' + err.message);
-        } finally {
-            setIsSavingConfig(false);
-        }
-    };
-
     const openClientManager = async () => {
         setIsClientModalOpen(true);
         if (!tenant) return;
 
-        setTempChurnDays(45);
-        setTempVipThreshold(500);
-
         try {
-            const listToLoad = engagementData[activeFilter] || [];
-            setClientsList(listToLoad);
+            const { data, error } = await supabase
+                .from('clients')
+                .select('*')
+                .eq('tenant_id', tenant.id)
+                .order('name');
+
+            if (error) throw error;
+            setClientsList(data || []);
         } catch (err) {
             console.error('Load clients failed:', err);
         }
     };
 
-    const openCampaignModal = (client?: any, type: 'recovery' | 'birthday' | 'loyalty' | 'manual' = 'manual') => {
-        if (client) {
-            // Individual Mode
-            setCampaignClient(client);
-            setSelectedCampaignType(type);
-            setSelectedCampaignClients([client.id]);
-            setCampaignTargetGroup('all'); // Default to all if single client
+    const openCampaignModal = (client: any, type: 'recovery' | 'birthday' | 'loyalty' | 'manual') => {
+        setCampaignClient(client);
+        setSelectedCampaignType(type);
+        setSelectedIncentiveType(null);
 
-            const firstName = client.name.split(' ')[0];
-            const storeName = tenant?.name || 'nossa loja';
-            let template = '';
+        const firstName = client.name.split(' ')[0];
+        const storeName = tenant?.name || 'nossa loja';
+        let template = '';
 
-            if (type === 'recovery') template = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
-            else if (type === 'birthday') template = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
-            else if (type === 'loyalty') {
-                const stamps = client.stamps_count || 0;
-                template = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
-            } else template = `Olá, ${firstName}! 👋 Como você está?`;
-
-            setCampaignMessage(template);
+        if (type === 'recovery') {
+            template = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
+        } else if (type === 'birthday') {
+            template = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
+        } else if (type === 'loyalty') {
+            const stamps = client.stamps_count || 0;
+            template = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
         } else {
-            // Bulk Mode
-            setCampaignClient(null);
-            setSelectedCampaignType(null);
-            setCampaignTargetGroup(activeFilter === 'all' ? 'all' : activeFilter);
-            setSelectedCampaignClients((engagementData[activeFilter] || []).map(c => c.id));
-            setCampaignMessage(`Olá [NOME]! 👋`);
+            template = `Olá, ${firstName}! 👋 Como você está?`;
         }
 
-        setSelectedIncentiveType(null);
+        setCampaignMessage(template);
         setIsCampaignModalOpen(true);
     };
 
@@ -601,14 +552,14 @@ function CRMContent() {
 
         let baseTemplate = '';
         if (newType === 'recovery') {
-            baseTemplate = `Olá, ${campaignClient ? campaignClient.name.split(' ')[0] : '[NOME]'}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
+            baseTemplate = `Olá, ${firstName}! 👋 Sentimos sua falta aqui na ${storeName}. Preparamos uma condição especial para você voltar a cuidar do seu visual esta semana. Que tal um horário? ✂️`;
         } else if (newType === 'birthday') {
-            baseTemplate = `Parabéns, ${campaignClient ? campaignClient.name.split(' ')[0] : '[NOME]'}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
+            baseTemplate = `Parabéns, ${firstName}! 🎉 A equipe da ${storeName} te deseja o melhor. Como presente, você ganhou um benefício exclusivo no seu próximo serviço conosco. Vamos agendar? 🎁`;
         } else if (newType === 'loyalty') {
-            const stamps = campaignClient?.stamps_count || 0;
-            baseTemplate = `Oi, ${campaignClient ? campaignClient.name.split(' ')[0] : '[NOME]'}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
+            const stamps = campaignClient.stamps_count || 0;
+            baseTemplate = `Oi, ${firstName}! 🌟 Passando para avisar que você já tem ${stamps} selos no seu cartão fidelidade! Falta muito pouco para o seu prêmio. Garanta seu horário e complete seu cartão! 🏆`;
         } else {
-            baseTemplate = `Olá, ${campaignClient ? campaignClient.name.split(' ')[0] : '[NOME]'}! 👋 Como você está?`;
+            baseTemplate = `Olá, ${firstName}! 👋 Como você está?`;
         }
 
         let incentivePart = '';
@@ -880,68 +831,6 @@ function CRMContent() {
     // Correcting the change detection: ensure we check the exact values
     const hasChanges = tenant && Number(selectedLoyaltyTarget) !== Number(tenant.loyalty_target);
 
-    const handleAddToQueue = async () => {
-        if (!tenant || selectedCampaignClients.length === 0) return;
-
-        try {
-            // 1. Create the Campaign record
-            const { data: campaign, error: cError } = await supabase
-                .from('campaigns')
-                .insert({
-                    tenant_id: tenant.id,
-                    name: `Campanha Segmentada - ${new Date().toLocaleDateString()}`,
-                    status: 'COMPLETED',
-                    filters: { segment: campaignTargetGroup },
-                    message_template: campaignMessage
-                })
-                .select()
-                .single();
-
-            if (cError) throw cError;
-
-            // 2. Prepare queue items
-            const newQueueItems = campaignTargetClients
-                .filter(c => selectedCampaignClients.includes(c.id))
-                .map(c => {
-                    let personalizedMsg = campaignMessage.replace(/\[NOME\]/g, c.name.split(' ')[0]);
-
-                    if (selectedIncentiveType === 'service' && rewardService) {
-                        const sName = services.find(s => s.id === rewardService)?.name;
-                        personalizedMsg += ` 🎉 Você ganhou um(a) ${sName} grátis!`;
-                    } else if (selectedIncentiveType === 'product' && rewardProduct) {
-                        const pName = products.find(p => p.id === rewardProduct)?.name;
-                        personalizedMsg += ` 🎁 Ganhe um(a) ${pName} em sua próxima visita!`;
-                    }
-
-                    return {
-                        ...c,
-                        campaign_id: campaign.id,
-                        personalizedMessage: personalizedMsg
-                    };
-                });
-
-            setQueue(newQueueItems);
-            setCurrentQueueIndex(0);
-            setIsQueueActive(true);
-            setQueueFinished(false);
-            setIsCampaignModalOpen(false);
-
-            // 3. Log items in background
-            await Promise.all(newQueueItems.map(item =>
-                supabase.from('campaign_items').insert({
-                    campaign_id: item.campaign_id,
-                    client_name: item.name,
-                    client_phone: item.phone,
-                    status: 'PENDING'
-                })
-            ));
-
-        } catch (err: any) {
-            console.error('Add to queue failed:', err);
-            alert('Erro ao iniciar campanha: ' + err.message);
-        }
-    };
-
     const loyaltyPreviewCircles = useMemo(() => {
         const count = selectedLoyaltyTarget || 5;
         return Array.from({ length: count });
@@ -972,7 +861,7 @@ function CRMContent() {
                     </p>
                 </div>
                 <button
-                    onClick={() => openCampaignModal()}
+                    onClick={() => window.location.href = '/admin/crm/nova-campanha'}
                     className="w-full md:w-auto text-black font-black uppercase text-[10px] tracking-[0.2em] px-8 py-4 rounded-2xl transition-all shadow-2xl active:scale-95 flex items-center justify-center gap-3 group"
                     style={{ backgroundColor: colors?.primary || '#f2b90d', color: businessType === 'salon' ? '#fff' : '#000' }}
                 >
@@ -1000,37 +889,31 @@ function CRMContent() {
                     value={stats.churnRisk}
                     icon="person_cancel"
                     color="text-rose-500"
-                    desc={`+${stats.churnDays} dias sem visita`}
+                    desc="+45 dias sem visita"
                     alert={stats.churnRisk > 0}
                     isActive={activeFilter === 'churn'}
                     onClick={() => setActiveFilter('churn')}
-                    onAction={openClientManager}
-                    actionLabel="EDITAR"
                     colors={colors}
                 />
                 <MetricCard
                     title="Aniversariantes"
                     value={stats.birthdays}
                     icon="cake"
-                    color="text-indigo-400"
-                    desc="Este Mês"
+                    color="text-pink-500"
+                    desc="No mês atual"
                     alert={stats.birthdays > 0}
                     isActive={activeFilter === 'birthdays'}
                     onClick={() => setActiveFilter('birthdays')}
-                    onAction={openClientManager}
-                    actionLabel="EDITAR"
                     colors={colors}
                 />
                 <MetricCard
                     title="Clientes VIP"
                     value={stats.vipClients}
-                    icon="star"
-                    color="text-[#f2b90d]"
-                    desc={`Gasto > R$ ${stats.vipThreshold}`}
+                    icon="auto_awesome"
+                    color="text-emerald-400"
+                    desc="LTV > R$ 500"
                     isActive={activeFilter === 'vip'}
                     onClick={() => setActiveFilter('vip')}
-                    onAction={openClientManager}
-                    actionLabel="EDITAR"
                     colors={colors}
                 />
                 <MetricCard
@@ -1343,10 +1226,10 @@ function CRMContent() {
                                     <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Motor de Retenção Ativo</p>
                                 </div>
                                 <button
-                                    onClick={() => setIsCampaignModalOpen(true)}
+                                    onClick={() => window.location.href = `/admin/crm/nova-campanha?segment=${activeFilter}`}
                                     className="bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[9px] tracking-widest px-6 py-3 rounded-xl transition-all shadow-lg active:scale-95 whitespace-nowrap"
                                 >
-                                    CRIAR CAMPANHA
+                                    CRIAR ESTA CAMPANHA
                                 </button>
                             </div>
                             <div className="px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase tracking-widest flex items-center gap-2">
@@ -1529,21 +1412,16 @@ function CRMContent() {
                 </div>
             </div>
 
-            {/* MODAL: GESTÃO DE SEGMENTO & CLIENTES (v6.0) */}
+            {/* MODAL: GESTÃO DE CLIENTES (CIRÚRGICO) */}
             {isClientModalOpen && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
-                        style={{ backgroundColor: colors?.cardBg }}
+                    <div className="border w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}20` }}
                     >
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                        <div className="p-8 border-b flex items-center justify-between" style={{ borderColor: `${colors?.border}20` }}>
                             <div>
-                                <h3 className="text-2xl font-black italic uppercase" style={{ color: colors?.text }}>
-                                    {activeFilter === 'all' ? 'Base Ativa' :
-                                        activeFilter === 'churn' ? 'Risco de Evasão' :
-                                            activeFilter === 'vip' ? 'Clientes VIP' :
-                                                activeFilter === 'birthdays' ? 'Aniversariantes' : 'Próximos Prêmios'}
-                                </h3>
-                                <p className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: colors?.textMuted }}>Configuração & Gestão de Lista</p>
+                                <h3 className="text-2xl font-black italic uppercase" style={{ color: colors?.text }}>Gestão da Base</h3>
+                                <p className="text-xs font-bold uppercase tracking-widest mt-1" style={{ color: colors?.textMuted }}>Excluir ou Sincronizar Clientes</p>
                             </div>
                             <button
                                 onClick={() => setIsClientModalOpen(false)}
@@ -1554,43 +1432,9 @@ function CRMContent() {
                             </button>
                         </div>
 
-                        <div className="p-8 space-y-8 max-h-[70vh] overflow-y-auto scrollbar-hide">
-                            {/* Parameter Editing Section */}
-                            {(activeFilter === 'churn' || activeFilter === 'vip') && (
-                                <div className="p-6 rounded-3xl border border-white/5 space-y-4" style={{ backgroundColor: `${colors?.secondaryBg}40` }}>
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2" style={{ color: colors?.primary }}>
-                                        <span className="material-symbols-outlined text-sm">settings</span>
-                                        Regra de Classificação
-                                    </h4>
-                                    <div className="flex items-end gap-4">
-                                        <div className="flex-1 space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1">
-                                                {activeFilter === 'churn' ? 'Dias sem Visita' : 'Valor Gasto Toual (R$)'}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={activeFilter === 'churn' ? tempChurnDays : tempVipThreshold}
-                                                onChange={(e) => activeFilter === 'churn' ? setTempChurnDays(Number(e.target.value)) : setTempVipThreshold(Number(e.target.value))}
-                                                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
-                                            />
-                                        </div>
-                                        <button
-                                            onClick={handleSaveCRMConfig}
-                                            disabled={isSavingConfig}
-                                            className="bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[10px] tracking-widest px-6 py-4 rounded-2xl transition-all h-[54px] active:scale-95 disabled:opacity-50"
-                                        >
-                                            {isSavingConfig ? '...' : 'APLICAR'}
-                                        </button>
-                                    </div>
-                                    <p className="text-[8px] font-bold italic opacity-40 uppercase ml-1">
-                                        {activeFilter === 'churn' ? '* Define quantos dias de inatividade classificam o cliente como risco.' : '* Define o valor total gasto necessário para ser VIP.'}
-                                    </p>
-                                </div>
-                            )}
-
-                            <div className="space-y-4">
-                                <div className="flex items-center justify-between px-4">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500">Lista de Membros ({clientsList.length})</h4>
+                        <div className="p-6 max-h-[50vh] overflow-y-auto scrollbar-hide">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between px-4 py-2 border-b border-white/5 mb-4">
                                     <label className="flex items-center gap-3 cursor-pointer group">
                                         <input
                                             type="checkbox"
@@ -1601,182 +1445,165 @@ function CRMContent() {
                                                 else setSelectedClients([]);
                                             }}
                                         />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d]">TUDO</span>
+                                        <span className="text-xs font-black uppercase tracking-widest text-[#f2b90d]">Selecionar Todos ({clientsList.length})</span>
                                     </label>
                                 </div>
 
                                 {clientsList.length === 0 ? (
-                                    <div className="text-center py-10 opacity-20">
-                                        <span className="material-symbols-outlined text-4xl mb-4 block">person_search</span>
-                                        <p className="text-xs font-black uppercase tracking-widest">Nenhum cliente enquadrado</p>
+                                    <div className="text-center py-10">
+                                        <span className="material-symbols-outlined text-4xl text-slate-700 mb-4 block">person_search</span>
+                                        <p className="text-slate-500 text-xs font-black uppercase tracking-widest">Nenhum cliente cadastrado ainda</p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-2">
-                                        {clientsList.map((client) => (
-                                            <div key={client.id} className="flex items-center justify-between p-4 rounded-2xl border transition-all group hover:border-[#f2b90d1a]"
-                                                style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}1a` }}
-                                            >
-                                                <div className="flex items-center gap-4">
-                                                    <input
-                                                        type="checkbox"
-                                                        className="size-5 rounded-lg border-white/10 bg-white/5 checked:bg-[#f2b90d] transition-all"
-                                                        checked={selectedClients.includes(client.id)}
-                                                        onChange={(e) => {
-                                                            if (e.target.checked) setSelectedClients(prev => [...prev, client.id]);
-                                                            else setSelectedClients(prev => prev.filter(uid => uid !== client.id));
-                                                        }}
-                                                    />
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black italic bg-white/5" style={{ color: colors?.primary }}>
-                                                            {client.name.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[12px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
-                                                            <p className="text-[10px] font-bold mt-1" style={{ color: colors?.textMuted }}>{client.phone}</p>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="text-right flex flex-col items-end">
-                                                    <p className="text-sm font-black" style={{ color: colors?.primary }}>R$ {Number(client.total_spent || 0).toFixed(0)}</p>
-                                                    <p className="text-[8px] uppercase font-black tracking-tighter opacity-40">LTV</p>
+                                    clientsList.map((client) => (
+                                        <div key={client.id} className="flex items-center justify-between p-4 rounded-2xl border transition-all group"
+                                            style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <input
+                                                    type="checkbox"
+                                                    className="size-5 rounded-lg border-white/10 bg-white/5 checked:bg-[#f2b90d] transition-all"
+                                                    checked={selectedClients.includes(client.id)}
+                                                    onChange={(e) => {
+                                                        if (e.target.checked) setSelectedClients(prev => [...prev, client.id]);
+                                                        else setSelectedClients(prev => prev.filter(uid => uid !== client.id));
+                                                    }}
+                                                />
+                                                <div>
+                                                    <p className="text-[14px] font-black uppercase italic leading-none" style={{ color: colors?.text }}>{client.name}</p>
+                                                    <p className="text-[13px] font-bold mt-1.5" style={{ color: colors?.textMuted }}>{client.phone}</p>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
+                                            <div className="text-right flex flex-col items-end">
+                                                <p className="text-base font-black" style={{ color: colors?.primary }}>R$ {Number(client.total_spent || 0).toFixed(2)}</p>
+                                                <p className="text-[10px] uppercase font-black tracking-tighter" style={{ color: colors?.textMuted }}>Gasto Total</p>
+                                            </div>
+                                        </div>
+                                    ))
                                 )}
                             </div>
                         </div>
 
-                        <div className="p-8 border-t border-white/5 flex gap-4 bg-black/20">
+                        <div className="p-8 border-t border-white/5 flex gap-4">
                             <button
                                 onClick={() => setIsClientModalOpen(false)}
-                                className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all"
+                                className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-xs tracking-widest py-4 rounded-2xl transition-all"
                             >
-                                FECHAR
+                                CANCELAR
                             </button>
                             <button
                                 onClick={handleDeleteClients}
                                 disabled={selectedClients.length === 0 || isDeleting}
-                                className="flex-1 bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all border border-rose-500/20 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-30"
+                                className="flex-1 bg-rose-500 hover:bg-rose-600 disabled:opacity-30 disabled:grayscale text-white font-black uppercase text-xs tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2"
                             >
-                                <span className="material-symbols-outlined text-sm">{isDeleting ? 'sync' : 'delete'}</span>
-                                {isDeleting ? '...' : `EXCLUIR (${selectedClients.length})`}
+                                <span className="material-symbols-outlined text-lg">{isDeleting ? 'sync' : 'delete_forever'}</span>
+                                {isDeleting ? 'EXCLUINDO...' : `EXCLUIR SELECIONADOS (${selectedClients.length})`}
                             </button>
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* MODAL: CAMPANHA WHATSAPP v6.0 (INTELIGENTE & EM MASSA) */}
-            {isCampaignModalOpen && (
+            {/* MODAL: CAMPANHA WHATSAPP (TEMPLATES INTELIGENTES) */}
+            {isCampaignModalOpen && campaignClient && (
                 <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="border border-white/10 w-full max-w-2xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
-                        style={{ backgroundColor: colors?.cardBg }}
+                    <div className="border w-full max-w-lg rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}20` }}
                     >
-                        <div className="p-8 border-b border-white/5 flex items-center justify-between">
+                        <div className="p-8 border-b flex items-center justify-between" style={{ borderColor: `${colors?.border}20` }}>
                             <div>
-                                <h3 className="text-xl font-black italic uppercase leading-none mb-1" style={{ color: colors?.text }}>Criar Nova Campanha</h3>
-                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Central de Engajamento Personalizado</p>
+                                <h3 className="text-xl font-black italic uppercase leading-none mb-1" style={{ color: colors?.text }}>Engajar Cliente</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>{campaignClient.name}</p>
                             </div>
                             <button onClick={() => setIsCampaignModalOpen(false)} className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center" style={{ color: colors?.textMuted }}>
                                 <span className="material-symbols-outlined">close</span>
                             </button>
                         </div>
 
-                        <div className="flex flex-col md:flex-row h-[70vh] overflow-hidden">
-                            {/* Setup de Campanha */}
-                            <div className="flex-1 p-8 space-y-6 overflow-y-auto scrollbar-hide border-r border-white/5">
-                                <div className="space-y-3">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Público Alvo (Segmento)</label>
-                                    <select
-                                        value={campaignTargetGroup}
-                                        onChange={(e) => setCampaignTargetGroup(e.target.value)}
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-xs font-bold text-white focus:border-[#f2b90d] outline-none transition-all appearance-none"
-                                    >
-                                        <option value="all">Base Ativa (Todos)</option>
-                                        <option value="churn">Risco de Evasão</option>
-                                        <option value="vip">Clientes VIP</option>
-                                        <option value="birthdays">Aniversariantes</option>
-                                        <option value="loyalty">Próximos Prêmios</option>
-                                    </select>
-                                </div>
+                        <div className="p-8 space-y-6">
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
+                                    onClick={() => handleToggleCampaignType('recovery')}
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'recovery'
+                                        ? 'bg-rose-500 border-rose-500 text-white'
+                                        : 'bg-white/5 border-white/10 text-white/40'
+                                        }`}
+                                >
+                                    <span className={`material-symbols-outlined ${selectedCampaignType === 'recovery' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>person_remove</span>
+                                    <span className="text-[8px] font-black uppercase">Recuperar</span>
+                                </button>
+                                <button
+                                    onClick={() => handleToggleCampaignType('birthday')}
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'birthday'
+                                        ? 'bg-emerald-500 border-emerald-500 text-white'
+                                        : 'bg-white/5 border-white/10 text-white/40'
+                                        }`}
+                                >
+                                    <span className={`material-symbols-outlined ${selectedCampaignType === 'birthday' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>celebration</span>
+                                    <span className="text-[8px] font-black uppercase">Aniversário</span>
+                                </button>
+                                <button
+                                    onClick={() => handleToggleCampaignType('loyalty')}
+                                    className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'loyalty'
+                                        ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                        : 'bg-white/5 border-white/10 text-white/40'
+                                        }`}
+                                >
+                                    <span className={`material-symbols-outlined ${selectedCampaignType === 'loyalty' ? '' : 'text-white/20'} group-hover:scale-110 transition-transform`}>loyalty</span>
+                                    <span className="text-[8px] font-black uppercase">Fidelidade</span>
+                                </button>
+                            </div>
 
-                                <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-3">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Incentivo de Prêmio</label>
+                                <div className="grid grid-cols-2 gap-3">
                                     <button
-                                        onClick={() => handleToggleCampaignType('recovery')}
-                                        className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'recovery' ? 'bg-rose-500 border-rose-500 text-white' : 'bg-white/5 border-white/10 text-white/40'}`}
+                                        onClick={() => handleToggleIncentive('service')}
+                                        disabled={!rewardService}
+                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 hover:border-[#f2b90d] hover:bg-transparent ${selectedIncentiveType === 'service'
+                                            ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                            : 'bg-white/5 border-white/10 border-dashed text-white/40'
+                                            }`}
                                     >
-                                        <span className={`material-symbols-outlined text-lg ${selectedCampaignType === 'recovery' ? '' : 'text-white/20'}`}>person_remove</span>
-                                        <span className="text-[8px] font-black uppercase">Recuperar</span>
+                                        <span className={`material-symbols-outlined text-sm ${selectedIncentiveType === 'service' ? '' : 'text-white/20'}`}>content_cut</span>
+                                        Serviço de Prêmio
                                     </button>
                                     <button
-                                        onClick={() => handleToggleCampaignType('birthday')}
-                                        className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'birthday' ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white/5 border-white/10 text-white/40'}`}
+                                        onClick={() => handleToggleIncentive('product')}
+                                        disabled={!rewardProduct}
+                                        className={`p-2.5 rounded-xl border transition-all text-[8px] font-black uppercase flex items-center justify-center gap-2 disabled:opacity-30 hover:border-[#f2b90d] hover:bg-transparent ${selectedIncentiveType === 'product'
+                                            ? 'bg-[#f2b90d] border-[#f2b90d] text-black'
+                                            : 'bg-white/5 border-white/10 border-dashed text-white/40'
+                                            }`}
                                     >
-                                        <span className={`material-symbols-outlined text-lg ${selectedCampaignType === 'birthday' ? '' : 'text-white/20'}`}>celebration</span>
-                                        <span className="text-[8px] font-black uppercase">Aniversário</span>
+                                        <span className={`material-symbols-outlined text-sm ${selectedIncentiveType === 'product' ? '' : 'text-white/20'}`}>shopping_bag</span>
+                                        Produto de Prêmio
                                     </button>
-                                    <button
-                                        onClick={() => handleToggleCampaignType('loyalty')}
-                                        className={`p-3 rounded-2xl transition-all flex flex-col items-center gap-1 group border hover:border-[#f2b90d] hover:bg-transparent ${selectedCampaignType === 'loyalty' ? 'bg-[#f2b90d] border-[#f2b90d] text-black' : 'bg-white/5 border-white/10 text-white/40'}`}
-                                    >
-                                        <span className={`material-symbols-outlined text-lg ${selectedCampaignType === 'loyalty' ? '' : 'text-white/20'}`}>loyalty</span>
-                                        <span className="text-[8px] font-black uppercase">Fidelidade</span>
-                                    </button>
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Mensagem Base</label>
-                                    <textarea
-                                        value={campaignMessage}
-                                        onChange={(e) => setCampaignMessage(e.target.value)}
-                                        rows={4}
-                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-xs font-bold text-white focus:border-[#f2b90d] outline-none transition-all resize-none"
-                                        placeholder="Olá [NOME], vimos que você não aparece faz tempo..."
-                                    />
-                                    <p className="text-[8px] font-bold text-slate-600 uppercase italic ml-1">* Use [NOME] para personalizar automaticamente.</p>
                                 </div>
                             </div>
 
-                            {/* Seletor de Clientes */}
-                            <div className="w-full md:w-72 bg-black/20 p-6 flex flex-col shrink-0">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h4 className="text-[9px] font-black uppercase tracking-widest text-slate-500">Clientes ({selectedCampaignClients.length})</h4>
-                                    <button
-                                        onClick={() => setSelectedCampaignClients(selectedCampaignClients.length === campaignTargetClients.length ? [] : campaignTargetClients.map(c => c.id))}
-                                        className="text-[8px] font-black text-[#f2b90d] uppercase"
-                                    >
-                                        {selectedCampaignClients.length === campaignTargetClients.length ? 'NENHUM' : 'TODOS'}
-                                    </button>
-                                </div>
-
-                                <div className="flex-1 overflow-y-auto space-y-2 scrollbar-hide">
-                                    {campaignTargetClients.length === 0 ? (
-                                        <p className="text-[10px] text-center text-slate-700 py-10 uppercase font-black italic">Nenhum cliente</p>
-                                    ) : (
-                                        campaignTargetClients.map(client => (
-                                            <label key={client.id} className="flex items-center gap-3 p-3 rounded-xl border border-white/5 bg-white/5 cursor-pointer hover:bg-white/10 transition-all">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedCampaignClients.includes(client.id)}
-                                                    onChange={(e) => e.target.checked
-                                                        ? setSelectedCampaignClients(prev => [...prev, client.id])
-                                                        : setSelectedCampaignClients(prev => prev.filter(id => id !== client.id))
-                                                    }
-                                                    className="size-4 rounded-md border-white/10 bg-white/5 checked:bg-[#f2b90d]"
-                                                />
-                                                <div className="overflow-hidden">
-                                                    <p className="text-[10px] font-black text-white truncate uppercase italic leading-none">{client.name}</p>
-                                                    <p className="text-[8px] font-bold text-slate-500 mt-1">{client.phone}</p>
-                                                </div>
-                                            </label>
-                                        ))
-                                    )}
+                            <div className="space-y-3">
+                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500 ml-1">Mensagem do WhatsApp</label>
+                                <textarea
+                                    value={campaignMessage}
+                                    onChange={(e) => setCampaignMessage(e.target.value)}
+                                    rows={5}
+                                    className="w-full border rounded-2xl p-4 text-xs placeholder:text-slate-700 focus:outline-none transition-all resize-none"
+                                    style={{
+                                        backgroundColor: `${colors?.secondaryBg}80`,
+                                        borderColor: `${colors?.border}40`,
+                                        color: colors?.text,
+                                        boxShadow: `0 0 0 1px ${colors?.border}20`
+                                    }}
+                                />
+                                <div className="flex items-center gap-2 px-1">
+                                    <span className="size-1.5 rounded-full bg-[#f2b90d] animate-pulse"></span>
+                                    <p className="text-[8px] font-bold text-slate-500 uppercase tracking-widest italic">Variáveis ativas: {campaignClient.name.split(' ')[0]} | {tenant?.name}</p>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="p-8 border-t border-white/5 bg-black/40 flex gap-4">
+                        <div className="p-8 border-t border-white/5 flex gap-4 bg-black/20">
                             <button
                                 onClick={() => setIsCampaignModalOpen(false)}
                                 className="flex-1 bg-white/5 hover:bg-white/10 text-slate-300 font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all"
@@ -1784,348 +1611,338 @@ function CRMContent() {
                                 CANCELAR
                             </button>
                             <button
-                                onClick={handleAddToQueue}
-                                disabled={selectedCampaignClients.length === 0}
-                                className="flex-[2] bg-[#f2b90d] hover:bg-[#d9a50b] disabled:opacity-30 text-black font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-[#f2b90d]/10 flex items-center justify-center gap-2 active:scale-95"
+                                onClick={handleWhatsAppSend}
+                                className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3"
                             >
-                                <span className="material-symbols-outlined text-lg">send_and_archive</span>
-                                ADICIONAR À FILA ({selectedCampaignClients.length})
+                                <span className="material-symbols-outlined text-lg">send</span>
+                                DISPARAR AGORA
                             </button>
                         </div>
                     </div>
                 </div>
-            )
-            }
+            )}
 
             {/* MODAL: DETALHES DA CAMPANHA */}
-            {
-                isDetailsModalOpen && selectedCampaign && (
-                    <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
-                        <div className="border w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]"
-                            style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}20` }}
-                        >
-                            <div className="p-8 border-b flex items-center justify-between shrink-0" style={{ borderColor: `${colors?.border}20` }}>
-                                <div>
-                                    <h3 className="text-xl font-black italic uppercase leading-none mb-1" style={{ color: colors?.text }}>Detalhes da Campanha</h3>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors?.primary }}>{selectedCampaign.name}</p>
+            {isDetailsModalOpen && selectedCampaign && (
+                <div className="fixed inset-0 z-[1100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="border w-full max-w-3xl rounded-[2.5rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh]"
+                        style={{ backgroundColor: colors?.cardBg, borderColor: `${colors?.border}20` }}
+                    >
+                        <div className="p-8 border-b flex items-center justify-between shrink-0" style={{ borderColor: `${colors?.border}20` }}>
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase leading-none mb-1" style={{ color: colors?.text }}>Detalhes da Campanha</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: colors?.primary }}>{selectedCampaign.name}</p>
+                            </div>
+                            <button
+                                onClick={() => setIsDetailsModalOpen(false)}
+                                className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all"
+                                style={{ color: colors?.textMuted }}
+                            >
+                                <span className="material-symbols-outlined">close</span>
+                            </button>
+                        </div>
+
+                        <div className="flex-1 p-8 overflow-y-auto scrollbar-hide space-y-8">
+                            {/* Summary Cards */}
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="border p-4 rounded-2xl" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
+                                    <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Total Cliques/Envios</p>
+                                    <p className="text-xl font-black" style={{ color: colors?.text }}>{campaignDetailsItems.length}</p>
                                 </div>
-                                <button
-                                    onClick={() => setIsDetailsModalOpen(false)}
-                                    className="size-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all"
-                                    style={{ color: colors?.textMuted }}
-                                >
-                                    <span className="material-symbols-outlined">close</span>
-                                </button>
+                                <div className="border p-4 rounded-2xl" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
+                                    <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Data</p>
+                                    <p className="text-xs font-black" style={{ color: colors?.text }}>{new Date(selectedCampaign.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div className="border p-4 rounded-2xl col-span-2" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
+                                    <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Mensagem Base</p>
+                                    <p className="text-[10px] font-bold italic truncate" title={selectedCampaign.message_template} style={{ color: colors?.textMuted }}>
+                                        {selectedCampaign.message_template}
+                                    </p>
+                                </div>
                             </div>
 
-                            <div className="flex-1 p-8 overflow-y-auto scrollbar-hide space-y-8">
-                                {/* Summary Cards */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="border p-4 rounded-2xl" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
-                                        <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Total Cliques/Envios</p>
-                                        <p className="text-xl font-black" style={{ color: colors?.text }}>{campaignDetailsItems.length}</p>
-                                    </div>
-                                    <div className="border p-4 rounded-2xl" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
-                                        <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Data</p>
-                                        <p className="text-xs font-black" style={{ color: colors?.text }}>{new Date(selectedCampaign.created_at).toLocaleDateString()}</p>
-                                    </div>
-                                    <div className="border p-4 rounded-2xl col-span-2" style={{ backgroundColor: `${colors?.secondaryBg}40`, borderColor: `${colors?.border}20` }}>
-                                        <p className="text-[8px] font-black uppercase mb-1" style={{ color: colors?.textMuted }}>Mensagem Base</p>
-                                        <p className="text-[10px] font-bold italic truncate" title={selectedCampaign.message_template} style={{ color: colors?.textMuted }}>
-                                            {selectedCampaign.message_template}
-                                        </p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Público Impactado</h4>
-                                    <div className="space-y-2">
-                                        {loadingDetails ? (
-                                            <div className="py-12 text-center text-slate-600 animate-pulse">Carregando impactos...</div>
-                                        ) : campaignDetailsItems.length === 0 ? (
-                                            <p className="text-center py-6 text-[10px] font-black uppercase text-slate-700">Nenhum registro individual encontrado</p>
-                                        ) : (
-                                            campaignDetailsItems.map((item: any, idx: number) => (
-                                                <div key={idx} className="flex items-center justify-between p-4 rounded-xl border"
-                                                    style={{ backgroundColor: `${colors?.secondaryBg}20`, borderColor: `${colors?.border}20` }}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black"
-                                                            style={{ backgroundColor: `${colors?.text}0d`, color: colors?.primary }}
-                                                        >
-                                                            {item.client_name?.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[11px] font-black uppercase leading-none" style={{ color: colors?.text }}>{item.client_name}</p>
-                                                            <p className="text-[8px] font-bold mt-1" style={{ color: colors?.textMuted }}>{item.client_phone}</p>
-                                                        </div>
+                            <div className="space-y-4">
+                                <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-500 ml-1">Público Impactado</h4>
+                                <div className="space-y-2">
+                                    {loadingDetails ? (
+                                        <div className="py-12 text-center text-slate-600 animate-pulse">Carregando impactos...</div>
+                                    ) : campaignDetailsItems.length === 0 ? (
+                                        <p className="text-center py-6 text-[10px] font-black uppercase text-slate-700">Nenhum registro individual encontrado</p>
+                                    ) : (
+                                        campaignDetailsItems.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex items-center justify-between p-4 rounded-xl border"
+                                                style={{ backgroundColor: `${colors?.secondaryBg}20`, borderColor: `${colors?.border}20` }}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="size-8 rounded-full flex items-center justify-center text-[10px] font-black"
+                                                        style={{ backgroundColor: `${colors?.text}0d`, color: colors?.primary }}
+                                                    >
+                                                        {item.client_name?.charAt(0)}
                                                     </div>
-                                                    <div className="px-3 py-1 rounded-full bg-emerald-500/5 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase">
-                                                        Enviado
+                                                    <div>
+                                                        <p className="text-[11px] font-black uppercase leading-none" style={{ color: colors?.text }}>{item.client_name}</p>
+                                                        <p className="text-[8px] font-bold mt-1" style={{ color: colors?.textMuted }}>{item.client_phone}</p>
                                                     </div>
                                                 </div>
-                                            ))
-                                        )}
-                                    </div>
+                                                <div className="px-3 py-1 rounded-full bg-emerald-500/5 border border-emerald-500/20 text-emerald-500 text-[8px] font-black uppercase">
+                                                    Enviado
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="p-8 border-t border-white/5 bg-black/20 shrink-0">
-                                <button
-                                    onClick={() => setIsDetailsModalOpen(false)}
-                                    className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-[#f2b90d]/10"
-                                >
-                                    FECHAR DETALHES
-                                </button>
-                            </div>
+                        <div className="p-8 border-t border-white/5 bg-black/20 shrink-0">
+                            <button
+                                onClick={() => setIsDetailsModalOpen(false)}
+                                className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase text-[10px] tracking-widest py-4 rounded-2xl transition-all shadow-xl shadow-[#f2b90d]/10"
+                            >
+                                FECHAR DETALHES
+                            </button>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
             {/* MODAL: FILA DE DISPARO RÁPIDO (CRM v5.0) */}
-            {
-                isQueueActive && (
-                    <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
-                        <div className="w-full max-w-xl border rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(242,185,13,0.1)]"
-                            style={{ backgroundColor: colors?.cardBg || '#0a0a0b', borderColor: `${colors?.border}20` }}
-                        >
-                            {/* Progress Bar */}
-                            <div className="h-1 bg-white/5 w-full">
-                                <div
-                                    className="h-full bg-[#f2b90d] transition-all duration-700"
-                                    style={{ width: `${((currentQueueIndex + (queueFinished ? 1 : 0)) / queue.length) * 100}%` }}
-                                ></div>
-                            </div>
+            {isQueueActive && (
+                <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4 bg-black/95 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="w-full max-w-xl border rounded-[3rem] overflow-hidden shadow-[0_0_100px_rgba(242,185,13,0.1)]"
+                        style={{ backgroundColor: colors?.cardBg || '#0a0a0b', borderColor: `${colors?.border}20` }}
+                    >
+                        {/* Progress Bar */}
+                        <div className="h-1 bg-white/5 w-full">
+                            <div
+                                className="h-full bg-[#f2b90d] transition-all duration-700"
+                                style={{ width: `${((currentQueueIndex + (queueFinished ? 1 : 0)) / queue.length) * 100}%` }}
+                            ></div>
+                        </div>
 
-                            {queueFinished ? (
-                                <div className="p-12 text-center space-y-6">
-                                    <div className="size-24 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 animate-bounce">
-                                        <span className="material-symbols-outlined text-5xl text-emerald-500">task_alt</span>
-                                    </div>
-                                    <h3 className="text-3xl font-black italic uppercase text-white">Missão Cumprida!</h3>
-                                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] max-w-xs mx-auto">
-                                        Parabéns! Você entrou em contato com {queue.length} clientes de forma recorde.
-                                    </p>
-                                    <button
-                                        onClick={() => { setIsQueueActive(false); fetchData(); }}
-                                        className="w-full bg-[#f2b90d] py-5 rounded-3xl text-black font-black uppercase tracking-widest transition-all hover:scale-105"
-                                    >
-                                        FECHAR RELATÓRIO
-                                    </button>
+                        {queueFinished ? (
+                            <div className="p-12 text-center space-y-6">
+                                <div className="size-24 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto mb-4 animate-bounce">
+                                    <span className="material-symbols-outlined text-5xl text-emerald-500">task_alt</span>
                                 </div>
-                            ) : (
-                                <div className="p-10 space-y-8">
-                                    <header className="flex justify-between items-start">
-                                        <div>
-                                            <p className="text-[#f2b90d] font-black uppercase text-[10px] tracking-widest mb-2 flex items-center gap-2">
-                                                <span className="size-2 rounded-full bg-[#f2b90d] animate-ping"></span>
-                                                Fila de Disparo Ativa
-                                            </p>
-                                            <h3 className="text-2xl font-black italic uppercase text-white">
-                                                {queue[currentQueueIndex]?.name}
-                                            </h3>
-                                            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-tighter">
-                                                Cliente {currentQueueIndex + 1} de {queue.length} • {queue[currentQueueIndex]?.phone}
-                                            </p>
-                                        </div>
-                                        <button onClick={() => setIsQueueActive(false)} className="text-slate-500 hover:text-white transition-colors">
-                                            <span className="material-symbols-outlined">close</span>
-                                        </button>
-                                    </header>
-
-                                    <div className="border rounded-3xl p-6 relative" style={{ backgroundColor: `${colors?.secondaryBg}80`, borderColor: `${colors?.border}20` }}>
-                                        <div className="absolute -top-3 left-6 px-3 py-1 bg-[#075e54] rounded-full text-[8px] font-black uppercase tracking-widest text-white ring-4" style={{ ringColor: colors?.cardBg }}>Preview WhatsApp</div>
-                                        <p className="text-sm italic pt-2" style={{ color: colors?.textMuted }}>
-                                            {activeFilter === 'churn' ? `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Sentimos sua falta...` :
-                                                activeFilter === 'birthdays' ? `Parabéns, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 🎉 Temos um presente...` :
-                                                    `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Como você está?`}
+                                <h3 className="text-3xl font-black italic uppercase text-white">Missão Cumprida!</h3>
+                                <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px] max-w-xs mx-auto">
+                                    Parabéns! Você entrou em contato com {queue.length} clientes de forma recorde.
+                                </p>
+                                <button
+                                    onClick={() => { setIsQueueActive(false); fetchData(); }}
+                                    className="w-full bg-[#f2b90d] py-5 rounded-3xl text-black font-black uppercase tracking-widest transition-all hover:scale-105"
+                                >
+                                    FECHAR RELATÓRIO
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="p-10 space-y-8">
+                                <header className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-[#f2b90d] font-black uppercase text-[10px] tracking-widest mb-2 flex items-center gap-2">
+                                            <span className="size-2 rounded-full bg-[#f2b90d] animate-ping"></span>
+                                            Fila de Disparo Ativa
+                                        </p>
+                                        <h3 className="text-2xl font-black italic uppercase text-white">
+                                            {queue[currentQueueIndex]?.name}
+                                        </h3>
+                                        <p className="text-slate-500 text-[10px] font-bold uppercase tracking-tighter">
+                                            Cliente {currentQueueIndex + 1} de {queue.length} • {queue[currentQueueIndex]?.phone}
                                         </p>
                                     </div>
+                                    <button onClick={() => setIsQueueActive(false)} className="text-slate-500 hover:text-white transition-colors">
+                                        <span className="material-symbols-outlined">close</span>
+                                    </button>
+                                </header>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <button
-                                            onClick={skipQueueClient}
-                                            className="py-5 rounded-3xl bg-white/5 border border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            PULAR
-                                            <span className="material-symbols-outlined text-sm">skip_next</span>
-                                        </button>
-                                        <button
-                                            onClick={handleQueueSend}
-                                            disabled={isNextLoading}
-                                            className="py-5 rounded-3xl bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
-                                        >
-                                            <span className="material-symbols-outlined text-xl">{isNextLoading ? 'sync' : 'send_and_archive'}</span>
-                                            {isNextLoading ? 'ENVIANDO...' : 'ENVIAR & PRÓXIMO'}
-                                        </button>
-                                    </div>
-
-                                    <div className="flex items-center justify-center gap-2">
-                                        <span className="size-1.5 rounded-full bg-slate-700"></span>
-                                        <p className="text-[8px] font-black uppercase tracking-widest text-slate-600">Anti-Spam Manual Ativo • Siga as Normas do WhatsApp</p>
-                                    </div>
+                                <div className="border rounded-3xl p-6 relative" style={{ backgroundColor: `${colors?.secondaryBg}80`, borderColor: `${colors?.border}20` }}>
+                                    <div className="absolute -top-3 left-6 px-3 py-1 bg-[#075e54] rounded-full text-[8px] font-black uppercase tracking-widest text-white ring-4" style={{ ringColor: colors?.cardBg }}>Preview WhatsApp</div>
+                                    <p className="text-sm italic pt-2" style={{ color: colors?.textMuted }}>
+                                        {activeFilter === 'churn' ? `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Sentimos sua falta...` :
+                                            activeFilter === 'birthdays' ? `Parabéns, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 🎉 Temos um presente...` :
+                                                `Olá, ${queue[currentQueueIndex]?.name.split(' ')[0]}! 👋 Como você está?`}
+                                    </p>
                                 </div>
-                            )}
-                        </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button
+                                        onClick={skipQueueClient}
+                                        className="py-5 rounded-3xl bg-white/5 border border-white/10 text-slate-400 font-black uppercase text-[10px] tracking-widest hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        PULAR
+                                        <span className="material-symbols-outlined text-sm">skip_next</span>
+                                    </button>
+                                    <button
+                                        onClick={handleQueueSend}
+                                        disabled={isNextLoading}
+                                        className="py-5 rounded-3xl bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-widest transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
+                                    >
+                                        <span className="material-symbols-outlined text-xl">{isNextLoading ? 'sync' : 'send_and_archive'}</span>
+                                        {isNextLoading ? 'ENVIANDO...' : 'ENVIAR & PRÓXIMO'}
+                                    </button>
+                                </div>
+
+                                <div className="flex items-center justify-center gap-2">
+                                    <span className="size-1.5 rounded-full bg-slate-700"></span>
+                                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-600">Anti-Spam Manual Ativo • Siga as Normas do WhatsApp</p>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )
-            }
+                </div>
+            )}
 
             {/* Modal de Serviço de Recompensa */}
-            {
-                isServiceModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4 user-select-none">
-                        <div className="bg-[#18181b] border border-white/10 w-full max-w-xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
-                            <div className="p-8 md:p-10">
-                                <div className="flex justify-between items-center mb-8">
-                                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
-                                        {editingRewardService ? 'EDITAR' : 'NOVO'} SERVIÇO DE PRÊMIO
-                                    </h3>
-                                    <button onClick={() => setIsServiceModalOpen(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                                        <span className="material-symbols-outlined text-zinc-400">close</span>
-                                    </button>
+            {isServiceModalOpen && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4 user-select-none">
+                    <div className="bg-[#18181b] border border-white/10 w-full max-w-xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
+                        <div className="p-8 md:p-10">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
+                                    {editingRewardService ? 'EDITAR' : 'NOVO'} SERVIÇO DE PRÊMIO
+                                </h3>
+                                <button onClick={() => setIsServiceModalOpen(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                                    <span className="material-symbols-outlined text-zinc-400">close</span>
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSaveRewardService} className="space-y-6">
+                                <div className="flex justify-center mb-6">
+                                    <ImageUpload
+                                        currentImage={newService.image_url}
+                                        onImageSelect={(file, preview) => setNewService(prev => ({ ...prev, image_url: preview, file }))}
+                                        helperText="Foto do Serviço"
+                                        bucket="services"
+                                    />
                                 </div>
 
-                                <form onSubmit={handleSaveRewardService} className="space-y-6">
-                                    <div className="flex justify-center mb-6">
-                                        <ImageUpload
-                                            currentImage={newService.image_url}
-                                            onImageSelect={(file, preview) => setNewService(prev => ({ ...prev, image_url: preview, file }))}
-                                            helperText="Foto do Serviço"
-                                            bucket="services"
-                                        />
-                                    </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO SERVIÇO</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={newService.name}
+                                        onChange={e => setNewService({ ...newService, name: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all placeholder:text-zinc-800"
+                                        placeholder="Ex: Corte de Brinde"
+                                    />
+                                </div>
 
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO SERVIÇO</label>
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO</label>
+                                        <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm font-black text-emerald-500 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">redeem</span>
+                                            CORTESIA
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DURAÇÃO (MIN)</label>
                                         <input
                                             required
                                             type="text"
-                                            value={newService.name}
-                                            onChange={e => setNewService({ ...newService, name: e.target.value })}
-                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all placeholder:text-zinc-800"
-                                            placeholder="Ex: Corte de Brinde"
+                                            value={newService.duration_minutes}
+                                            onChange={e => setNewService({ ...newService, duration_minutes: maskNumber(e.target.value) })}
+                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
+                                            placeholder="30"
                                         />
                                     </div>
+                                </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO</label>
-                                            <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm font-black text-emerald-500 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-sm">redeem</span>
-                                                CORTESIA
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DURAÇÃO (MIN)</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={newService.duration_minutes}
-                                                onChange={e => setNewService({ ...newService, duration_minutes: maskNumber(e.target.value) })}
-                                                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
-                                                placeholder="30"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={savingRewards}
-                                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 disabled:opacity-50"
-                                    >
-                                        {savingRewards ? 'SALVANDO...' : (editingRewardService ? 'ATUALIZAR' : 'SALVAR') + ' SERVIÇO DE PRÊMIO'}
-                                    </button>
-                                </form>
-                            </div>
+                                <button
+                                    type="submit"
+                                    disabled={savingRewards}
+                                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {savingRewards ? 'SALVANDO...' : (editingRewardService ? 'ATUALIZAR' : 'SALVAR') + ' SERVIÇO DE PRÊMIO'}
+                                </button>
+                            </form>
                         </div>
                     </div>
-                )
-            }
+                </div>
+            )}
 
             {/* Modal de Produto de Recompensa */}
-            {
-                isProductModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4 user-select-none">
-                        <div className="bg-[#18181b] border border-white/10 w-full max-w-xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
-                            <div className="p-8 md:p-10">
-                                <div className="flex justify-between items-center mb-8">
-                                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
-                                        {editingRewardProduct ? 'EDITAR' : 'NOVO'} PRODUTO DE PRÊMIO
-                                    </h3>
-                                    <button onClick={() => setIsProductModalOpen(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
-                                        <span className="material-symbols-outlined text-zinc-400">close</span>
-                                    </button>
+            {isProductModalOpen && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center bg-black/80 backdrop-blur-sm overflow-y-auto pt-10 md:pt-20 pb-24 px-4 user-select-none">
+                    <div className="bg-[#18181b] border border-white/10 w-full max-w-xl rounded-[2.5rem] shadow-2xl relative animate-in zoom-in-95 duration-300">
+                        <div className="p-8 md:p-10">
+                            <div className="flex justify-between items-center mb-8">
+                                <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">
+                                    {editingRewardProduct ? 'EDITAR' : 'NOVO'} PRODUTO DE PRÊMIO
+                                </h3>
+                                <button onClick={() => setIsProductModalOpen(false)} className="size-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors">
+                                    <span className="material-symbols-outlined text-zinc-400">close</span>
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSaveRewardProduct} className="space-y-6">
+                                <div className="flex justify-center mb-6">
+                                    <ImageUpload
+                                        currentImage={newProduct.image_url}
+                                        onImageSelect={(file, preview) => setNewProduct(prev => ({ ...prev, image_url: preview, file }))}
+                                        helperText="Foto do Produto"
+                                        bucket="products"
+                                    />
                                 </div>
 
-                                <form onSubmit={handleSaveRewardProduct} className="space-y-6">
-                                    <div className="flex justify-center mb-6">
-                                        <ImageUpload
-                                            currentImage={newProduct.image_url}
-                                            onImageSelect={(file, preview) => setNewProduct(prev => ({ ...prev, image_url: preview, file }))}
-                                            helperText="Foto do Produto"
-                                            bucket="products"
-                                        />
-                                    </div>
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO PRODUTO</label>
+                                    <input
+                                        required
+                                        type="text"
+                                        value={newProduct.name}
+                                        onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all placeholder:text-zinc-800"
+                                        placeholder="Ex: Pomada de Brinde"
+                                    />
+                                </div>
 
+                                <div className="space-y-2">
+                                    <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DESCRIÇÃO</label>
+                                    <textarea
+                                        value={newProduct.description}
+                                        onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
+                                        className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all h-20 resize-none"
+                                        placeholder="Breve descrição do prêmio..."
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">NOME DO PRODUTO</label>
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO</label>
+                                        <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm font-black text-emerald-500 flex items-center gap-2">
+                                            <span className="material-symbols-outlined text-sm">redeem</span>
+                                            CORTESIA
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">ESTOQUE ATUAL</label>
                                         <input
                                             required
                                             type="text"
-                                            value={newProduct.name}
-                                            onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all placeholder:text-zinc-800"
-                                            placeholder="Ex: Pomada de Brinde"
+                                            value={newProduct.current_stock}
+                                            onChange={e => setNewProduct({ ...newProduct, current_stock: maskNumber(e.target.value) })}
+                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
+                                            placeholder="0"
                                         />
                                     </div>
+                                </div>
 
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">DESCRIÇÃO</label>
-                                        <textarea
-                                            value={newProduct.description}
-                                            onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-                                            className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all h-20 resize-none"
-                                            placeholder="Breve descrição do prêmio..."
-                                        />
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">PREÇO</label>
-                                            <div className="w-full bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-sm font-black text-emerald-500 flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-sm">redeem</span>
-                                                CORTESIA
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 tracking-[0.1em]">ESTOQUE ATUAL</label>
-                                            <input
-                                                required
-                                                type="text"
-                                                value={newProduct.current_stock}
-                                                onChange={e => setNewProduct({ ...newProduct, current_stock: maskNumber(e.target.value) })}
-                                                className="w-full bg-black border border-white/5 rounded-2xl p-4 text-sm font-bold text-white focus:border-[#f2b90d] outline-none transition-all"
-                                                placeholder="0"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <button
-                                        type="submit"
-                                        disabled={savingRewards}
-                                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 disabled:opacity-50"
-                                    >
-                                        {savingRewards ? 'SALVANDO...' : (editingRewardProduct ? 'ATUALIZAR' : 'SALVAR') + ' PRODUTO DE PRÊMIO'}
-                                    </button>
-                                </form>
-                            </div>
+                                <button
+                                    type="submit"
+                                    disabled={savingRewards}
+                                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4 rounded-xl uppercase tracking-widest text-[10px] shadow-lg transition-all active:scale-95 disabled:opacity-50"
+                                >
+                                    {savingRewards ? 'SALVANDO...' : (editingRewardProduct ? 'ATUALIZAR' : 'SALVAR') + ' PRODUTO DE PRÊMIO'}
+                                </button>
+                            </form>
                         </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 }
 
@@ -2154,21 +1971,13 @@ function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLa
                 backgroundColor: colors?.cardBg || '#121214',
                 border: '1px solid',
                 borderColor: isActive ? (colors?.primary || '#f2b90d') : (alert ? '#ef44444d' : `${colors?.border || '#27272a'}1a`),
-                boxShadow: isActive ? `0 0 0 4px ${colors?.primary || '#f2b90d'}1a` : undefined,
-                outline: '0px solid #f2b90d'
-            }}
-            onMouseEnter={(e) => {
-                if (!isActive) {
-                    e.currentTarget.style.borderColor = '#f2b90d';
-                    e.currentTarget.style.borderWidth = '1px';
-                }
-            }}
-            onMouseLeave={(e) => {
-                if (!isActive) {
-                    e.currentTarget.style.borderColor = alert ? '#ef44444d' : `${colors?.border || '#27272a'}1a`;
-                }
+                boxShadow: isActive ? `0 0 0 4px ${colors?.primary || '#f2b90d'}1a` : undefined
             }}
         >
+            {/* Action Icon (Quick Action Indicator) */}
+            <div className={`absolute top-4 right-4 text-[18px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 ${color}`}>
+                <span className="material-symbols-outlined">north_east</span>
+            </div>
 
             {/* Decoration */}
             <div className={`absolute -bottom-4 -right-4 size-20 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity ${color.replace('text-', 'bg-')}`}>
