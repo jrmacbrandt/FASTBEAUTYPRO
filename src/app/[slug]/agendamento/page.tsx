@@ -123,6 +123,10 @@ export default function DynamicBookingPage() {
         };
     }, [tenant]);
 
+    const primaryColor = theme.primary;
+    const businessType = tenant?.business_type || 'barber';
+    const buttonTextColor = businessType === 'salon' ? 'white' : 'black';
+
     const nextStep = () => setStep(step + 1);
     const prevStep = () => setStep(prev => Math.max(1, prev - 1));
 
@@ -471,63 +475,6 @@ Até lá! 👋`;
                                     <span className="material-symbols-outlined font-bold">check_circle</span>
                                 </button>
 
-                                {/* Loyalty Card Visualization */}
-                                {(tenant.loyalty_enabled || (clientLoyalty && clientLoyalty.stamps_count > 0)) && (
-                                    <div className="mt-8 p-6 rounded-[2rem] bg-black/40 border border-white/10 relative overflow-hidden group">
-                                        <div className="absolute -right-4 -bottom-4 opacity-5 rotate-12 transition-transform group-hover:scale-110 duration-700">
-                                            <span className="material-symbols-outlined text-8xl" style={{ color: primaryColor }}>loyalty</span>
-                                        </div>
-
-                                        <div className="relative z-10 space-y-4">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40">Seu Cartão Fidelidade</p>
-                                                    <h3 className="text-xl font-black italic uppercase tracking-tighter">
-                                                        {clientLoyalty && clientLoyalty.stamps_count >= loyaltyTarget
-                                                            ? '🔥 PRÊMIO LIBERADO!'
-                                                            : `${loyaltyTarget} Selos + 1 Grátis`}
-                                                    </h3>
-                                                </div>
-                                                <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[8px] font-black uppercase tracking-widest">
-                                                    {clientLoyalty?.stamps_count || 0} / {loyaltyTarget}
-                                                </div>
-                                            </div>
-
-                                            <div className="flex gap-2 flex-wrap">
-                                                {/* Threshold-1 stamps + Reward slot */}
-                                                {[...Array(loyaltyTarget)].map((_, i) => (
-                                                    <div
-                                                        key={i}
-                                                        className={`size-9 rounded-full border-2 flex items-center justify-center transition-all duration-500 ${i < (clientLoyalty?.stamps_count || 0)
-                                                            ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-500 scale-105 shadow-[0_0_15px_rgba(16,185,129,0.2)]'
-                                                            : 'border-white/5 bg-white/5 opacity-30'
-                                                            }`}
-                                                    >
-                                                        {i < (clientLoyalty?.stamps_count || 0) ? (
-                                                            <span className="material-symbols-outlined text-sm font-bold">check</span>
-                                                        ) : (
-                                                            <span className="text-[10px] font-black opacity-30">{i + 1}</span>
-                                                        )}
-                                                    </div>
-                                                ))}
-
-                                                {/* Final Reward Slot */}
-                                                <div className={`size-9 rounded-full border-2 border-dashed flex items-center justify-center transition-all duration-700 ${(clientLoyalty?.stamps_count || 0) >= loyaltyTarget
-                                                    ? 'bg-[#f2b90d] border-[#f2b90d] text-black scale-110 shadow-[0_0_20px_rgba(242,185,13,0.4)] animate-pulse'
-                                                    : 'border-white/20 bg-white/5 opacity-50'
-                                                    }`}>
-                                                    <span className="material-symbols-outlined text-lg">redeem</span>
-                                                </div>
-                                            </div>
-
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-white/30 leading-relaxed italic">
-                                                {clientLoyalty && clientLoyalty.stamps_count >= loyaltyTarget
-                                                    ? 'Você completou o cartão! Aproveite seu serviço cortesia.'
-                                                    : `Faltam apenas ${Math.max(0, loyaltyTarget - (clientLoyalty?.stamps_count || 0))} selos para sua próxima cortesia.`}
-                                            </p>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     )}
