@@ -81,6 +81,32 @@ export default function AdminAgendaPage() {
         }
     }, [profile, selectedProfessionalId]);
 
+    // 🔴 REALTIME: Re-fetch agenda whenever any appointment changes for this tenant
+    useEffect(() => {
+        if (!profile?.tenant_id) return;
+
+        const channel = supabase
+            .channel(`admin-agenda-${profile.tenant_id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'appointments',
+                    filter: `tenant_id=eq.${profile.tenant_id}`
+                },
+                () => {
+                    // Re-fetch silently on any change (INSERT/UPDATE/DELETE)
+                    fetchAgenda(profile.tenant_id);
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [profile?.tenant_id]);
+
     if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando agenda...</div>;
 
     const todayDate = new Date();

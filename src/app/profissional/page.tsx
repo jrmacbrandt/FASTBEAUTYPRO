@@ -28,6 +28,38 @@ export default function ProfessionalAgendaPage() {
         fetchServices();
     }, []);
 
+    // 🔴 REALTIME: Atualiza a agenda do profissional em tempo real quando novos agendamentos chegam
+    useEffect(() => {
+        let channel: ReturnType<typeof supabase.channel> | null = null;
+
+        const setupRealtime = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            channel = supabase
+                .channel(`profissional-agenda-${session.user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'appointments',
+                        filter: `barber_id=eq.${session.user.id}`
+                    },
+                    () => {
+                        fetchAgenda();
+                    }
+                )
+                .subscribe();
+        };
+
+        setupRealtime();
+
+        return () => {
+            if (channel) supabase.removeChannel(channel);
+        };
+    }, []);
+
     const colors = businessType === 'salon'
         ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', inputBg: '#f5f3f0' }
         : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', inputBg: '#0f0f10' };
