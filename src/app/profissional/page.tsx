@@ -20,56 +20,11 @@ export default function ProfessionalAgendaPage() {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [currentTab, setCurrentTab] = useState<'hoje' | 'proximos' | 'historico'>('hoje');
 
-    useEffect(() => {
-        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
-        if (savedType) setBusinessType(savedType);
-        fetchAgenda();
-        fetchProducts();
-        fetchServices();
-    }, []);
-
-    // 🔴 REALTIME: Atualiza a agenda do profissional em tempo real quando novos agendamentos chegam
-    useEffect(() => {
-        let channel: ReturnType<typeof supabase.channel> | null = null;
-
-        const setupRealtime = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) return;
-
-            channel = supabase
-                .channel(`profissional-agenda-${session.user.id}`)
-                .on(
-                    'postgres_changes',
-                    {
-                        event: '*',
-                        schema: 'public',
-                        table: 'appointments',
-                        filter: `barber_id=eq.${session.user.id}`
-                    },
-                    () => {
-                        fetchAgenda();
-                    }
-                )
-                .subscribe();
-        };
-
-        setupRealtime();
-
-        return () => {
-            if (channel) supabase.removeChannel(channel);
-        };
-    }, []);
-
-    const colors = businessType === 'salon'
-        ? { primary: '#7b438e', bg: '#faf8f5', text: '#1e1e1e', textMuted: '#6b6b6b', cardBg: '#ffffff', inputBg: '#f5f3f0' }
-        : { primary: '#f2b90d', bg: '#000000', text: '#f8fafc', textMuted: '#64748b', cardBg: '#121214', inputBg: '#0f0f10' };
-
-    // ... fetchAgenda, fetchProducts, etc (keeping line numbers in mind for replacement)
+    // Definida ANTES dos useEffects para evitar stale closure no Realtime
     const fetchAgenda = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        // Fetch last 60 days to cover History but also future for Upcoming
         const sixtyDaysAgo = new Date();
         sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
@@ -90,6 +45,63 @@ export default function ProfessionalAgendaPage() {
         }
         setLoading(false);
     };
+
+    // Ref para capturar a versão mais atual de fetchAgenda (evita stale closure no canal Realtime)
+    const fetchAgendaRef = React.useRef(fetchAgenda);
+    useEffect(() => {
+        fetchAgendaRef.current = fetchAgenda;
+    });
+
+    useEffect(() => {
+        const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
+        if (savedType) setBusinessType(savedType);
+        fetchAgenda();
+        fetchProducts();
+        fetchServices();
+    }, []);
+
+    // 🔴 REALTIME: Canal Supabase + polling de segurança como fallback
+    useEffect(() => {
+        let channel: ReturnType<typeof supabase.channel> | null = null;
+        let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+        const setupRealtime = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            // Canal Realtime (requer Replication ativa no Supabase Dashboard)
+            channel = supabase
+                .channel(`profissional-agenda-${session.user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'appointments',
+                        filter: `barber_id=eq.${session.user.id}`
+                    },
+                    (payload) => {
+                        console.log('[Realtime] appointments change:', payload.eventType);
+                        fetchAgendaRef.current();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('[Realtime] status:', status);
+                });
+
+            // Polling a cada 15s como fallback caso Realtime não esteja com Replication ativa
+            pollInterval = setInterval(() => {
+                fetchAgendaRef.current();
+            }, 15000);
+        };
+
+        setupRealtime();
+
+        return () => {
+            if (channel) supabase.removeChannel(channel);
+            if (pollInterval) clearInterval(pollInterval);
+        };
+    }, []);
 
     const fetchProducts = async () => {
         const { data: { session } } = await supabase.auth.getSession();

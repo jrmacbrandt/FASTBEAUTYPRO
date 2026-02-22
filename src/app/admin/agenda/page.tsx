@@ -81,29 +81,46 @@ export default function AdminAgendaPage() {
         }
     }, [profile, selectedProfessionalId]);
 
-    // 🔴 REALTIME: Re-fetch agenda whenever any appointment changes for this tenant
+    // Ref para capturar a versão mais atual de fetchAgenda (evita stale closure no Realtime/Polling)
+    const fetchAgendaRef = React.useRef(fetchAgenda);
+    useEffect(() => {
+        fetchAgendaRef.current = fetchAgenda;
+    });
+
+    // 🔴 REALTIME: Canal Supabase + polling de segurança como fallback
     useEffect(() => {
         if (!profile?.tenant_id) return;
 
+        const tid = profile.tenant_id;
+        let pollInterval: ReturnType<typeof setInterval> | null = null;
+
         const channel = supabase
-            .channel(`admin-agenda-${profile.tenant_id}`)
+            .channel(`admin-agenda-${tid}`)
             .on(
                 'postgres_changes',
                 {
                     event: '*',
                     schema: 'public',
                     table: 'appointments',
-                    filter: `tenant_id=eq.${profile.tenant_id}`
+                    filter: `tenant_id=eq.${tid}`
                 },
-                () => {
-                    // Re-fetch silently on any change (INSERT/UPDATE/DELETE)
-                    fetchAgenda(profile.tenant_id);
+                (payload) => {
+                    console.log('[Realtime Admin] appointments change:', payload.eventType);
+                    fetchAgendaRef.current(tid);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[Realtime Admin] status:', status);
+            });
+
+        // Polling a cada 15s como fallback caso Realtime não esteja com Replication ativa
+        pollInterval = setInterval(() => {
+            fetchAgendaRef.current(tid);
+        }, 15000);
 
         return () => {
             supabase.removeChannel(channel);
+            if (pollInterval) clearInterval(pollInterval);
         };
     }, [profile?.tenant_id]);
 
