@@ -171,10 +171,10 @@ export default function ProfessionalAgendaPage() {
 
                 if (!profile?.tenant_id) return;
 
-                const { error } = await supabase.rpc('mark_appointment_no_show', {
-                    p_appointment_id: id,
-                    p_tenant_id: profile.tenant_id
-                });
+                const { error } = await supabase
+                    .from('appointments')
+                    .update({ status: 'absent' })
+                    .eq('id', id);
 
                 if (error) throw error;
                 fetchAgenda();

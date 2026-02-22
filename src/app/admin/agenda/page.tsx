@@ -95,10 +95,7 @@ export default function AdminAgendaPage() {
         if (!profile?.tenant_id) return;
         setLoading(true);
         if (newStatus === 'absent') {
-            await supabase.rpc('mark_appointment_no_show', {
-                p_appointment_id: id,
-                p_tenant_id: profile.tenant_id
-            });
+            await supabase.from('appointments').update({ status: 'absent' }).eq('id', id);
         } else {
             await supabase.from('appointments').update({ status: 'scheduled' }).eq('id', id);
         }

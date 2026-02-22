@@ -12,9 +12,9 @@ DECLARE
     v_stamps_before    INTEGER;
     v_stamps_after     INTEGER;
 BEGIN
-    -- 1. Update appointment status to 'no_show'
+    -- 1. Update appointment status to 'absent'
     UPDATE public.appointments
-    SET status = 'no_show'
+    SET status = 'absent'
     WHERE id = p_appointment_id 
       AND tenant_id = p_tenant_id
     RETURNING customer_whatsapp INTO v_client_phone;
