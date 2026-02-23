@@ -279,26 +279,33 @@ export default function ProfessionalAgendaPage() {
 
         setLoading(true);
 
-        // 1. Mark Appointment as completed
-        const { error: apptError } = await supabase
-            .from('appointments')
-            .update({ status: 'completed' })
-            .eq('id', item.id);
-
-        if (apptError) {
-            alert('Erro ao atualizar agendamento');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
             setLoading(false);
             return;
         }
 
-        // 2. Update Order status to pending_payment
-        const { error: orderError } = await supabase
-            .from('orders')
-            .update({ status: 'pending_payment', finalized_at: new Date() })
-            .eq('appointment_id', item.id);
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('tenant_id')
+            .eq('id', session.user.id)
+            .single();
 
-        if (orderError) {
-            console.error('Order finalize error:', orderError);
+        if (!profile?.tenant_id) {
+            setLoading(false);
+            return;
+        }
+
+        const { data: rpcResult, error: rpcError } = await supabase.rpc('finalize_appointment_order', {
+            p_appointment_id: item.id,
+            p_tenant_id: profile.tenant_id
+        });
+
+        if (rpcError || !rpcResult?.success) {
+            console.error('Finalize error:', rpcError || rpcResult);
+            alert('Erro ao finalizar atendimento: ' + (rpcError?.message || rpcResult?.error || 'Erro desconhecido'));
+            setLoading(false);
+            return;
         }
 
         alert('Atendimento finalizado e enviado para o caixa!');
