@@ -654,20 +654,20 @@ Aguardo sua confirmação! 😊`;
                                                     width: '2.25rem', height: '2.25rem', borderRadius: '50%',
                                                     border: isProvisional
                                                         ? '2px dashed #f59e0b'
-                                                        : `2px solid ${isConfirmed ? theme.primary : 'rgba(255,255,255,0.1)'}`,
+                                                        : `2px solid ${isConfirmed ? theme.primary : 'rgba(255,255,255,0.4)'}`,
                                                     backgroundColor: isProvisional
                                                         ? 'rgba(245,158,11,0.12)'
-                                                        : isConfirmed ? `${theme.primary}35` : 'rgba(255,255,255,0.03)',
+                                                        : isConfirmed ? `${theme.primary}35` : 'rgba(255,255,255,0.1)',
                                                     boxShadow: isProvisional ? '0 0 12px rgba(245,158,11,0.4)' : 'none',
                                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                    opacity: (isConfirmed || isProvisional) ? 1 : 0.3,
+                                                    opacity: 1,
                                                     transition: 'all 0.4s',
                                                 }}>
                                                     {isProvisional
                                                         ? <span className="material-symbols-outlined" style={{ fontSize: '1rem', color: '#f59e0b' }}>hourglass_empty</span>
                                                         : isConfirmed
                                                             ? <span className="material-symbols-outlined" style={{ fontSize: '1.1rem', color: theme.primary }}>star</span>
-                                                            : <span style={{ fontSize: '11px', fontWeight: 900, color: '#fff', opacity: 0.5 }}>{i + 1}</span>
+                                                            : <span style={{ fontSize: '11px', fontWeight: 900, color: '#fff', opacity: 1 }}>{i + 1}</span>
                                                     }
                                                 </div>
                                             );
@@ -675,9 +675,9 @@ Aguardo sua confirmação! 😊`;
                                         {/* Reward slot */}
                                         <div style={{
                                             width: '2.25rem', height: '2.25rem', borderRadius: '50%',
-                                            border: `2px dashed rgba(255,255,255,0.15)`,
-                                            backgroundColor: 'rgba(255,255,255,0.03)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.3,
+                                            border: `2px dashed rgba(255,255,255,0.5)`,
+                                            backgroundColor: 'rgba(255,255,255,0.1)',
+                                            display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 1,
                                         }}>
                                             <span className="material-symbols-outlined" style={{ fontSize: '1.1rem', color: '#fff' }}>redeem</span>
                                         </div>
