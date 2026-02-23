@@ -209,9 +209,10 @@ export default function ProfessionalAgendaPage() {
         }
     };
 
-    const handleSaveDraft = async () => {
+    const handleSaveAndFinalize = async () => {
+        if (!confirm('Deseja FINALIZAR este atendimento e enviar para o caixa?')) return;
         setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session } = { session: null } } = await supabase.auth.getSession();
         if (!session) return setLoading(false);
 
         const { data: barberProfile } = await supabase
@@ -247,15 +248,21 @@ export default function ProfessionalAgendaPage() {
         const commissionAmount = (serviceTotal * serviceRate) + (productTotal * productRate);
 
         if (existingOrder) {
-            await supabase.from('orders').update({
+            const { error: updateError } = await supabase.from('orders').update({
                 service_total: serviceTotal,
                 product_total: productTotal,
                 total_value: totalValue,
                 commission_amount: commissionAmount,
                 items: cart
             }).eq('id', existingOrder.id);
+
+            if (updateError) {
+                alert('Erro ao atualizar itens da comanda');
+                setLoading(false);
+                return;
+            }
         } else {
-            await supabase.from('orders').insert({
+            const { error: insertError } = await supabase.from('orders').insert({
                 tenant_id: barberProfile.tenant_id,
                 appointment_id: selectedClient.id,
                 barber_id: session.user.id,
@@ -266,39 +273,18 @@ export default function ProfessionalAgendaPage() {
                 status: 'draft',
                 items: cart
             });
+
+            if (insertError) {
+                alert('Erro ao criar itens da comanda');
+                setLoading(false);
+                return;
+            }
         }
 
-        alert('Comanda salva como rascunho!');
-        setLoading(false);
-        fetchAgenda();
-        setView('agenda');
-    };
-
-    const handleFinalizeOrder = async (item: any) => {
-        if (!confirm('Deseja FINALIZAR este atendimento e enviar para o caixa?')) return;
-
-        setLoading(true);
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-            setLoading(false);
-            return;
-        }
-
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('tenant_id')
-            .eq('id', session.user.id)
-            .single();
-
-        if (!profile?.tenant_id) {
-            setLoading(false);
-            return;
-        }
-
+        // Now call the atomic RPC to finalize
         const { data: rpcResult, error: rpcError } = await supabase.rpc('finalize_appointment_order', {
-            p_appointment_id: item.id,
-            p_tenant_id: profile.tenant_id
+            p_appointment_id: selectedClient.id,
+            p_tenant_id: barberProfile.tenant_id
         });
 
         if (rpcError || !rpcResult?.success) {
@@ -308,9 +294,10 @@ export default function ProfessionalAgendaPage() {
             return;
         }
 
-        alert('Atendimento finalizado e enviado para o caixa!');
+        alert('Comanda finalizada e enviada para o caixa!');
         setLoading(false);
         fetchAgenda();
+        setView('agenda');
     };
 
     const addToCart = (item: any, type: 'service' | 'product') => {
@@ -425,7 +412,6 @@ export default function ProfessionalAgendaPage() {
                                     onUndo={handleUndoAbsent}
                                     onDelete={handleDeleteAppointment}
                                     onStart={handleOpenCommand}
-                                    onFinalize={handleFinalizeOrder}
                                     showDate={currentTab === 'proximos'}
                                 />
                             ))}
@@ -656,7 +642,7 @@ export default function ProfessionalAgendaPage() {
                             <span className="font-black uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Geral</span>
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {total.toFixed(2)}</span>
                         </div>
-                        <button onClick={handleSaveDraft} className="w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>SALVAR <span className="material-symbols-outlined">save</span></button>
+                        <button onClick={handleSaveAndFinalize} className="w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>FINALIZAR <span className="material-symbols-outlined">check_circle</span></button>
                     </div>
                 </div>
             </aside>
@@ -720,15 +706,6 @@ const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onDelete, on
                             >
                                 {hasOrder ? 'EDITAR' : 'INICIAR'}
                             </button>
-                            {!showDate && (
-                                <button
-                                    onClick={() => onFinalize(item)}
-                                    className="h-10 md:h-12 px-4 md:px-6 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg active:scale-95 italic"
-                                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
-                                >
-                                    FINALIZAR
-                                </button>
-                            )}
                         </>
                     )}
                 </div>
