@@ -257,7 +257,8 @@ export default function ProfessionalAgendaPage() {
             }).eq('id', existingOrder.id);
 
             if (updateError) {
-                alert('Erro ao atualizar itens da comanda');
+                console.error('Update order error details:', updateError);
+                alert('Erro ao atualizar itens da comanda: ' + (updateError.message || JSON.stringify(updateError)));
                 setLoading(false);
                 return;
             }
@@ -275,7 +276,8 @@ export default function ProfessionalAgendaPage() {
             });
 
             if (insertError) {
-                alert('Erro ao criar itens da comanda');
+                console.error('Insert order error details:', insertError);
+                alert('Erro ao criar itens da comanda: ' + (insertError.message || JSON.stringify(insertError)));
                 setLoading(false);
                 return;
             }
