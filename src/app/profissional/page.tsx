@@ -271,7 +271,7 @@ export default function ProfessionalAgendaPage() {
                 product_total: productTotal,
                 total_value: totalValue,
                 commission_amount: commissionAmount,
-                status: 'draft',
+                status: 'pending_payment',
                 items: cart
             });
 
