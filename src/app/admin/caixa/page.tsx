@@ -134,7 +134,14 @@ export default function CashierCheckoutPage() {
         }
     };
 
+    // Helper Ref to hold the latest tenant_id and avoid stale closures in listeners
+    const tenantIdRef = React.useRef(profile?.tenant_id);
+    const activeTabRef = React.useRef(activeTab);
+
     useEffect(() => {
+        tenantIdRef.current = profile?.tenant_id;
+        activeTabRef.current = activeTab;
+
         if (profile?.tenant_id) {
             if (activeTab === 'pending') fetchPendingOrders(profile.tenant_id);
             if (activeTab === 'history') fetchHistoryOrders(profile.tenant_id);
@@ -143,6 +150,64 @@ export default function CashierCheckoutPage() {
             setSelected(null);
         }
     }, [profile, activeTab]);
+
+    // 🛡️ [BLINDADO] - REALTIME LISTENERS & POLLING (Auto-Atualização do Caixa)
+    useEffect(() => {
+        let channel: ReturnType<typeof supabase.channel> | null = null;
+        let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+        const setupRealtime = () => {
+            const currentTenant = tenantIdRef.current;
+            if (!currentTenant) return;
+
+            console.log('[Caixa Realtime] Initializing Subscription for tenant:', currentTenant);
+
+            // Channel listening for orders table modifications for this tenant
+            channel = supabase
+                .channel(`caixa-orders-${currentTenant}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'orders',
+                        filter: `tenant_id=eq.${currentTenant}`
+                    },
+                    (payload) => {
+                        console.log('[Caixa Realtime] Orders modification detected:', payload.eventType);
+                        const tab = activeTabRef.current;
+                        const tid = tenantIdRef.current;
+                        if (tid) {
+                            if (tab === 'pending') fetchPendingOrders(tid);
+                            if (tab === 'history') fetchHistoryOrders(tid);
+                        }
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('[Caixa Realtime] Status:', status);
+                });
+
+            // Fallback Polling (15s) in case WebSocket connection is interrupted or missed
+            pollInterval = setInterval(() => {
+                const tab = activeTabRef.current;
+                const tid = tenantIdRef.current;
+                if (tid) {
+                    if (tab === 'pending') fetchPendingOrders(tid);
+                    if (tab === 'history') fetchHistoryOrders(tid);
+                }
+            }, 15000);
+        };
+
+        // Delayed start to ensure profile is completely loaded
+        if (profile?.tenant_id) {
+            setupRealtime();
+        }
+
+        return () => {
+            if (channel) supabase.removeChannel(channel);
+            if (pollInterval) clearInterval(pollInterval);
+        };
+    }, [profile?.tenant_id]);
 
     const fetchCatalog = async (tid: string) => {
         const [servRes, prodRes] = await Promise.all([
