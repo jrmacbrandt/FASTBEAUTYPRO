@@ -305,7 +305,10 @@ export default function ProfessionalAgendaPage() {
 
     const addToCart = (item: any, type: 'service' | 'product') => {
         if (type === 'product' && item.current_stock === 0) return alert('Sem estoque!');
-        const itemPrice = Number(item.price || 0);
+
+        // 🐛 BUGFIX: Serviços usam 'price', mas Produtos usam 'sale_price' no schema do Supabase.
+        const itemPrice = Number(type === 'product' ? (item.sale_price || item.price || 0) : (item.price || 0));
+
         setCart(prev => {
             const existing = prev.find(i => i.id === item.id);
             if (existing) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
@@ -564,7 +567,7 @@ export default function ProfessionalAgendaPage() {
                                                         checked={selectedItems.includes(p.id)}
                                                         onChange={() => toggleSelectItem(p.id)}
                                                     />
-                                                    <span className="font-black text-base italic" style={{ color: colors.primary }}>R$ {p.price}</span>
+                                                    <span className="font-black text-base italic" style={{ color: colors.primary }}>R$ {p.sale_price || p.price || '0.00'}</span>
                                                 </div>
                                             </div>
                                         </div>
