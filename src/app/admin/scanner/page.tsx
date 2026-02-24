@@ -12,6 +12,8 @@ export default function ScannerPage() {
     const [loading, setLoading] = useState(false);
     const [clientData, setClientData] = useState<any>(null);
     const [error, setError] = useState('');
+    const [editedStamps, setEditedStamps] = useState<number | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,11 +56,45 @@ export default function ScannerPage() {
                 .single();
 
             setClientData({ ...client, client_loyalty: loyalty ? [loyalty] : [] });
+            setEditedStamps(loyalty ? loyalty.stamps_count : 0);
 
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveLoyalty = async () => {
+        if (!clientData || !profile?.tenant_id || editedStamps === null) return;
+
+        const actualStampsCount = clientData.client_loyalty?.[0]?.stamps_count || 0;
+        if (editedStamps === actualStampsCount) return;
+
+        setIsSaving(true);
+        try {
+            const normalizedPhone = clientData.phone.replace(/\D/g, '');
+
+            // 🛡️ [BLINDADO] Update apenas a contagem de selos
+            const { error: upsertError } = await supabase.from('client_loyalty').upsert({
+                tenant_id: profile.tenant_id,
+                client_phone: normalizedPhone,
+                stamps_count: editedStamps,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'tenant_id,client_phone' });
+
+            if (upsertError) throw upsertError;
+
+            alert('✅ Fidelidade atualizada com sucesso!');
+            setClientData({
+                ...clientData,
+                client_loyalty: [{ ...clientData.client_loyalty?.[0], stamps_count: editedStamps }]
+            });
+        } catch (err: any) {
+            console.error(err);
+            alert('Erro ao salvar fidelidade: ' + err.message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -154,7 +190,9 @@ export default function ScannerPage() {
 
                             {/* Loyalty Card Grid (Scanner Version) */}
                             {(() => {
-                                const stampsCount = clientData.client_loyalty?.[0]?.stamps_count || 0;
+                                const actualStampsCount = clientData.client_loyalty?.[0]?.stamps_count || 0;
+                                const stampsCount = editedStamps !== null ? editedStamps : actualStampsCount;
+                                const hasChanges = stampsCount !== actualStampsCount;
                                 const loyaltyTarget = profile?.tenant?.loyalty_target || 10;
                                 const isRewardReady = stampsCount >= loyaltyTarget;
 
@@ -176,9 +214,17 @@ export default function ScannerPage() {
                                                 {[...Array(loyaltyTarget)].map((_, i) => (
                                                     <div
                                                         key={i}
-                                                        className={`size-10 rounded-xl border-2 flex items-center justify-center transition-all duration-500 ${i < stampsCount
+                                                        onClick={() => {
+                                                            // Permitir marcar e desmarcar preenchimentos clicando nas estrelas
+                                                            if (i === stampsCount - 1) {
+                                                                setEditedStamps(i); // desmarcar a última
+                                                            } else {
+                                                                setEditedStamps(i + 1); // preencher até a atual
+                                                            }
+                                                        }}
+                                                        className={`size-10 rounded-xl border-2 flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 ${i < stampsCount
                                                             ? 'border-white/5'
-                                                            : 'border-white/5 bg-white/5 opacity-20'
+                                                            : 'border-white/5 bg-white/5 opacity-20 hover:opacity-100'
                                                             }`}
                                                         style={i < stampsCount ? {
                                                             backgroundColor: `${colors.primary}30`,
@@ -189,7 +235,7 @@ export default function ScannerPage() {
                                                         {i < stampsCount ? (
                                                             <span className="material-symbols-outlined text-sm font-bold" style={{ color: colors.primary }}>star</span>
                                                         ) : (
-                                                            <span className="text-[10px] font-black opacity-30">{i + 1}</span>
+                                                            <span className="material-symbols-outlined text-sm font-bold opacity-30">star</span>
                                                         )}
                                                     </div>
                                                 ))}
@@ -210,55 +256,27 @@ export default function ScannerPage() {
 
                                             <p className="text-[10px] font-bold uppercase tracking-widest leading-relaxed italic" style={{ color: isRewardReady ? colors.primary : colors.textMuted }}>
                                                 {isRewardReady
-                                                    ? '🔥 PRÊMIO LIBERADO! VALIDAR AGORA.'
+                                                    ? '🔥 PRÊMIO ALCANÇADO!'
                                                     : `Faltam ${Math.max(0, loyaltyTarget - stampsCount)} selos para a próxima cortesia.`}
                                             </p>
                                         </div>
+
+                                        {hasChanges && (
+                                            <div className="mt-6">
+                                                <button
+                                                    onClick={handleSaveLoyalty}
+                                                    disabled={isSaving}
+                                                    className="w-full font-black py-4 rounded-xl uppercase text-xs tracking-widest transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
+                                                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}
+                                                >
+                                                    {isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                                                    {!isSaving && <span className="material-symbols-outlined text-lg">save</span>}
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })()}
-
-                            <div className="pt-4 border-t space-y-3" style={{ borderColor: colors.border }}>
-                                <button
-                                    onClick={async () => {
-                                        if (!clientData || !profile?.tenant_id) return;
-                                        try {
-                                            const { LoyaltyService } = await import('@/lib/loyalty');
-                                            const normalizedPhone = clientData.phone.replace(/\D/g, '');
-                                            const result = await LoyaltyService.addStamp(profile.tenant_id, normalizedPhone);
-
-                                            if (result.rewardEarned) {
-                                                alert(`🎉 BRINDE LIBERADO!\n${clientData.name} completou o cartão de fidelidade!\nCartão reiniciado — novo ciclo iniciado.`);
-                                            } else if (result.stampAdded) {
-                                                alert(`✅ Selo registrado para ${clientData.name}!\nTotal: ${result.newStampsCount} selos.`);
-                                            } else {
-                                                alert('Nenhum selo registrado (fidelidade desativada ou erro).');
-                                            }
-                                        } catch (err) {
-                                            alert('Erro ao registrar selo. Tente novamente.');
-                                        } finally {
-                                            setClientData(null);
-                                            setPhone('');
-                                            setError('');
-                                        }
-                                    }}
-                                    className="w-full font-black py-4 rounded-xl uppercase text-xs tracking-widest transition-all active:scale-95 shadow-xl"
-                                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}
-                                >
-                                    CONFIRMAR PAGAMENTO + REGISTRAR SELO
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        setClientData(null);
-                                        setPhone('');
-                                        setError('');
-                                    }}
-                                    className="w-full font-black py-3 rounded-xl uppercase text-xs tracking-widest transition-all active:scale-95 border"
-                                    style={{ backgroundColor: 'transparent', borderColor: 'rgba(239,68,68,0.3)', color: 'rgb(239,68,68)' }}
-                                >
-                                    MARCAR AUSÊNCIA (sem selo)
-                                </button>
-                            </div>
                         </div>
                     )}
                 </div>
