@@ -147,9 +147,24 @@ export default function OwnerDashboardPage() {
                 fetchDashboardData(profile.tenant_id);
             }
         };
+
+        // 🛡️ [BLINDADO] - Atualização em Tempo Real via Supabase WebSockets (Checkout no Caixa)
+        const channel = supabase.channel('admin_dashboard_orders')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'orders',
+                filter: profile?.tenant_id ? `tenant_id=eq.${profile.tenant_id}` : undefined
+            }, () => {
+                handleUpdate();
+            })
+            .subscribe();
+
         window.addEventListener('professional-approved', handleUpdate);
-        window.addEventListener('order-paid', handleUpdate);
+        window.addEventListener('order-paid', handleUpdate); // Mantém fallback local
+
         return () => {
+            supabase.removeChannel(channel);
             window.removeEventListener('professional-approved', handleUpdate);
             window.removeEventListener('order-paid', handleUpdate);
         };

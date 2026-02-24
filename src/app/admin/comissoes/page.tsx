@@ -17,6 +17,19 @@ export default function AdminCommissionsPage() {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
         if (savedType) setBusinessType(savedType);
         fetchCommissions();
+
+        // 🛡️ [BLINDADO] - Atualização em Tempo Real (Checkout no Caixa)
+        const channel = supabase.channel('admin_comissoes_changes')
+            .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'orders'
+            }, () => fetchCommissions())
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, [selectedPeriod]);
 
     const fetchCommissions = async () => {

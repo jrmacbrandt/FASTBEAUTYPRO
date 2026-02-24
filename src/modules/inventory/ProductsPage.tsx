@@ -17,6 +17,20 @@ export default function ProductsPage() {
     useEffect(() => {
         if (profile?.tenant_id) {
             fetchProducts(profile.tenant_id, activeTab);
+
+            // 🛡️ [BLINDADO] - Atualização em Tempo Real (Baixa de Estoque Automática no Caixa)
+            const channel = supabase.channel('admin_inventory_changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: activeTab === 'sale' ? 'products' : 'supplies',
+                    filter: `tenant_id=eq.${profile.tenant_id}`
+                }, () => fetchProducts(profile.tenant_id, activeTab))
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
         }
     }, [profile, activeTab]);
 

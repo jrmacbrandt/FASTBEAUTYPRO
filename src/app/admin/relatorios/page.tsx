@@ -83,6 +83,26 @@ export default function ReportsPage() {
         if (!profileLoading && profile?.tenant_id) {
             fetchFinancialData(profile.tenant_id);
             fetchHistoricalData(profile.tenant_id);
+
+            // 🛡️ [BLINDADO] - Atualização em Tempo Real (Checkout no Caixa / Estoque)
+            const channel = supabase.channel('admin_relatorios_changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `tenant_id=eq.${profile.tenant_id}`
+                }, () => fetchFinancialData(profile.tenant_id))
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'stock_transactions',
+                    filter: `tenant_id=eq.${profile.tenant_id}`
+                }, () => fetchFinancialData(profile.tenant_id))
+                .subscribe();
+
+            return () => {
+                supabase.removeChannel(channel);
+            };
         }
     }, [profileLoading, profile]);
 
