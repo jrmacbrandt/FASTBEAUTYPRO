@@ -148,9 +148,24 @@ export default function TeamManagementPage() {
                 const { error } = await supabase.from('profiles').update(profileData).eq('id', editingBarber.id);
                 if (error) throw error;
             } else {
-                alert("A criação de novos usuários com login requer acesso ao servidor de autenticação. Por favor, use a função de convite.");
-                setUploading(false);
-                return;
+                const res = await fetch('/api/admin/create-professional', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: formData.email,
+                        full_name: formData.full_name,
+                        cpf: formData.cpf.replace(/\\D/g, ''),
+                        phone: formData.phone.replace(/\\D/g, ''),
+                        service_commission: Number(formData.service_commission || 0),
+                        product_commission: Number(formData.product_commission || 0),
+                        tenant_id: currentUser?.tenant_id,
+                        role: 'barber',
+                        password: 'mudar123'
+                    })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erro interno ao criar profissional');
             }
 
             if (currentUser?.tenant_id) fetchTeam(currentUser.tenant_id);
