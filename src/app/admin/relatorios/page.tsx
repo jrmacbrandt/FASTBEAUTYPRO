@@ -127,13 +127,13 @@ export default function ReportsPage() {
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
             thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-            // 1. Fetch Paid Orders (Full Detail)
+            // 🛡️ [BLINDADO] - Fetch Paid Orders (Full Detail - REAL TIME FIX)
             const { data: orders } = await supabase
                 .from('orders')
                 .select('total_value, commission_amount, service_total, product_total, fee_amount_services, fee_amount_products, finalized_at, created_at')
                 .eq('tenant_id', tenantId)
                 .eq('status', 'paid')
-                .gte('created_at', thirtyDaysAgo.toISOString());
+                .gte('finalized_at', thirtyDaysAgo.toISOString());
 
             // 2. Fetch Stock Transactions (Cost)
             const { data: transactions } = await supabase

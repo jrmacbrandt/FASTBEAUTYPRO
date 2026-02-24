@@ -57,13 +57,14 @@ export default function AdminCommissionsPage() {
                 // For now, we simulate or fetch from a hypothetical commissions/orders table
                 // Since the specific table for commissions isn't clear, we'll implement a clean UI
                 // that aggregates data from 'orders' if available
+                // 🛡️ [BLINDADO] - Fetch orders for the period (REAL TIME FIX)
                 const { data: orders } = await supabase
                     .from('orders')
                     .select('*')
                     .eq('tenant_id', profile.tenant_id)
-                    .eq('status', 'completed')
-                    .gte('created_at', `${selectedPeriod}-01`)
-                    .lte('created_at', `${selectedPeriod}-31`);
+                    .eq('status', 'paid')
+                    .gte('finalized_at', `${selectedPeriod}-01`)
+                    .lte('finalized_at', `${selectedPeriod}-31`);
 
 
                 // 3. Fetch orders for the PREVIOUS period to calculate growth
@@ -75,13 +76,14 @@ export default function AdminCommissionsPage() {
                 const prevMonth = month === 1 ? 12 : month - 1;
                 const prevPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
 
+                // 🛡️ [BLINDADO] - Fetch orders for the PREVIOUS period (REAL TIME FIX)
                 const { data: prevOrders } = await supabase
                     .from('orders')
                     .select('commission_amount')
                     .eq('tenant_id', profile.tenant_id)
-                    .eq('status', 'completed')
-                    .gte('created_at', `${prevPeriod}-01`)
-                    .lte('created_at', `${prevPeriod}-31`);
+                    .eq('status', 'paid')
+                    .gte('finalized_at', `${prevPeriod}-01`)
+                    .lte('finalized_at', `${prevPeriod}-31`);
 
                 const currentTotalCommission = orders?.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0) || 0;
                 const prevTotalCommission = prevOrders?.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0) || 0;
