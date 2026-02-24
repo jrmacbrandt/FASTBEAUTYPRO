@@ -6,6 +6,14 @@
 -- ================================================================
 
 -- 1. Criação da Tabela Consolidada (Arquivo Mestre)
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
 CREATE TABLE IF NOT EXISTS public.tenant_monthly_summaries (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     tenant_id UUID NOT NULL REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -26,12 +34,11 @@ ALTER TABLE public.tenant_monthly_summaries ENABLE ROW LEVEL SECURITY;
 
 -- Política simples: Dono do Tenant vê seus resumos
 CREATE POLICY "Tenants podem visualizar próprios resumos"
-ON public.tenant_monthly_summaries
-FOR SELECT TO authenticated
+ON public.tenant_monthly_summaries FOR SELECT TO authenticated
 USING (
     tenant_id IN (
-        SELECT t.id FROM public.tenants t
-        WHERE t.owner_id = auth.uid()
+        SELECT p.tenant_id FROM public.profiles p 
+        WHERE p.id = auth.uid() AND (p.role = 'owner' OR p.role = 'master')
     )
 );
 
