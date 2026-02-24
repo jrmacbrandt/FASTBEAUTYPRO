@@ -482,20 +482,22 @@ export default function CashierCheckoutPage() {
                                     { label: 'CRÉDITO', val: 'CARTÃO' },
                                     { label: 'DINHEIRO', val: 'DINHEIRO' },
                                     { label: 'DÉBITO', val: 'DÉBITO' }
-                                ].map(m => (
-                                    <button
-                                        key={m.val}
-                                        onClick={() => setPaymentMethod(m.val)}
-                                        className={`border font-black py-3 md:py-4 rounded-xl transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95 ${paymentMethod === m.val ? 'bg-primary text-black' : 'bg-black/40 text-white'}`}
-                                        style={{
-                                            borderColor: paymentMethod === m.val ? colors.primary : colors.border,
-                                            backgroundColor: paymentMethod === m.val ? colors.primary : `${colors.text}0d`,
-                                            color: paymentMethod === m.val ? (isSalon ? 'white' : 'black') : colors.text
-                                        }}
-                                    >
-                                        {m.label}
-                                    </button>
-                                ))}
+                                ]
+                                    .filter(m => tenantFees.payment_methods?.includes(m.val))
+                                    .map(m => (
+                                        <button
+                                            key={m.val}
+                                            onClick={() => setPaymentMethod(m.val)}
+                                            className={`border font-black py-3 md:py-4 rounded-xl transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95 ${paymentMethod === m.val ? 'bg-primary text-black' : 'bg-black/40 text-white'}`}
+                                            style={{
+                                                borderColor: paymentMethod === m.val ? colors.primary : colors.border,
+                                                backgroundColor: paymentMethod === m.val ? colors.primary : `${colors.text}0d`,
+                                                color: paymentMethod === m.val ? (isSalon ? 'white' : 'black') : colors.text
+                                            }}
+                                        >
+                                            {m.label}
+                                        </button>
+                                    ))}
                             </div>
 
                             {voucher && (
@@ -536,9 +538,11 @@ export default function CashierCheckoutPage() {
                             )}
                         </div>
 
-                        <div className="pt-5 md:pt-6 border-t" style={{ borderColor: colors.border }}>
+                        {/* Fee Breakdown Visual (REMOVIDO A PEDIDO DO CLIENTE - BLINDADO) */}
+
+                        <div className="pt-5 md:pt-6 border-t mt-4" style={{ borderColor: colors.border }}>
                             <div className="flex justify-between items-end mb-5 md:mb-6">
-                                <span className="font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total</span>
+                                <span className="font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Cobrado do Cliente</span>
                                 <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {(selected.total_price || 0).toFixed(2)}</span>
                             </div>
                             <button

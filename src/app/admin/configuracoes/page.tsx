@@ -55,6 +55,7 @@ export default function EstablishmentSettingsPage() {
         setLogoPreview(preview);
     };
 
+    // 🛡️ [BLINDADO] - Persistência das Configurações de Taxa
     const handleSave = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         setIsSaving(true);
@@ -105,6 +106,9 @@ export default function EstablishmentSettingsPage() {
                 loyalty_target: tenant.loyalty_target,
                 loyalty_enabled: tenant.loyalty_enabled,
                 payment_methods: tenant.payment_methods,
+                fee_percent_pix: tenant.fee_percent_pix,
+                fee_percent_credit: tenant.fee_percent_credit,
+                fee_percent_debit: tenant.fee_percent_debit,
                 primary_color: tenant.primary_color,
                 secondary_color: tenant.secondary_color,
                 tertiary_color: tenant.tertiary_color
@@ -372,27 +376,64 @@ export default function EstablishmentSettingsPage() {
 
             {activeTab === 'finance' && (
                 <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in">
-                    <h4 className="text-lg md:text-xl font-black italic uppercase text-white">Configurações Financeiras</h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                        {['PIX', 'CARTÃO', 'DINHEIRO', 'DÉBITO'].map(m => {
+                    <h4 className="text-lg md:text-xl font-black italic uppercase text-white mb-2">Configurações Financeiras</h4>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-6 block">Habilite os métodos aceitos e defina as taxas da sua maquininha (%)</p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
+                        {['PIX', 'CARTÃO', 'DÉBITO', 'DINHEIRO'].map(m => {
                             const isActive = tenant.payment_methods?.includes(m);
+                            // Mapping for fee state properties
+                            const feeKey = m === 'PIX' ? 'fee_percent_pix' : m === 'CARTÃO' ? 'fee_percent_credit' : m === 'DÉBITO' ? 'fee_percent_debit' : null;
+                            const currentFee = feeKey ? (tenant[feeKey] || 0) : 0;
+
                             return (
-                                <div
-                                    key={m}
-                                    onClick={() => {
-                                        const current = tenant.payment_methods || [];
-                                        const updated = current.includes(m)
-                                            ? current.filter((i: string) => i !== m)
-                                            : [...current, m];
-                                        setTenant({ ...tenant, payment_methods: updated });
-                                    }}
-                                    className={`p-6 rounded-2xl border cursor-pointer transition-all flex items-center justify-between group ${isActive ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/5 bg-black/40 hover:bg-white/5'
-                                        }`}
-                                >
-                                    <span className={`text-xs font-black uppercase tracking-widest transition-colors ${isActive ? 'text-emerald-500' : 'text-slate-400 group-hover:text-white'}`}>{m}</span>
-                                    <div className={`w-10 h-5 rounded-full relative transition-colors duration-300 ${isActive ? 'bg-emerald-500' : 'bg-slate-700'}`}>
-                                        <div className={`absolute top-1 size-3 bg-white rounded-full shadow-lg transition-all duration-300 ${isActive ? 'translate-x-6' : 'translate-x-1'}`}></div>
+                                <div key={m} className={`p-6 md:p-8 rounded-3xl border transition-all flex flex-col gap-6 ${isActive ? 'border-emerald-500/50 bg-emerald-500/5' : 'border-white/5 bg-black/40'}`}>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`size-10 rounded-xl flex items-center justify-center ${isActive ? 'bg-emerald-500/20 text-emerald-500' : 'bg-white/5 text-slate-500'}`}>
+                                                <span className="material-symbols-outlined text-lg">
+                                                    {m === 'PIX' ? 'pix' : m === 'CARTÃO' ? 'credit_card' : m === 'DINHEIRO' ? 'payments' : 'point_of_sale'}
+                                                </span>
+                                            </div>
+                                            <span className={`text-base font-black uppercase tracking-widest transition-colors ${isActive ? 'text-emerald-500' : 'text-slate-400'}`}>{m}</span>
+                                        </div>
+                                        <div
+                                            onClick={() => {
+                                                const current = tenant.payment_methods || [];
+                                                const updated = current.includes(m)
+                                                    ? current.filter((i: string) => i !== m)
+                                                    : [...current, m];
+                                                setTenant({ ...tenant, payment_methods: updated });
+                                            }}
+                                            className={`w-12 h-6 rounded-full relative cursor-pointer shadow-inner transition-colors duration-300 flex-shrink-0 ${isActive ? 'bg-emerald-500' : 'bg-slate-800'}`}
+                                        >
+                                            <div className={`absolute top-1 size-4 bg-white rounded-full shadow-lg transition-all duration-300 ${isActive ? 'right-1' : 'left-1'}`}></div>
+                                        </div>
                                     </div>
+
+                                    {feeKey && (
+                                        <div className={`pt-4 border-t transition-all ${isActive ? 'border-emerald-500/20 opacity-100' : 'border-white/5 opacity-30 pointer-events-none'}`}>
+                                            <label className={`text-[10px] font-black uppercase tracking-widest ml-1 mb-2 block ${isActive ? 'text-emerald-500' : 'text-slate-500'}`}>Taxa Operacional (%)</label>
+                                            <div className="relative">
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    max="100"
+                                                    value={currentFee}
+                                                    onChange={(e) => setTenant({ ...tenant, [feeKey]: parseFloat(e.target.value) || 0 })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white outline-none focus:border-emerald-500 transition-all text-right pr-12"
+                                                    placeholder="0.00"
+                                                />
+                                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-black">%</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {m === 'DINHEIRO' && (
+                                        <div className={`pt-4 border-t transition-all ${isActive ? 'border-emerald-500/20 opacity-100' : 'border-white/5 opacity-30 pointer-events-none'}`}>
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-emerald-500/50 mt-2">Isento de Taxas Automáticas</p>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}

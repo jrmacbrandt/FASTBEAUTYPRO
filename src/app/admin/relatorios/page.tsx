@@ -245,6 +245,7 @@ export default function ReportsPage() {
             </header>
 
             {/* Metrics Grid */}
+            {/* Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <MetricCard
                     title="Receita Bruta Serviços"
@@ -268,7 +269,7 @@ export default function ReportsPage() {
                     colorIndex={3}
                 />
                 <MetricCard
-                    title="Lucro Líquido"
+                    title="Lucro Líquido Real"
                     value={`R$ ${metrics.profit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
                     icon="trending_up"
                     theme={theme}
@@ -276,9 +277,8 @@ export default function ReportsPage() {
                     headerLabel="Resultado Final"
                     subtext={
                         <div className="space-y-1.5 mt-3 border-t border-white/5 pt-3">
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">TAXAS OPER. SERVIÇOS: R$ {metrics.serviceFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight">TAXAS OPER. PRODUTOS: R$ {metrics.productFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
-                            <p className="text-[11px] font-black text-rose-500 uppercase tracking-tighter">TOTAL DE TAXAS OPER.: R$ {metrics.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight flex justify-between"><span>TAXAS DE SERVIÇOS:</span> <span className="text-rose-500 font-black">- R$ {metrics.serviceFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
+                            <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-tight flex justify-between"><span>TAXAS DE PRODUTOS:</span> <span className="text-rose-500 font-black">- R$ {metrics.productFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
                         </div>
                     }
                 />

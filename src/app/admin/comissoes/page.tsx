@@ -98,13 +98,22 @@ export default function AdminCommissionsPage() {
 
                 const prosWithStats = pros.map(p => {
                     const proOrders = orders?.filter(o => o.barber_id === p.id) || [];
-                    const totalSales = proOrders.reduce((acc, curr) => acc + (curr.total_amount || 0), 0);
+                    const totalSales = proOrders.reduce((acc, curr) => acc + (curr.total_value || 0), 0);
                     const commission = proOrders.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0);
+                    const feeCost = proOrders.reduce((acc, curr) => acc + (curr.fee_amount_services || 0) + (curr.fee_amount_products || 0), 0);
+
+                    // Cálculo da Fração Proporcional das Taxas (Salão/Profissional)
+                    const commissionRate = totalSales > 0 ? (commission / totalSales) : 0;
+                    const professionalFeeShare = feeCost * commissionRate;
+                    const netCommission = commission - professionalFeeShare;
 
                     return {
                         ...p,
                         totalSales,
                         commission,
+                        feeCost,
+                        professionalFeeShare,
+                        netCommission,
                         orderCount: proOrders.length
                     };
                 });
@@ -154,9 +163,9 @@ export default function AdminCommissionsPage() {
                         <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform">
                             <span className="material-symbols-outlined text-7xl md:text-8xl" style={{ color: colors.primary }}>payments</span>
                         </div>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Total em Comissões (Mês)</p>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Comissões a Pagar (Líquido)</p>
                         <h3 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter">
-                            R$ {professionals.reduce((acc, curr) => acc + curr.commission, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {professionals.reduce((acc, curr) => acc + curr.netCommission, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </h3>
                         <div className={`mt-6 flex items-center gap-2 ${growth >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                             <span className="material-symbols-outlined text-sm">{growth >= 0 ? 'trending_up' : 'trending_down'}</span>
@@ -187,23 +196,22 @@ export default function AdminCommissionsPage() {
                                 <thead>
                                     <tr className="bg-white/[0.02]">
                                         <th className="text-left px-4 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Profissional</th>
-                                        <th className="text-center px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Total Geral</th>
-                                        <th className="text-right px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">% Serviços</th>
-                                        <th className="text-right px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">% Produtos</th>
-                                        <th className="text-right px-4 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Total Comissões</th>
+                                        <th className="text-center px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Vendas (Bruto)</th>
+                                        <th className="text-right px-2 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Taxas (Rateio)</th>
+                                        <th className="text-right px-4 py-4 text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Comissão Líquida</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={5} className="px-8 py-10 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">Carregando dados...</td>
+                                            <td colSpan={4} className="px-8 py-10 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">Carregando dados...</td>
                                         </tr>
                                     ) : professionals.length === 0 ? (
                                         <tr>
-                                            <td colSpan={5} className="px-8 py-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">Sem dados para este período.</td>
+                                            <td colSpan={4} className="px-8 py-20 text-center text-slate-500 font-bold uppercase tracking-widest text-xs">Sem dados para este período.</td>
                                         </tr>
                                     ) : (
-                                        professionals.sort((a, b) => b.commission - a.commission).map(pro => (
+                                        professionals.sort((a, b) => b.netCommission - a.netCommission).map(pro => (
                                             <tr key={pro.id} className="group hover:bg-white/[0.02] transition-colors">
                                                 <td className="px-4 py-4">
                                                     <div className="flex items-center gap-3">
@@ -225,18 +233,18 @@ export default function AdminCommissionsPage() {
                                                 <td className="px-2 py-4 text-center text-slate-400 font-bold text-xs uppercase">
                                                     R$ {pro.totalSales.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
-                                                <td className="px-2 py-4 text-right text-xs md:text-sm font-bold text-[#f2b90d]/80">
-                                                    {/* Estimativa ou Dado Futuro - Serviço */}
-                                                    R$ {(pro.commission * 0.8).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-[8px] text-slate-500 opacity-50 block leading-none">EST.</span>
-                                                </td>
-                                                <td className="px-2 py-4 text-right text-xs md:text-sm font-bold text-emerald-500/80">
-                                                    {/* Estimativa ou Dado Futuro - Produto */}
-                                                    R$ {(pro.commission * 0.2).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} <span className="text-[8px] text-slate-500 opacity-50 block leading-none">EST.</span>
+                                                <td className="px-2 py-4 text-right text-xs md:text-sm font-bold text-rose-500/80">
+                                                    - R$ {pro.professionalFeeShare.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                                 </td>
                                                 <td className="px-4 py-4 text-right">
-                                                    <span className="text-[#f2b90d] font-black italic text-sm md:text-lg">
-                                                        R$ {pro.commission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                                    </span>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[#f2b90d] font-black italic text-sm md:text-lg">
+                                                            R$ {pro.netCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                        <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-1">
+                                                            BRUTO: R$ {pro.commission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))
