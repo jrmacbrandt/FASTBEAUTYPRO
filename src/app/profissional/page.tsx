@@ -41,7 +41,7 @@ export default function ProfessionalAgendaPage() {
 
             setTodayAgenda(data.filter(a => a.scheduled_at.startsWith(todayStr) && a.status === 'scheduled'));
             setUpcomingAgenda(data.filter(a => a.scheduled_at > todayStr && a.status === 'scheduled'));
-            setHistoryAgenda(data.filter(a => a.status === 'completed' || a.status === 'paid').reverse());
+            setHistoryAgenda(data.filter(a => a.status === 'completed' || a.status === 'paid' || a.status === 'absent').reverse());
         }
         setLoading(false);
     };
@@ -381,8 +381,8 @@ export default function ProfessionalAgendaPage() {
                                         {historyAgenda.map(item => (
                                             <tr key={item.id} className="border-b transition-colors hover:bg-white/5" style={{ color: colors.text, borderColor: `${colors.text}0d` }}>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black ${item.status === 'completed' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
-                                                        {item.status === 'completed' ? 'REALIZADO' : 'AUSENTE'}
+                                                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black ${item.status === 'completed' || item.status === 'paid' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-rose-500/10 text-rose-500'}`}>
+                                                        {item.status === 'completed' || item.status === 'paid' ? 'REALIZADO' : 'AUSENTE'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 truncate max-w-[150px]">
