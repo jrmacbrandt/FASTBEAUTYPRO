@@ -21,11 +21,15 @@ export default function ProfessionalHistoryPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
         const { data, error } = await supabase
             .from('appointments')
             .select('*, profiles(full_name), services(name)')
             .eq('barber_id', session.user.id)
             .eq('status', 'completed')
+            .gte('scheduled_at', ninetyDaysAgo.toISOString())
             .order('scheduled_at', { ascending: false });
 
         if (!error && data) {

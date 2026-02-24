@@ -41,16 +41,16 @@ export default function OwnerDashboardPage() {
 
     const fetchDashboardData = async (tid: string) => {
         setLoadingStats(true);
-        const sixtyDaysAgo = new Date();
-        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-        sixtyDaysAgo.setHours(0, 0, 0, 0);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        ninetyDaysAgo.setHours(0, 0, 0, 0);
 
         const { data: orders, error } = await supabase
             .from('orders')
             .select('total_value, finalized_at, created_at')
             .eq('tenant_id', tid)
             .eq('status', 'paid')
-            .gte('finalized_at', sixtyDaysAgo.toISOString());
+            .gte('finalized_at', ninetyDaysAgo.toISOString());
 
         if (!error && orders) {
             const now = new Date();

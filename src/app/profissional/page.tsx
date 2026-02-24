@@ -25,14 +25,14 @@ export default function ProfessionalAgendaPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const sixtyDaysAgo = new Date();
-        sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
         const { data, error } = await supabase
             .from('appointments')
             .select('*, profiles(full_name), services(name, price), orders(total_value, items)')
             .eq('barber_id', session.user.id)
-            .gte('scheduled_at', sixtyDaysAgo.toISOString())
+            .gte('scheduled_at', ninetyDaysAgo.toISOString())
             .order('scheduled_at', { ascending: true });
 
         if (!error && data) {

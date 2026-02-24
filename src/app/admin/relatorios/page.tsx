@@ -77,12 +77,26 @@ export default function ReportsPage() {
         profit: 0
     });
     const [chartData, setChartData] = useState<any[]>([]);
+    const [historicalData, setHistoricalData] = useState<any[]>([]);
 
     useEffect(() => {
         if (!profileLoading && profile?.tenant_id) {
             fetchFinancialData(profile.tenant_id);
+            fetchHistoricalData(profile.tenant_id);
         }
     }, [profileLoading, profile]);
+
+    const fetchHistoricalData = async (tenantId: string) => {
+        const { data, error } = await supabase
+            .from('tenant_monthly_summaries')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .order('reference_month', { ascending: false });
+
+        if (!error && data) {
+            setHistoricalData(data);
+        }
+    };
 
     const fetchFinancialData = async (tenantId: string) => {
         try {
@@ -250,14 +264,50 @@ export default function ReportsPage() {
                 />
             </div>
 
+            {/* Historical Summaries Area */}
+            {historicalData.length > 0 && (
+                <div className="rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl overflow-hidden transition-all mt-8"
+                    style={{ backgroundColor: theme.cardBg }}
+                >
+                    <div className="flex items-center justify-between mb-8 md:mb-10">
+                        <div>
+                            <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter" style={{ color: theme.text }}>Histórico Consolidado (Arquivo Mestre)</h3>
+                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-40" style={{ color: theme.textMuted }}>Resultados mensais (+90 dias)</p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {historicalData.map(month => (
+                            <div key={month.id} className="border border-white/5 p-4 rounded-2xl md:rounded-[2rem] flex flex-col sm:flex-row items-center justify-between gap-4 bg-black/20">
+                                <div className="flex items-center gap-4 w-full">
+                                    <div className="size-12 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${theme.primary}1a`, color: theme.primary }}>
+                                        <span className="material-symbols-outlined">calendar_month</span>
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-lg text-white capitalize">{new Date(month.reference_month).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h4>
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{month.total_appointments} ATENDIMENTOS</p>
+                                    </div>
+                                </div>
+                                <div className="flex w-full sm:w-auto items-center sm:items-end justify-between sm:flex-col border-t sm:border-t-0 border-white/5 pt-3 sm:pt-0">
+                                    <p className="text-[8px] font-black uppercase tracking-widest italic opacity-40 text-slate-500 mb-1">Lucro Líquido</p>
+                                    <p className="text-xl md:text-2xl font-black italic tracking-tighter text-emerald-500">
+                                        R$ {Number(month.net_profit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             {/* Charts Area */}
-            <div className="rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl overflow-hidden transition-all"
+            <div className="rounded-3xl md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl overflow-hidden transition-all mt-8"
                 style={{ backgroundColor: theme.cardBg }}
             >
                 <div className="flex items-center justify-between mb-8 md:mb-10">
                     <div>
                         <h3 className="text-xl md:text-2xl font-black italic uppercase tracking-tighter" style={{ color: theme.text }}>Performance Diária</h3>
-                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-40" style={{ color: theme.textMuted }}>Faturamento vs Custos (Últimos 7 dias)</p>
+                        <p className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] opacity-40" style={{ color: theme.textMuted }}>Faturamento vs Custos (Últimos 30 dias)</p>
                     </div>
                     <div className="flex items-center gap-2 md:gap-4">
                         <div className="flex items-center gap-1 md:gap-2">
