@@ -254,7 +254,9 @@ export default function ProfessionalAgendaPage() {
                 product_total: productTotal,
                 total_value: totalValue,
                 commission_amount: commissionAmount,
-                items: cart
+                items: cart,
+                status: 'pending_payment',
+                finalized_at: new Date().toISOString()
             }).eq('id', existingOrder.id);
 
             if (updateError) {
@@ -273,6 +275,7 @@ export default function ProfessionalAgendaPage() {
                 total_value: totalValue,
                 commission_amount: commissionAmount,
                 status: 'pending_payment',
+                finalized_at: new Date().toISOString(),
                 items: cart
             });
 

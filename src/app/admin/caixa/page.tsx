@@ -40,8 +40,8 @@ export default function CashierCheckoutPage() {
                     customer_whatsapp,
                     scheduled_at, 
                     client_id,
-                    professional_id,
-                    profiles(full_name, service_commission, product_commission),
+                    barber_id,
+                    profiles!appointments_barber_id_fkey(full_name, service_commission, product_commission),
                     services(name)
                 )
             `)
@@ -49,19 +49,25 @@ export default function CashierCheckoutPage() {
             .eq('status', 'pending_payment')
             .order('finalized_at', { ascending: true });
 
+        if (error) {
+            console.error('[Caixa] Erro ao buscar comandas pendentes:', error);
+            console.warn('[Caixa] Detalhes do Tenant ID:', tid);
+        }
+
         if (!error && data) {
+            console.log(`[Caixa] ${data.length} comandas pendentes encontradas.`);
             const formatted = data.map((o: any) => ({
                 id: o.id,
                 appointment_id: o.appointments?.id,
-                customer_name: o.appointments?.customer_name,
-                barber_name: o.appointments?.profiles?.full_name,
-                service_name: o.appointments?.services?.name,
-                time: o.appointments?.scheduled_at,
+                customer_name: o.appointments?.customer_name || 'Sem nome',
+                barber_name: o.appointments?.profiles?.full_name || 'Agendamento Externo',
+                service_name: o.appointments?.services?.name || 'Serviços Diversos',
+                time: o.appointments?.scheduled_at || o.finalized_at,
                 total_price: o.total_value,
                 commission: o.commission_amount,
                 client_id: o.appointments?.client_id,
                 client_phone: o.appointments?.customer_whatsapp,
-                professional_id: o.appointments?.professional_id,
+                barber_id: o.appointments?.barber_id,
                 barber_commission: {
                     service: o.appointments?.profiles?.service_commission || 50,
                     product: o.appointments?.profiles?.product_commission || 10
