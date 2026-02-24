@@ -7,11 +7,19 @@ import { useProfile } from '@/hooks/useProfile';
 export default function CashierCheckoutPage() {
     const { profile, loading: profileLoading, theme: colors } = useProfile();
     const [orders, setOrders] = useState<any[]>([]);
+    const [historyOrders, setHistoryOrders] = useState<any[]>([]);
+    const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
     const [selected, setSelected] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [voucher, setVoucher] = useState<any>(null);
     const [paymentMethod, setPaymentMethod] = useState<string>('DINHEIRO');
     const [tenantFees, setTenantFees] = useState<any>({ pix: 0, cash: 0, credit: 4.99, debit: 1.99 });
+
+    // States for adding items
+    const [availableServices, setAvailableServices] = useState<any[]>([]);
+    const [availableProducts, setAvailableProducts] = useState<any[]>([]);
+    const [showAddItem, setShowAddItem] = useState(false);
+    const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
 
     const fetchPendingOrders = async (tid: string) => {
         setLoading(true);
@@ -25,13 +33,15 @@ export default function CashierCheckoutPage() {
                 commission_amount,
                 status, 
                 finalized_at,
+                items,
                 appointments!appointment_id (
                     id, 
                     customer_name,
                     customer_whatsapp,
                     scheduled_at, 
                     client_id,
-                    profiles(full_name),
+                    professional_id,
+                    profiles(full_name, service_commission, product_commission),
                     services(name)
                 )
             `)
@@ -51,9 +61,53 @@ export default function CashierCheckoutPage() {
                 commission: o.commission_amount,
                 client_id: o.appointments?.client_id,
                 client_phone: o.appointments?.customer_whatsapp,
+                professional_id: o.appointments?.professional_id,
+                barber_commission: {
+                    service: o.appointments?.profiles?.service_commission || 50,
+                    product: o.appointments?.profiles?.product_commission || 10
+                },
                 raw: o
             }));
             setOrders(formatted);
+        }
+        setLoading(false);
+    };
+
+    const fetchHistoryOrders = async (tid: string) => {
+        setLoading(true);
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+        const { data, error } = await supabase
+            .from('orders')
+            .select(`
+                id, 
+                total_value, 
+                status, 
+                finalized_at,
+                payment_method,
+                appointments!appointment_id (
+                    customer_name,
+                    profiles(full_name),
+                    services(name)
+                )
+            `)
+            .eq('tenant_id', tid)
+            .eq('status', 'paid')
+            .gte('finalized_at', ninetyDaysAgo.toISOString())
+            .order('finalized_at', { ascending: false });
+
+        if (!error && data) {
+            const formatted = data.map((o: any) => ({
+                id: o.id,
+                customer_name: o.appointments?.customer_name,
+                barber_name: o.appointments?.profiles?.full_name,
+                service_name: o.appointments?.services?.name,
+                time: o.finalized_at,
+                total_price: o.total_value,
+                payment_method: o.payment_method
+            }));
+            setHistoryOrders(formatted);
         }
         setLoading(false);
     };
@@ -81,10 +135,81 @@ export default function CashierCheckoutPage() {
 
     useEffect(() => {
         if (profile?.tenant_id) {
-            fetchPendingOrders(profile.tenant_id);
+            if (activeTab === 'pending') fetchPendingOrders(profile.tenant_id);
+            if (activeTab === 'history') fetchHistoryOrders(profile.tenant_id);
             fetchTenantFees(profile.tenant_id);
+            fetchCatalog(profile.tenant_id);
+            setSelected(null);
         }
-    }, [profile]);
+    }, [profile, activeTab]);
+
+    const fetchCatalog = async (tid: string) => {
+        const [servRes, prodRes] = await Promise.all([
+            supabase.from('services').select('id, name, price, duration').eq('tenant_id', tid).eq('is_active', true),
+            supabase.from('products').select('id, name, sale_price, current_stock').eq('tenant_id', tid).gt('current_stock', 0)
+        ]);
+        if (servRes.data) setAvailableServices(servRes.data);
+        if (prodRes.data) setAvailableProducts(prodRes.data);
+    };
+
+    const handleAddExtraItem = async (item: any, type: 'service' | 'product') => {
+        if (!selected || isUpdatingOrder) return;
+        setIsUpdatingOrder(true);
+
+        const currentItems = selected.raw.items || [];
+        const itemPrice = Number(type === 'product' ? item.sale_price : item.price) || 0;
+
+        let newItems = [...currentItems];
+        const existing = newItems.find(i => i.id === item.id);
+
+        if (existing) {
+            newItems = newItems.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+        } else {
+            newItems.push({ ...item, price: itemPrice, type, qty: 1 });
+        }
+
+        // Recalculate totals
+        let newServiceTotal = Number(selected.raw.service_total) || 0;
+        let newProductTotal = Number(selected.raw.product_total) || 0;
+        let newCommission = Number(selected.commission) || 0;
+
+        const sRate = Number(selected.barber_commission.service) / 100;
+        const pRate = Number(selected.barber_commission.product) / 100;
+
+        if (type === 'service') {
+            newServiceTotal += itemPrice;
+            newCommission += (itemPrice * sRate);
+        } else {
+            newProductTotal += itemPrice;
+            newCommission += (itemPrice * pRate);
+        }
+
+        const newTotalValue = newServiceTotal + newProductTotal;
+
+        const updatePayload = {
+            items: newItems,
+            service_total: newServiceTotal,
+            product_total: newProductTotal,
+            total_value: newTotalValue,
+            commission_amount: newCommission
+        };
+
+        const { error } = await supabase.from('orders').update(updatePayload).eq('id', selected.id);
+
+        if (!error) {
+            // Optimistic update
+            setSelected({
+                ...selected,
+                total_price: newTotalValue,
+                commission: newCommission,
+                raw: { ...selected.raw, ...updatePayload }
+            });
+            setShowAddItem(false);
+        } else {
+            alert('Erro ao adicionar item.');
+        }
+        setIsUpdatingOrder(false);
+    };
 
     const fetchTenantFees = async (tid: string) => {
         const { data } = await supabase.from('tenants').select('fee_percent_pix, fee_percent_cash, fee_percent_credit, fee_percent_debit').eq('id', tid).single();
@@ -156,12 +281,29 @@ export default function CashierCheckoutPage() {
     return (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-500 pb-10">
             <div className="lg:col-span-2 space-y-4 md:space-y-6">
-                <div className="flex items-center justify-between px-2 md:px-0">
-                    <h3 className="text-lg md:text-xl font-black italic uppercase" style={{ color: colors.text }}>Comandas Pendentes</h3>
-                    <span className="text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full border uppercase"
-                        style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                        {orders.length} FILA
-                    </span>
+                <div className="flex items-center justify-between px-2 md:px-0 mb-4">
+                    <div className="flex gap-4">
+                        <button
+                            onClick={() => setActiveTab('pending')}
+                            className={`text-sm md:text-base font-black italic uppercase transition-all ${activeTab === 'pending' ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
+                            style={{ color: activeTab === 'pending' ? colors.primary : colors.text }}
+                        >
+                            Fila Pendente
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`text-sm md:text-base font-black italic uppercase transition-all ${activeTab === 'history' ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
+                            style={{ color: activeTab === 'history' ? colors.primary : colors.text }}
+                        >
+                            Histórico (90 Dias)
+                        </button>
+                    </div>
+                    {activeTab === 'pending' && (
+                        <span className="text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full border uppercase"
+                            style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
+                            {orders.length} FILA
+                        </span>
+                    )}
                 </div>
 
                 <div className="grid gap-3 md:gap-4">
@@ -169,12 +311,12 @@ export default function CashierCheckoutPage() {
                         <div className="text-center py-20 opacity-40">
                             <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
                         </div>
-                    ) : orders.length > 0 ? (
-                        orders.map(cmd => (
+                    ) : (activeTab === 'pending' ? orders : historyOrders).length > 0 ? (
+                        (activeTab === 'pending' ? orders : historyOrders).map(cmd => (
                             <button
                                 key={cmd.id}
-                                onClick={() => setSelected(cmd)}
-                                className={`w-full p-4 md:p-6 rounded-3xl border text-left transition-all flex items-center justify-between group ${selected?.id === cmd.id ? 'shadow-xl scale-[1.01]' : 'hover:border-white/20'}`}
+                                onClick={() => activeTab === 'pending' ? setSelected(cmd) : null}
+                                className={`w-full p-4 md:p-6 rounded-3xl border text-left transition-all flex items-center justify-between group ${selected?.id === cmd.id ? 'shadow-xl scale-[1.01]' : 'hover:border-white/20'} ${activeTab === 'history' ? 'cursor-default border-white/5 opacity-80' : ''}`}
                                 style={{
                                     backgroundColor: selected?.id === cmd.id ? `${colors.primary}1a` : colors.cardBg,
                                     borderColor: selected?.id === cmd.id ? colors.primary : colors.border
@@ -183,17 +325,29 @@ export default function CashierCheckoutPage() {
                                 <div className="flex items-center gap-3 md:gap-4 w-full">
                                     <div className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-colors shrink-0"
                                         style={{ backgroundColor: selected?.id === cmd.id ? colors.primary : `${colors.primary}1a`, color: selected?.id === cmd.id ? (isSalon ? 'white' : 'black') : colors.primary }}>
-                                        <span className="material-symbols-outlined text-[20px] md:text-[24px]">receipt</span>
+                                        <span className="material-symbols-outlined text-[20px] md:text-[24px]">
+                                            {activeTab === 'pending' ? 'receipt' : 'check_circle'}
+                                        </span>
                                     </div>
                                     <div className="min-w-0">
-                                        <h4 className="font-bold text-base md:text-lg italic tracking-tight truncate" style={{ color: colors.text }}>{cmd.customer_name}</h4>
-                                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate" style={{ color: colors.textMuted }}>Prof: {cmd.barber_name}</p>
+                                        <h4 className="font-bold text-base md:text-lg italic tracking-tight truncate" style={{ color: activeTab === 'history' ? colors.primary : colors.text }}>
+                                            {cmd.customer_name}
+                                        </h4>
+                                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate flex items-center gap-2" style={{ color: colors.textMuted }}>
+                                            <span>Prof: {cmd.barber_name}</span>
+                                            {activeTab === 'history' && cmd.payment_method && (
+                                                <span className="font-black" style={{ color: colors.textMuted }}>• {cmd.payment_method}</span>
+                                            )}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="text-right shrink-0">
-                                    <p className="text-xl md:text-2xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {(cmd.total_price || 0).toFixed(2)}</p>
+                                    <p className="text-xl md:text-2xl font-black italic tracking-tighter" style={{ color: activeTab === 'history' ? colors.text : colors.primary }}>
+                                        R$ {(cmd.total_price || 0).toFixed(2)}
+                                    </p>
                                     <p className="text-[8px] md:text-[10px] font-black uppercase" style={{ color: colors.textMuted }}>
                                         {cmd.time ? new Date(cmd.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                        {activeTab === 'history' && cmd.time && ` - ${new Date(cmd.time).toLocaleDateString()}`}
                                     </p>
                                 </div>
                             </button>
@@ -211,16 +365,111 @@ export default function CashierCheckoutPage() {
                 {selected ? (
                     <div className="border p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 shadow-2xl sticky top-4 md:top-10"
                         style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}4d` }}>
+
+                        {/* 🛡️ [BLINDADO] Actions row for Cancel/Return */}
+                        <div className="flex justify-between items-center -mt-2 mb-4">
+                            <button
+                                onClick={() => setSelected(null)}
+                                className="text-[9px] md:text-[10px] font-black tracking-widest uppercase transition-all opacity-60 hover:opacity-100 flex items-center gap-1"
+                                style={{ color: colors.text }}
+                            >
+                                <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                Voltar
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!confirm('Devolver esta comanda para a fila do profissional? Status voltará para em andamento.')) return;
+                                    const { error: orderError } = await supabase.from('orders').update({ status: 'draft' }).eq('id', selected.id);
+                                    let apptError = null;
+                                    if (selected.appointment_id) {
+                                        const { error } = await supabase.from('appointments').update({ status: 'scheduled' }).eq('id', selected.appointment_id);
+                                        apptError = error;
+                                    }
+                                    if (orderError || apptError) {
+                                        alert('Erro ao devolver comanda.');
+                                    } else {
+                                        alert('Comanda devolvida com sucesso!');
+                                        setSelected(null);
+                                        if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
+                                    }
+                                }}
+                                className="text-[8px] md:text-[9px] font-black tracking-widest uppercase transition-all text-orange-500 hover:text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg bg-orange-500/5 hover:bg-orange-500/10 flex items-center gap-1"
+                            >
+                                <span className="material-symbols-outlined text-sm">undo</span>
+                                Devolver Mão de Obra
+                            </button>
+                        </div>
+
                         <div className="text-center">
                             <h3 className="text-xl md:text-2xl font-black italic tracking-tight mb-1 md:mb-2 uppercase" style={{ color: colors.text }}>Recebimento</h3>
                             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>{selected.customer_name}</p>
                         </div>
 
                         <div className="space-y-3 md:space-y-4 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
-                            <div className="flex justify-between items-center text-xs font-bold border-b pb-2" style={{ borderColor: colors.border }}>
-                                <span className="italic font-black uppercase tracking-widest text-[9px] truncate mr-4" style={{ color: colors.textMuted }}>{selected.service_name} + Extras</span>
-                            </div>
+                            {selected.raw?.items && selected.raw.items.length > 0 ? (
+                                selected.raw.items.map((item: any, idx: number) => (
+                                    <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2" style={{ borderColor: colors.border }}>
+                                        <div className="flex flex-col">
+                                            <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
+                                                {item.qty > 1 && `${item.qty}x `}{item.name}
+                                            </span>
+                                            <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
+                                        </div>
+                                        <span style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="flex justify-between items-center text-xs font-bold border-b pb-2" style={{ borderColor: colors.border }}>
+                                    <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>{selected.service_name} (Serviço Base)</span>
+                                </div>
+                            )}
                         </div>
+
+                        {/* ADD EXTRA ITEMS UI */}
+                        {activeTab === 'pending' && (
+                            <div className="pt-2">
+                                {showAddItem ? (
+                                    <div className="space-y-3 p-4 rounded-xl border bg-black/20" style={{ borderColor: colors.border }}>
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-[10px] uppercase font-black tracking-widest" style={{ color: colors.text }}>Adicionar Item</span>
+                                            <button onClick={() => setShowAddItem(false)} className="opacity-50 hover:opacity-100">
+                                                <span className="material-symbols-outlined text-sm">close</span>
+                                            </button>
+                                        </div>
+
+                                        <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1" style={{ color: colors.primary }}>Serviços</p>
+                                            {availableServices.map(s => (
+                                                <button key={s.id} onClick={() => handleAddExtraItem(s, 'service')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                                                    <span className="text-[10px] font-bold" style={{ color: colors.text }}>{s.name}</span>
+                                                    <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(s.price).toFixed(2)}</span>
+                                                </button>
+                                            ))}
+
+                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1 mt-4" style={{ color: colors.primary }}>Produtos</p>
+                                            {availableProducts.map(p => (
+                                                <button key={p.id} onClick={() => handleAddExtraItem(p, 'product')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold" style={{ color: colors.text }}>{p.name}</span>
+                                                        <span className="text-[8px] opacity-50" style={{ color: colors.textMuted }}>Estoque: {p.current_stock}</span>
+                                                    </div>
+                                                    <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(p.sale_price).toFixed(2)}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setShowAddItem(true)}
+                                        className="w-full py-2 rounded-xl border border-dashed flex items-center justify-center gap-2 transition-all hover:bg-white/5 opacity-70 hover:opacity-100"
+                                        style={{ borderColor: colors.primary, color: colors.primary }}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Venda Extra</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
 
                         <div className="space-y-3">
                             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60" style={{ color: colors.textMuted }}>Escolha o Método</p>
