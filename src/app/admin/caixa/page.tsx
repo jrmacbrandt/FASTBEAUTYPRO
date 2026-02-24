@@ -73,6 +73,7 @@ export default function CashierCheckoutPage() {
         setLoading(false);
     };
 
+    // 🛡️ [BLINDADO] - Histórico de Comandas (90 Dias Max LGPD)
     const fetchHistoryOrders = async (tid: string) => {
         setLoading(true);
         const ninetyDaysAgo = new Date();
@@ -152,6 +153,7 @@ export default function CashierCheckoutPage() {
         if (prodRes.data) setAvailableProducts(prodRes.data);
     };
 
+    // 🛡️ [BLINDADO] - Injeção Dinâmica de Itens Extras na Comanda
     const handleAddExtraItem = async (item: any, type: 'service' | 'product') => {
         if (!selected || isUpdatingOrder) return;
         setIsUpdatingOrder(true);
@@ -231,6 +233,7 @@ export default function CashierCheckoutPage() {
         }
     }, [selected]);
 
+    // 🛡️ [BLINDADO] - Fluxo de Checkout com Recalculo de Estoque e Comissões
     const handleConfirmPayment = async () => {
         if (!selected || !profile?.tenant_id) return;
 
