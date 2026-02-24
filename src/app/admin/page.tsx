@@ -41,6 +41,7 @@ export default function OwnerDashboardPage() {
 
     const fetchDashboardData = async (tid: string) => {
         setLoadingStats(true);
+        // 🛡️ [BLINDADO] - Limite de 90 dias de histórico para perfomance (Sincronizado com o robô de limpeza)
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
         ninetyDaysAgo.setHours(0, 0, 0, 0);

@@ -21,6 +21,7 @@ export default function ProfessionalHistoryPage() {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
+        // 🛡️ [BLINDADO] - Limite de 90 dias de histórico para perfomance (Sincronizado com o robô de limpeza)
         const ninetyDaysAgo = new Date();
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
