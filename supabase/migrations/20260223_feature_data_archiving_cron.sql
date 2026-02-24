@@ -4,8 +4,8 @@
 -- Objetivo: Criar rotina automática diária para arquivar dados velhos
 -- ================================================================
 
--- 1. Habilitar a extensão pg_cron (se já não estiver)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
+-- 1. Habilitar a extensão pg_cron
+CREATE EXTENSION IF NOT EXISTS pg_cron WITH SCHEMA extensions;
 
 -- 2. Criar uma função "Wrapper" que itera sobre todos os tenants
 -- O pg_cron roda comandos isolados, então precisamos de uma função 
