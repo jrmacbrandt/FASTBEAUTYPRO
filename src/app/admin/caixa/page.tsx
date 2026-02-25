@@ -20,6 +20,7 @@ export default function CashierCheckoutPage() {
     const [availableProducts, setAvailableProducts] = useState<any[]>([]);
     const [showAddItem, setShowAddItem] = useState(false);
     const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+    const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     const fetchPendingOrders = async (tid: string) => {
         setLoading(true);
@@ -304,9 +305,10 @@ export default function CashierCheckoutPage() {
         }
     }, [selected]);
 
-    // 🛡️ [BLINDADO] - Fluxo de Checkout com Recalculo de Estoque e Comissões
+    // 🛡️ [BLINDADO] - Fluxo de Checkout Seguro (Protegido contra Duplicidade)
     const handleConfirmPayment = async () => {
-        if (!selected || !profile?.tenant_id) return;
+        if (!selected || !profile?.tenant_id || isProcessingPayment) return;
+        setIsProcessingPayment(true);
 
         const feeKey = paymentMethod === 'PIX' ? 'pix' : paymentMethod === 'CARTÃO' ? 'credit' : paymentMethod === 'DÉBITO' ? 'debit' : 'cash';
         const feeRate = (tenantFees[feeKey] || 0) / 100;
@@ -335,6 +337,7 @@ export default function CashierCheckoutPage() {
         if (rpcError || !rpcResult?.success) {
             const msg = rpcError?.message || rpcResult?.error || 'Erro desconhecido';
             alert('Erro ao processar pagamento: ' + msg);
+            setIsProcessingPayment(false);
             return;
         }
 
@@ -346,6 +349,7 @@ export default function CashierCheckoutPage() {
         alert(`Pagamento de R$ ${selected.total_price.toFixed(2)} confirmado!\nEstoque atualizado.`);
         setSelected(null);
         if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
+        setIsProcessingPayment(false);
     };
 
     if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando caixa...</div>;
@@ -616,12 +620,14 @@ export default function CashierCheckoutPage() {
                                 <span className="font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Cobrado do Cliente</span>
                                 <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {(selected.total_price || 0).toFixed(2)}</span>
                             </div>
+                            {/* 🛡️ [BLINDADO] Prevenção de Double Checkout */}
                             <button
+                                disabled={isProcessingPayment}
                                 onClick={handleConfirmPayment}
-                                className="w-full font-black py-4 md:py-5 rounded-xl md:rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95"
+                                className={`w-full font-black py-4 md:py-5 rounded-xl md:rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95 ${isProcessingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
                                 style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
                             >
-                                CONFIRMAR
+                                {isProcessingPayment ? 'PROCESSANDO...' : 'CONFIRMAR'}
                                 <span className="material-symbols-outlined text-xl md:text-2xl">check_circle</span>
                             </button>
                         </div>

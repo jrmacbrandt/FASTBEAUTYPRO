@@ -211,7 +211,9 @@ export default function ProfessionalAgendaPage() {
         }
     };
 
+    // 🛡️ [BLINDADO] Expedição Segura de Comanda (Proteção contra Duplicidade)
     const handleSaveAndFinalize = async () => {
+        if (loading) return;
         if (!confirm('Deseja FINALIZAR este atendimento e enviar para o caixa?')) return;
         setLoading(true);
         const { data: { session } = { session: null } } = await supabase.auth.getSession();
@@ -652,7 +654,10 @@ export default function ProfessionalAgendaPage() {
                             <span className="font-black uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Geral</span>
                             <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {total.toFixed(2)}</span>
                         </div>
-                        <button onClick={handleSaveAndFinalize} className="w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>FINALIZAR <span className="material-symbols-outlined">check_circle</span></button>
+                        {/* 🛡️ [BLINDADO] Prevenção de Double Submit */}
+                        <button disabled={loading} onClick={handleSaveAndFinalize} className={`w-full font-black py-4 md:py-5 rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`} style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}>
+                            {loading ? 'FINALIZANDO...' : 'FINALIZAR'} <span className="material-symbols-outlined">check_circle</span>
+                        </button>
                     </div>
                 </div>
             </aside>
