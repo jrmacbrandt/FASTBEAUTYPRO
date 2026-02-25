@@ -14,6 +14,11 @@ export default function ImageUpload({ currentImage, onImageSelect, helperText, c
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    // Sincroniza o state interno quando a imagem atual vinda do form externo (edição) muda
+    React.useEffect(() => {
+        setPreview(currentImage || null);
+    }, [currentImage]);
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -67,7 +72,7 @@ export default function ImageUpload({ currentImage, onImageSelect, helperText, c
                         ) : (
                             <div className="flex flex-col items-center gap-2 opacity-50 group-hover:opacity-100 transition-opacity">
                                 <span className="material-symbols-outlined text-3xl text-[#f2b90d]">add_a_photo</span>
-                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Adicionar Logo</span>
+                                <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{helperText || 'Adicionar Foto'}</span>
                             </div>
                         )}
                     </>
