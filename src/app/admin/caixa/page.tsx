@@ -464,7 +464,9 @@ export default function CashierCheckoutPage() {
                                         apptError = error;
                                     }
                                     if (orderError || apptError) {
-                                        alert('Erro ao devolver comanda.');
+                                        console.error('Order Error:', orderError);
+                                        console.error('Appt Error:', apptError);
+                                        alert(`Erro ao devolver comanda.\nOrder: ${orderError?.message || 'OK'}\nAppt: ${apptError?.message || 'OK'}`);
                                     } else {
                                         alert('Comanda devolvida com sucesso!');
                                         setSelected(null);
