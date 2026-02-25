@@ -287,7 +287,7 @@ export default function TeamManagementPage() {
 
             {/* Modal de Edição/Criação Simplificado */}
             {(isRegistrationModalOpen || editingBarber) && (
-                <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 py-12 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto">
+                <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 py-12 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300 overflow-y-auto overflow-x-hidden">
                     <div className="w-full max-w-2xl rounded-[2.5rem] border shadow-2xl animate-in zoom-in-95 duration-300"
                         style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}
                     >
