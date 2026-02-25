@@ -125,40 +125,53 @@ export async function middleware(request: NextRequest) {
     }
 
     const isSuspendedPage = url.pathname === '/unidade-suspensa';
+    const isPausedPage = url.pathname === '/unidade-pausada';
 
     // ----------------------------------------------------------------
     // 🛡️ [BLINDADO] STRICT LOGIC (USER DEFINED V4.0) + MAINTENANCE (V5.0)
     // ----------------------------------------------------------------
 
-    // 🚀 CRITICAL MAINTENANCE LOCKOUT (V10.0)
+    // 1. MASTER Logic
+    // Only jrmacbrandt@gmail.com (Whitelisted) access /admin-master. 
+    // Already handled by Role Override above then Routing below.
+
     // 🚀 CRITICAL MAINTENANCE LOCKOUT (V12.0 - Strict Master Only)
     // Rule: Every non-master is blocked if tenant is in maintenance.
     // Owners (Real Admins) MUST be blocked during maintenance per audit request.
-    if (role !== 'master' && (isAdminPage || isProPage || isMaintenancePage)) {
+    if (role !== 'master' && (isAdminPage || isProPage || isMaintenancePage || isPausedPage)) {
         const tid = profile?.tenant_id;
         if (tid) {
             const { data: dbTenant } = await supabase
                 .from('tenants')
-                .select('maintenance_mode')
+                .select('active, maintenance_mode')
                 .eq('id', tid)
                 .single();
 
-            if (dbTenant?.maintenance_mode && !isMaintenancePage) {
+            // ⛔ 1. PAUSE LOCKOUT (Immediate Effect)
+            if (dbTenant?.active === false && !isPausedPage) {
+                console.log('🚪 LOCKOUT: Unit Paused. Blocking access.');
+                return NextResponse.redirect(new URL('/unidade-pausada', request.url));
+            }
+
+            if (dbTenant?.active !== false && isPausedPage) {
+                console.log('🚪 UNLOCK: Unit Unpaused. Returning home.');
+                const homeUrl = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
+                return NextResponse.redirect(new URL(homeUrl, request.url));
+            }
+
+            // ⚠️ 2. MAINTENANCE LOCKOUT 
+            if (dbTenant?.maintenance_mode && !isMaintenancePage && dbTenant?.active !== false) {
                 console.log('🚪 LOCKOUT: Maintenance active. Blocking access.');
                 return NextResponse.redirect(new URL('/manutencao', request.url));
             }
 
-            if (!dbTenant?.maintenance_mode && isMaintenancePage) {
+            if (!dbTenant?.maintenance_mode && isMaintenancePage && dbTenant?.active !== false) {
                 console.log('🚪 UNLOCK: Maintenance over. Returning home.');
                 const homeUrl = role === 'owner' ? '/admin' : (role === 'barber' ? '/profissional' : '/');
                 return NextResponse.redirect(new URL(homeUrl, request.url));
             }
         }
     }
-
-    // 1. MASTER Logic
-    // Only jrmacbrandt@gmail.com (Whitelisted) access /admin-master. 
-    // Already handled by Role Override above then Routing below.
 
     // 2. OWNER Logic (Admin)
     // Rule: IF Approved (Active) -> Admin Panel.
@@ -176,10 +189,11 @@ export async function middleware(request: NextRequest) {
 
         // Fix: Check both Boolean 'active' and String 'status' to avoid data inconsistency gaps.
         // User reports "Approved" (Status: Ativo) but middleware was blocking.
+        // Also block explicitly if active is false (paused).
         const isStatusActive = tenantObj?.status === 'active';
-        const isApproved = isActive || isStatusActive;
+        const isApproved = (isActive || isStatusActive) && isActive !== false;
 
-        if (!isApproved && !isPaymentPage && !isSuspendedPage) {
+        if (!isApproved && !isPaymentPage && !isSuspendedPage && !isPausedPage) {
             // Not Approved? -> Payment/Coupon
             url.pathname = '/pagamento-pendente';
             return NextResponse.redirect(url);
@@ -196,9 +210,9 @@ export async function middleware(request: NextRequest) {
         // "SE APROVADO PELO ADMINISTRADOR DA LOJA--SEU PAINEL PROFISSIONAL"
         // "SE NÃO --- TELA DE AGUARDANDO APROVAÇÃO"
 
-        const isProApproved = status === 'active';
+        const isProApproved = status === 'active' && isActive !== false;
 
-        if (!isProApproved && !isApprovalPage) {
+        if (!isProApproved && !isApprovalPage && !isPausedPage) {
             url.pathname = '/aguardando-aprovacao';
             return NextResponse.redirect(url);
         }
@@ -217,8 +231,15 @@ export async function middleware(request: NextRequest) {
     const isValidPro = role === 'barber' && status === 'active';
 
     // If on a "Gatekeeper" page but already have access, send Home.
-    if (isAuthPage || isPaymentPage || isApprovalPage) {
-        if (isValidMaster) {
+    if (isAuthPage || isPaymentPage || isApprovalPage || isPausedPage) {
+        // Prevent redirect loop if the user is on the paused page AND they are actually paused
+        const isCurrentlyPaused = !isActive && tenantObj?.active === false;
+
+        if (isCurrentlyPaused && isPausedPage) {
+            return supabaseResponse;
+        }
+
+        if (isValidMaster && !isPausedPage) {
             url.pathname = '/admin-master';
             return NextResponse.redirect(url);
         }
