@@ -52,25 +52,28 @@ export async function POST(req: NextRequest) {
 
         const userId = authData.user.id;
 
-        // 2. Wait for the database trigger `handle_new_user` to create the initial profile
-        await new Promise(resolve => setTimeout(resolve, 600));
-
-        // 3. Update the profile with specific fields that the trigger ignores or defaults
-        // Uses the admin client to bypass RLS UPDATE restrictions
-        const profileUpdates = {
+        // 2. Garante a Criação do Perfil (Independente de Trigger)
+        // Utliza o supabaseAdmin para bypassar RLS e forçar o UPSERT da linha no banco público.
+        // Isso resolve atrasos (race conditions) ou falhas de triggers silenciosas.
+        const profileData = {
+            id: userId,
+            full_name: full_name,
+            email: email,
+            role: role || 'barber',
+            tenant_id: tenant_id,
+            cpf: cpf,
+            phone: phone,
             service_commission: Number(service_commission || 0),
             product_commission: Number(product_commission || 0),
-            phone: phone, // Trigger doesn't handle phone
-            status: 'active' // Override 'pending' state
+            status: 'active'
         };
 
         const { error: profileError } = await supabaseAdmin
             .from('profiles')
-            .update(profileUpdates)
-            .eq('id', userId);
+            .upsert(profileData, { onConflict: 'id' });
 
         if (profileError) {
-            console.error(`[CreateProfessional] Profile update error for ${userId}:`, profileError.message);
+            console.error(`[CreateProfessional] Profile upsert error for ${userId}:`, profileError.message);
             // We don't fail the request here, but log the warning, since the auth user is created.
         }
 
