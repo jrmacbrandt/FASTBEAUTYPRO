@@ -100,8 +100,17 @@ BEGIN
         GET DIAGNOSTICS deleted_clients = ROW_COUNT;
     END IF;
 
-    -- 6. Apaga Perfis de Time (MANTENDO O OWNER)
+    -- 6. Apaga Identidades de Login Globais e Perfis de Time (MANTENDO O OWNER)
     -- Atenção redobrada para não apagar o dono da loja (role = 'owner')
+    -- Primeiro destruímos a raiz de Autenticação (auth.users), liberando o email.
+    DELETE FROM auth.users 
+    WHERE id IN (
+        SELECT id FROM public.profiles 
+        WHERE tenant_id = p_tenant_id 
+        AND role != 'owner' 
+        AND role != 'master'
+    );
+
     DELETE FROM public.profiles 
     WHERE tenant_id = p_tenant_id 
     AND role != 'owner' 
