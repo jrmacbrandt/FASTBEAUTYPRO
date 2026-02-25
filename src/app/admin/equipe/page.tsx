@@ -124,10 +124,20 @@ export default function TeamManagementPage() {
             let avatarUrl = editingBarber?.avatar_url;
 
             if (avatarFile) {
-                const fileName = `avatar-${Date.now()}-${Math.random().toString(36).substring(7)}.webp`;
-                const { error: uploadError } = await supabase.storage.from('avatars').upload(fileName, avatarFile, { cacheControl: '3600', upsert: false });
+                const fileName = `avatar-${currentUser?.tenant_id || 'unknown'}-${Date.now()}.webp`;
+                const { error: uploadError } = await supabase.storage
+                    .from('logos')
+                    .upload(fileName, avatarFile, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
+
                 if (uploadError) throw uploadError;
-                const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('logos')
+                    .getPublicUrl(fileName);
+
                 avatarUrl = publicUrl;
             }
 
@@ -154,8 +164,8 @@ export default function TeamManagementPage() {
                     body: JSON.stringify({
                         email: formData.email,
                         full_name: formData.full_name,
-                        cpf: formData.cpf.replace(/\\D/g, ''),
-                        phone: formData.phone.replace(/\\D/g, ''),
+                        cpf: formData.cpf.replace(/\D/g, ''),
+                        phone: formData.phone.replace(/\D/g, ''),
                         service_commission: Number(formData.service_commission || 0),
                         product_commission: Number(formData.product_commission || 0),
                         tenant_id: currentUser?.tenant_id,

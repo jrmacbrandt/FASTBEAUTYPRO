@@ -16,6 +16,7 @@ export default function ImageUpload({
     currentImage,
     onImageSelect,
     helperText,
+    bucket,
     className,
     maxWidth = 200,
     maxHeight = 200,
