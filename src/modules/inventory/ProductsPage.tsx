@@ -163,12 +163,8 @@ export default function ProductsPage() {
                         <div key={product.id} className="border p-6 relative group transition-all rounded-[2.5rem]"
                             style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
                             <div className="flex justify-between items-start mb-6">
-                                <div className="size-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner border border-white/5 overflow-hidden" style={{ backgroundColor: `${colors.text}08` }}>
-                                    {product.image_url ? (
-                                        <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <span className="material-symbols-outlined text-white/40">inventory_2</span>
-                                    )}
+                                <div className="size-14 rounded-2xl flex items-center justify-center text-2xl shadow-inner border border-white/5 opacity-50" style={{ backgroundColor: `${colors.text}08` }}>
+                                    <span className="material-symbols-outlined text-white/40">inventory_2</span>
                                 </div>
                                 <div className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border ${product.current_stock <= product.min_threshold
                                     ? 'bg-red-500/10 text-red-500 border-red-500/20 animate-pulse'
