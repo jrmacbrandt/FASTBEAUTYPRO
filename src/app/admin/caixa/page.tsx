@@ -457,7 +457,8 @@ export default function CashierCheckoutPage() {
                             <button
                                 onClick={async () => {
                                     if (!confirm('Devolver esta comanda para a fila do profissional? Status voltará para em andamento.')) return;
-                                    const { error: orderError } = await supabase.from('orders').update({ status: 'draft' }).eq('id', selected.id);
+                                    // Deletamos a comanda não paga para limpar do caixa e permitir nova geração pelo profissional
+                                    const { error: orderError } = await supabase.from('orders').delete().eq('id', selected.id);
                                     let apptError = null;
                                     if (selected.appointment_id) {
                                         const { error } = await supabase.from('appointments').update({ status: 'scheduled' }).eq('id', selected.appointment_id);
