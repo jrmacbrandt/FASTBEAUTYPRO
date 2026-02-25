@@ -7,9 +7,20 @@ interface ImageUploadProps {
     helperText?: string;
     bucket?: string; // For future extensibility, though commonly 'logos'
     className?: string;
+    maxWidth?: number;
+    maxHeight?: number;
+    quality?: number;
 }
 
-export default function ImageUpload({ currentImage, onImageSelect, helperText, className }: ImageUploadProps) {
+export default function ImageUpload({
+    currentImage,
+    onImageSelect,
+    helperText,
+    className,
+    maxWidth = 800,
+    maxHeight = 800,
+    quality = 0.85
+}: ImageUploadProps) {
     const [preview, setPreview] = useState<string | null>(currentImage || null);
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -24,8 +35,8 @@ export default function ImageUpload({ currentImage, onImageSelect, helperText, c
         if (file) {
             setLoading(true);
             try {
-                // Resize to 200x200 (Compact) and convert to WebP
-                const processedBlob = await processImage(file, 200, 200, 0.85);
+                // Resize and convert to WebP explicitly
+                const processedBlob = await processImage(file, maxWidth, maxHeight, quality);
                 const processedFile = new File([processedBlob], 'upload.webp', { type: 'image/webp' });
 
                 const objectUrl = URL.createObjectURL(processedBlob);
