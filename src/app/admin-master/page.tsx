@@ -19,6 +19,7 @@ export default function MasterDashboardPage() {
     const [selectedTenant, setSelectedTenant] = useState<any>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [isResetting, setIsResetting] = useState(false);
     const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
 
     useEffect(() => {
@@ -139,6 +140,34 @@ export default function MasterDashboardPage() {
             console.error('Erro ao ativar suporte:', err);
             alert(`ERRO CRÍTICO: Não foi possível ativar o modo manutenção.\n\nDetalhes: ${err.message}`);
             setIsActivatingSupport(false);
+        }
+    };
+
+    // 🛡️ [BLINDADO] RESET DE FÁBRICA
+    // Destrói todo o banco do inquilino (orders, appts, clients, etc), mantendo apenas o Owner e Configs
+    const handleFactoryReset = async (tenant: any) => {
+        if (!tenant || isResetting) return;
+
+        const confirmed = confirm(`ATENÇÃO MÁXIMA: Você está prestes a resetar a loja "${tenant.name}" para os padrões de fábrica.\n\nISSO APAGARÁ TODAS AS COMANDAS, AGENDAMENTOS, PRODUTOS E CLIENTES DA LOJA. O DONO CONTINUARÁ EXISTINDO.\n\nTem certeza absoluta que deseja CONTINUAR?`);
+        if (!confirmed) return;
+
+        setIsResetting(true);
+        try {
+            const { data, error } = await supabase.rpc('reset_tenant_to_factory', {
+                p_tenant_id: tenant.id
+            });
+
+            if (error || (data && !data.success)) {
+                console.error('RPC Error:', error || data);
+                alert(`Erro ao tentar resetar loja.\n\nDetalhes: ${error?.message || data?.error}`);
+            } else {
+                alert(`Sucesso: A loja "${tenant.name}" foi limpa e resetada para a conf de fábrica.\n\nEstatísticas da limpeza:\n- Perfis: ${data.stats.profiles}\n- Agendamentos: ${data.stats.appointments}\n- Comandas: ${data.stats.orders}\n- Clientes: ${data.stats.clients}`);
+            }
+        } catch (err: any) {
+            console.error('Caught Exception:', err);
+            alert(`Falha Crítica ao conectar com RPC de Reset: ${err.message}`);
+        } finally {
+            setIsResetting(false);
         }
     };
 
@@ -476,6 +505,16 @@ export default function MasterDashboardPage() {
                                                         title="Suporte Master (Impersonation)"
                                                     >
                                                         <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
+                                                    </button>
+
+                                                    {/* 🛡️ [BLINDADO] BOTÃO DE RESET FÁBRICA */}
+                                                    <button
+                                                        onClick={() => handleFactoryReset(t)}
+                                                        disabled={isResetting}
+                                                        className={`size-9 bg-red-900/50 text-red-400 rounded-xl flex items-center justify-center transition-all border border-red-500/50 hover:bg-red-600 hover:text-white shadow-md ${isResetting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                        title="Reset de Fábrica (Apagar Todos os Dados)"
+                                                    >
+                                                        <span className={`material-symbols-outlined text-[18px] ${isResetting ? 'animate-spin' : ''}`}>{isResetting ? 'refresh' : 'bomb'}</span>
                                                     </button>
 
                                                     <button
