@@ -59,6 +59,11 @@ BEGIN
         GET DIAGNOSTICS deleted_subscriptions = ROW_COUNT;
     END IF;
 
+    -- Apaga Planos VIP (Assinaturas Criadas pelo Lojista)
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'subscription_plans') THEN
+        EXECUTE 'DELETE FROM public.subscription_plans WHERE tenant_id = $1' USING p_tenant_id;
+    END IF;
+
     -- 3.5 Limpa Referências de Fidelidade no Tenant (prevenindo FK Violation)
     UPDATE public.tenants 
     SET loyalty_reward_service_id = NULL, 
