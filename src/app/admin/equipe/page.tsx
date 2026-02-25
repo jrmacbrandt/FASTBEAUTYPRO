@@ -291,7 +291,7 @@ export default function TeamManagementPage() {
                     <div className="w-full max-w-2xl rounded-[2.5rem] border shadow-2xl animate-in zoom-in-95 duration-300"
                         style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}
                     >
-                        <div className="p-8 border-b flex justify-between items-center sticky top-0 z-10" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                        <div className="p-8 flex justify-between items-center" style={{ backgroundColor: colors.cardBg }}>
                             <h3 className="text-xl font-black italic uppercase tracking-tight" style={{ color: colors.text }}>
                                 {editingBarber ? 'Editar Profissional' : 'Novo Profissional'}
                             </h3>
