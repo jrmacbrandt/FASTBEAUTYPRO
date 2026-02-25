@@ -40,9 +40,10 @@ export default function ProfessionalAgendaPage() {
         if (!error && data) {
             const today = new Date();
             const todayStr = today.toISOString().split('T')[0];
+            const endOfToday = todayStr + 'T23:59:59.999Z';
 
-            setTodayAgenda(data.filter(a => a.scheduled_at.startsWith(todayStr) && a.status === 'scheduled'));
-            setUpcomingAgenda(data.filter(a => a.scheduled_at > todayStr && a.status === 'scheduled'));
+            setTodayAgenda(data.filter(a => a.status === 'scheduled' && a.scheduled_at <= endOfToday));
+            setUpcomingAgenda(data.filter(a => a.status === 'scheduled' && a.scheduled_at > endOfToday));
             setHistoryAgenda(data.filter(a => a.status === 'completed' || a.status === 'paid' || a.status === 'absent').reverse());
         }
         setLoading(false);
@@ -667,16 +668,20 @@ export default function ProfessionalAgendaPage() {
 
 // PREMIUM AGENDA CARD COMPONENT
 const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onDelete, onStart, onFinalize, showDate }: any) => {
-    const isToday = !showDate;
+    const isActualToday = item.scheduled_at?.startsWith(new Date().toISOString().split('T')[0]);
+    const displayLabel = (isActualToday && !showDate) ? 'Hoje' : new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const isOverdue = !isActualToday && !showDate; // Se está na aba 'Hoje' mas não é de hoje, está atrasado
+    const labelColor = isOverdue ? '#ef4444' : colors.primary;
+
     const status = item.status;
     const hasOrder = item.orders && item.orders.length > 0;
 
     return (
         <div className="group border p-4 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
             <div className="flex items-center gap-5 w-full md:w-auto">
-                <div className="size-14 md:size-20 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg gap-0.5" style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                    <span className="text-sm md:text-2xl text-white opacity-90 uppercase tracking-tighter leading-none">
-                        {isToday ? 'Hoje' : new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
+                <div className="size-14 md:size-20 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg gap-0.5" style={{ backgroundColor: `${labelColor}1a`, color: labelColor, borderColor: `${labelColor}33` }}>
+                    <span className="text-sm md:text-2xl opacity-90 uppercase tracking-tighter leading-none font-black drop-shadow-md" style={{ color: isOverdue ? '#ef4444' : '#ffffff' }}>
+                        {displayLabel}
                     </span>
                     <span className="text-[10px] md:text-xs opacity-60 leading-none tracking-widest">
                         {item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}
