@@ -35,7 +35,7 @@ export async function middleware(request: NextRequest) {
     const { data: { user }, error } = await supabase.auth.getUser();
 
     // ----------------------------------------------------
-    // Access Control Logic (Definitive Fix)
+    // 🛡️ [BLINDADO] Access Control Logic (Definitive Fix)
     // ----------------------------------------------------
     const url = request.nextUrl.clone();
     const isAuthPage = url.pathname === '/login' || url.pathname === '/login-master';
@@ -93,7 +93,9 @@ export async function middleware(request: NextRequest) {
     const tenantData = (profile as any)?.tenant || (profile as any)?.tenants;
     const tenantObj = Array.isArray(tenantData) ? tenantData[0] : tenantData;
 
-    const isActive = tenantObj?.active !== false;
+    // --- DEFINITIVE FIX: SECURITY PREVENT NULL BYPASS ---
+    // Make sure tenantObj actually exists before evaluating active state
+    const isActive = tenantObj ? tenantObj.active !== false : false;
     let hasPaid = tenantObj?.has_paid;
     let subscriptionPlan = tenantObj?.subscription_plan;
     const trialEndsAt = tenantObj?.trial_ends_at;
@@ -125,7 +127,7 @@ export async function middleware(request: NextRequest) {
     const isSuspendedPage = url.pathname === '/unidade-suspensa';
 
     // ----------------------------------------------------------------
-    // NEW STRICT LOGIC (USER DEFINED V4.0) + MAINTENANCE (V5.0)
+    // 🛡️ [BLINDADO] STRICT LOGIC (USER DEFINED V4.0) + MAINTENANCE (V5.0)
     // ----------------------------------------------------------------
 
     // 🚀 CRITICAL MAINTENANCE LOCKOUT (V10.0)

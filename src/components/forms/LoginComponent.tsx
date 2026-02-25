@@ -137,9 +137,9 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                         .eq('id', profile.tenant_id)
                         .maybeSingle();
 
-                    // AUDIT CHECK: Requires Active/Trialing status AND Payment confirmed
+                    // 🛡️ [BLINDADO] AUDIT CHECK: Requires Active/Trialing status AND Payment confirmed
                     const isActiveStatus = tenantData?.status === 'active' || tenantData?.status === 'trialing';
-                    const isPaid = tenantData?.has_paid !== false;
+                    const isPaid = tenantData ? tenantData.has_paid !== false : false;
 
                     if (!isPaid || !isActiveStatus) {
                         console.warn(`[Login] Access Blocked for Owner. Status: ${tenantData?.status}, Paid: ${isPaid}`);
@@ -189,7 +189,7 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
         }
     };
 
-    // Unified Registration (Only for Owners/Estabelecimentos)
+    // 🛡️ [BLINDADO] Unified Registration (Only for Owners/Estabelecimentos)
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);

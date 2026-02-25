@@ -1,5 +1,6 @@
 "use client";
 
+// 🛡️ [BLINDADO] Professional Panel - Core Access & Logic Locked. Do not modify.
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 

@@ -1,5 +1,6 @@
 "use client";
 
+// 🛡️ [BLINDADO] Master Admin Dashboard - Core Access & Logic Locked. Do not modify.
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
