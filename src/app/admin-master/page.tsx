@@ -103,10 +103,16 @@ export default function MasterDashboardPage() {
             .trim();
     };
 
+    // 🛡️ [BLINDADO] Prevenção de Duplo Suborno na Ativação de Suporte (Double-Submit Protection)
+    const [isActivatingSupport, setIsActivatingSupport] = React.useState(false);
+
     const handleSupport = async (tenant: any) => {
+        if (isActivatingSupport) return;
         if (!confirm(`MODO SUPORTE MASTER\n\nIsso irá:\n1. ATIVAR o bloqueio de manutenção para ${tenant.name}.\n2. Deslogar usuários ativos da loja.\n3. Permitir seu acesso exclusivo.\n\nDeseja continuar?`)) {
             return;
         }
+
+        setIsActivatingSupport(true);
 
         try {
             // 1. Tentar ativar via RPC (Mais seguro)
@@ -132,6 +138,7 @@ export default function MasterDashboardPage() {
         } catch (err: any) {
             console.error('Erro ao ativar suporte:', err);
             alert(`ERRO CRÍTICO: Não foi possível ativar o modo manutenção.\n\nDetalhes: ${err.message}`);
+            setIsActivatingSupport(false);
         }
     };
 

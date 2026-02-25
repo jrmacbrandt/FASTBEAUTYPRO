@@ -101,7 +101,12 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         }
     }, [profile, pathname, businessType]);
 
+    // 🛡️ [BLINDADO] Prevenção de Duplicidade no Fim da Manutenção/Suporte
+    const [isStoppingSupport, setIsStoppingSupport] = React.useState(false);
+
     const handleStopSupport = async () => {
+        if (isStoppingSupport) return;
+        setIsStoppingSupport(true);
         const cookies = document.cookie.split('; ');
         const supportId = cookies.find(row => row.trim().startsWith('support_tenant_id='))?.split('=')[1];
 
@@ -126,6 +131,8 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         } catch (err: any) {
             window.location.href = '/admin-master?stop_impersonate=true';
         }
+        // Cleanup state just in case redirect takes time
+        setIsStoppingSupport(false);
     };
 
     if (profileLoading) return null;
@@ -153,11 +160,12 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                             </span>
                         </div>
                         <button
+                            disabled={isStoppingSupport}
                             onClick={handleStopSupport}
-                            className="bg-black text-[#f2b90d] px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter hover:bg-zinc-900 transition-all flex items-center gap-2"
+                            className={`bg-black text-[#f2b90d] px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tighter hover:bg-zinc-900 transition-all flex items-center gap-2 ${isStoppingSupport ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <span className="material-symbols-outlined text-[14px]">logout</span>
-                            {isMaintenance ? 'Finalizar Manutenção' : 'Sair do Suporte'}
+                            {isStoppingSupport ? 'Saindo...' : (isMaintenance ? 'Finalizar Manutenção' : 'Sair do Suporte')}
                         </button>
                     </div>
                 )}
