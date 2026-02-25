@@ -52,6 +52,14 @@ export default function DynamicBookingPage() {
                 .single();
 
             if (tenantData) {
+                if (tenantData.maintenance_mode) {
+                    router.push('/manutencao');
+                    return;
+                }
+                if (tenantData.active === false) {
+                    router.push('/unidade-pausada');
+                    return;
+                }
                 setTenant(tenantData);
 
                 // Fetch Services

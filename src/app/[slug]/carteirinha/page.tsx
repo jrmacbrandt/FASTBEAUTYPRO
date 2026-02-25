@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import QRCode from "react-qr-code";
 
 export default function CarteirinhaPage() {
     const params = useParams();
+    const router = useRouter();
     const slug = params.slug as string;
     const [loading, setLoading] = useState(true);
     const [tenant, setTenant] = useState<any>(null);
@@ -31,7 +32,17 @@ export default function CarteirinhaPage() {
             .eq('slug', slug)
             .single();
 
-        if (data) setTenant(data);
+        if (data) {
+            if (data.maintenance_mode) {
+                router.push('/manutencao');
+                return;
+            }
+            if (data.active === false) {
+                router.push('/unidade-pausada');
+                return;
+            }
+            setTenant(data);
+        }
         setLoading(false);
     };
 

@@ -52,9 +52,14 @@ export default function ShopLandingPage() {
                 .single();
 
             if (tenantData) {
-                // 🛡️ [BLINDADO] Protocolo de Manutenção - NÃO MODIFICAR
+                // 🛡️ [BLINDADO] Protocolo de Manutenção e Pausa - NÃO MODIFICAR
                 if (tenantData.maintenance_mode) {
                     router.push('/manutencao');
+                    return;
+                }
+
+                if (tenantData.active === false) {
+                    router.push('/unidade-pausada');
                     return;
                 }
 
@@ -70,6 +75,9 @@ export default function ShopLandingPage() {
                         (payload) => {
                             if (payload.new.maintenance_mode) {
                                 router.push('/manutencao');
+                            }
+                            if (payload.new.active === false) {
+                                router.push('/unidade-pausada');
                             }
                         }
                     )
