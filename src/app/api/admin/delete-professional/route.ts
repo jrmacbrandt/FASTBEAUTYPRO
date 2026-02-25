@@ -40,7 +40,7 @@ export async function POST(req: Request) {
         // 3. Get Target Profile
         const { data: targetProfile, error: targetError } = await supabaseAdmin
             .from('profiles')
-            .select('email, tenant_id')
+            .select('email, tenant_id, avatar_url')
             .eq('id', professionalId)
             .single();
 
@@ -54,12 +54,28 @@ export async function POST(req: Request) {
         }
 
         // 5. MASTER PROTECTION: Never delete the master
-        if (targetProfile.email === 'jrmacbrandt@gmail.com') {
+        if (targetProfile.email === 'jrmacbrandt@gmail.com' || targetProfile.email === 'jrmacbrandt@yahoo.com') {
             return NextResponse.json({ error: 'O Administrador Master é intocável e não pode ser removido' }, { status: 403 });
         }
 
         // 6. EXECUTE HARD DELETE
-        // Delete from Auth (cascades to Profile due to FK if configured, or we delete profile after)
+
+        // 6.1 Delete Avatar if it exists
+        if (targetProfile.avatar_url) {
+            const match = targetProfile.avatar_url.match(/\/storage\/v1\/object\/public\/([^\/]+)\/(.+)/);
+            if (match) {
+                const bucket = match[1];
+                const filePath = match[2];
+                try {
+                    await supabaseAdmin.storage.from(bucket).remove([filePath]);
+                } catch (e) {
+                    console.error('[DeleteProfessional] Failed to delete avatar:', e);
+                    // Continue deletion even if image removal fails
+                }
+            }
+        }
+
+        // 6.2 Delete from Auth (cascades to Profile due to FK if configured, or we delete profile after)
         const { error: deleteAuthError } = await supabaseAdmin.auth.admin.deleteUser(professionalId);
         if (deleteAuthError) throw deleteAuthError;
 

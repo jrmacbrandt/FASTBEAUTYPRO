@@ -90,8 +90,15 @@ export default function TeamManagementPage() {
             if (!confirm('Deseja excluir DEFINITIVAMENTE este profissional? Esta ação não pode ser desfeita.')) return;
             setBarbers(prev => prev.filter(b => b.id !== id));
             try {
-                const { error } = await supabase.from('profiles').delete().eq('id', id);
-                if (error) throw error;
+                const res = await fetch('/api/admin/delete-professional', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ professionalId: id })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Erro ao excluir profissional');
+
                 if (currentUser?.tenant_id) fetchTeam(currentUser.tenant_id);
             } catch (error: any) {
                 setBarbers(previousBarbers);
