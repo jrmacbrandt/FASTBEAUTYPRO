@@ -17,8 +17,8 @@ export default function ImageUpload({
     onImageSelect,
     helperText,
     className,
-    maxWidth = 800,
-    maxHeight = 800,
+    maxWidth = 200,
+    maxHeight = 200,
     quality = 0.85
 }: ImageUploadProps) {
     const [preview, setPreview] = useState<string | null>(currentImage || null);
