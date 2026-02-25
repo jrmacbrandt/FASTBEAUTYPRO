@@ -666,7 +666,8 @@ export default function ProfessionalAgendaPage() {
     );
 }
 
-// PREMIUM AGENDA CARD COMPONENT
+// 🛡️ [BLINDADO] PREMIUM AGENDA CARD COMPONENT (Renderização Sensível ao Tempo)
+// Esta lógica calcula atrasos e devoluções. Não refatorar regras de 'Hoje' / 'Atrasado'.
 const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onDelete, onStart, onFinalize, showDate }: any) => {
     const isActualToday = item.scheduled_at?.startsWith(new Date().toISOString().split('T')[0]);
     const displayLabel = (isActualToday && !showDate) ? 'Hoje' : new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });

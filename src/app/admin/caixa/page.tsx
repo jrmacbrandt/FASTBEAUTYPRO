@@ -20,6 +20,8 @@ export default function CashierCheckoutPage() {
     const [availableProducts, setAvailableProducts] = useState<any[]>([]);
     const [showAddItem, setShowAddItem] = useState(false);
     const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
+    // 🛡️ [BLINDADO] Prevenção de duplo clique em devoluções
+    const [isReturningOrder, setIsReturningOrder] = useState(false);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     const fetchPendingOrders = async (tid: string) => {
@@ -305,6 +307,35 @@ export default function CashierCheckoutPage() {
         }
     }, [selected]);
 
+    // 🛡️ [BLINDADO] - Fluxo de Devolução Segura (Protegido contra Duplicidade)
+    const handleReturnOrder = async () => {
+        if (!selected || isReturningOrder) return;
+        if (!confirm('Devolver esta comanda para a fila do profissional? Status voltará para em andamento.')) return;
+
+        setIsReturningOrder(true);
+        try {
+            // Executamos a RPC atômica para proteger a integridade no banco
+            const { data, error } = await supabase.rpc('return_order_to_professional', {
+                p_order_id: selected.id,
+                p_appointment_id: selected.appointment_id || null
+            });
+
+            if (error || (data && !data.success)) {
+                console.error('RPC Error:', error || data);
+                alert(`Erro ao devolver comanda.\nDetalhes: ${error?.message || data?.error || 'Desconhecido'}`);
+            } else {
+                alert('Comanda devolvida com sucesso!');
+                setSelected(null);
+                if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
+            }
+        } catch (err: any) {
+            console.error('Caught Exception:', err);
+            alert(`Erro critico: ${err.message}`);
+        } finally {
+            setIsReturningOrder(false);
+        }
+    };
+
     // 🛡️ [BLINDADO] - Fluxo de Checkout Seguro (Protegido contra Duplicidade)
     const handleConfirmPayment = async () => {
         if (!selected || !profile?.tenant_id || isProcessingPayment) return;
@@ -454,30 +485,14 @@ export default function CashierCheckoutPage() {
                                 <span className="material-symbols-outlined text-sm">arrow_back</span>
                                 Voltar
                             </button>
+                            {/* 🛡️ [BLINDADO] Prevenção de Duplicidade ao Devolver Comanda */}
                             <button
-                                onClick={async () => {
-                                    if (!confirm('Devolver esta comanda para a fila do profissional? Status voltará para em andamento.')) return;
-                                    // Deletamos a comanda não paga para limpar do caixa e permitir nova geração pelo profissional
-                                    const { error: orderError } = await supabase.from('orders').delete().eq('id', selected.id);
-                                    let apptError = null;
-                                    if (selected.appointment_id) {
-                                        const { error } = await supabase.from('appointments').update({ status: 'scheduled' }).eq('id', selected.appointment_id);
-                                        apptError = error;
-                                    }
-                                    if (orderError || apptError) {
-                                        console.error('Order Error:', orderError);
-                                        console.error('Appt Error:', apptError);
-                                        alert(`Erro ao devolver comanda.\nOrder: ${orderError?.message || 'OK'}\nAppt: ${apptError?.message || 'OK'}`);
-                                    } else {
-                                        alert('Comanda devolvida com sucesso!');
-                                        setSelected(null);
-                                        if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
-                                    }
-                                }}
-                                className="text-[8px] md:text-[9px] font-black tracking-widest uppercase transition-all text-orange-500 hover:text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg bg-orange-500/5 hover:bg-orange-500/10 flex items-center gap-1"
+                                disabled={isReturningOrder}
+                                onClick={handleReturnOrder}
+                                className={`text-[8px] md:text-[9px] font-black tracking-widest uppercase transition-all text-orange-500 hover:text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg bg-orange-500/5 hover:bg-orange-500/10 flex items-center gap-1 ${isReturningOrder ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
                                 <span className="material-symbols-outlined text-sm">undo</span>
-                                Devolver Mão de Obra
+                                {isReturningOrder ? 'DEVOLVENDO...' : 'Devolver Mão de Obra'}
                             </button>
                         </div>
 
