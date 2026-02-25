@@ -59,6 +59,21 @@ BEGIN
         GET DIAGNOSTICS deleted_subscriptions = ROW_COUNT;
     END IF;
 
+    -- 3.5 Limpa Referências de Fidelidade no Tenant (prevenindo FK Violation)
+    UPDATE public.tenants 
+    SET loyalty_reward_service_id = NULL, 
+        loyalty_reward_product_id = NULL 
+    WHERE id = p_tenant_id;
+
+    -- Apaga Prêmios de Fidelidade (Serviços e Produtos Exclusivos)
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'loyalty_rewards_services') THEN
+        EXECUTE 'DELETE FROM public.loyalty_rewards_services WHERE tenant_id = $1' USING p_tenant_id;
+    END IF;
+
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'loyalty_rewards_products') THEN
+        EXECUTE 'DELETE FROM public.loyalty_rewards_products WHERE tenant_id = $1' USING p_tenant_id;
+    END IF;
+
     -- 4. Apaga Catálogos (Serviços, Produtos, Insumos) e CRM
     DELETE FROM public.services WHERE tenant_id = p_tenant_id;
     GET DIAGNOSTICS deleted_services = ROW_COUNT;
