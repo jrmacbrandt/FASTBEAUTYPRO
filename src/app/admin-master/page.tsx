@@ -237,7 +237,7 @@ export default function MasterDashboardPage() {
 
                 const { error, data: updateData } = await supabase
                     .from('tenants')
-                    .update({ active: newStatus })
+                    .update({ active: newStatus, status: newStatus ? 'active' : 'paused' })
                     .eq('id', targetTenant.id)
                     .select();
 
@@ -249,9 +249,12 @@ export default function MasterDashboardPage() {
                 console.log('[MasterAction-V3] ✅ Update successful:', updateData);
 
                 // FORCE UI UPDATE LOCAL STATE
-                setTenants(prev => prev.map(t => t.id === targetTenant.id ? { ...t, active: newStatus } : t));
+                setTenants(prev => prev.map(t => t.id === targetTenant.id ? { ...t, active: newStatus, status: newStatus ? 'active' : 'paused' } : t));
 
-                alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
+                // Atraso de 100ms no alert para permitir que o React renderize o novo status na tela ANTES de congelar o navegador.
+                setTimeout(() => {
+                    alert(`Unidade ${newStatus ? 'ATIVADA' : 'PAUSADA'} com sucesso! (V3)`);
+                }, 100);
             } else if (action === 'save') {
                 console.log('[MasterAction-V3] Attempting to save tenant data for:', targetTenant.id);
                 console.log('[MasterAction-V3] Data to save:', data);
