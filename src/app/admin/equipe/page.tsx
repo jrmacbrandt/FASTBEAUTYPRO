@@ -90,9 +90,13 @@ export default function TeamManagementPage() {
             if (!confirm('Deseja excluir DEFINITIVAMENTE este profissional? Esta ação não pode ser desfeita.')) return;
             setBarbers(prev => prev.filter(b => b.id !== id));
             try {
+                const { data: { session } } = await supabase.auth.getSession();
                 const res = await fetch('/api/admin/delete-professional', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
                     body: JSON.stringify({ professionalId: id })
                 });
 
@@ -165,9 +169,13 @@ export default function TeamManagementPage() {
                 const { error } = await supabase.from('profiles').update(profileData).eq('id', editingBarber.id);
                 if (error) throw error;
             } else {
+                const { data: { session } } = await supabase.auth.getSession();
                 const res = await fetch('/api/admin/create-professional', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${session?.access_token}`
+                    },
                     body: JSON.stringify({
                         email: formData.email,
                         full_name: formData.full_name,
