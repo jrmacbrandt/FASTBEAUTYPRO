@@ -170,7 +170,7 @@ export default function TeamManagementPage() {
                         product_commission: Number(formData.product_commission || 0),
                         tenant_id: currentUser?.tenant_id,
                         role: 'barber',
-                        password: 'mudar123',
+                        password: '12345678',
                         avatar_url: avatarUrl
                     })
                 });
@@ -323,6 +323,12 @@ export default function TeamManagementPage() {
                                     <input type="text" className="w-full border rounded-2xl p-4 font-bold outline-none text-xs transition-all" style={{ backgroundColor: `${colors.bg}40`, borderColor: colors.border, color: colors.text }} value={formData.product_commission} onChange={(e) => setFormData({ ...formData, product_commission: maskPercent(e.target.value) })} placeholder="0" />
                                 </div>
                             </div>
+
+                            {!editingBarber && (
+                                <div className="p-4 rounded-xl text-[10px] font-bold text-center italic tracking-wide" style={{ backgroundColor: `${colors.primary}1A`, color: colors.primary }}>
+                                    Atenção: A senha padrão de primeiro acesso para todo profissional cadastrado é <strong className="font-black text-xs">12345678</strong>. Oriente-os a alterá-la no primeiro login.
+                                </div>
+                            )}
 
                             <button onClick={handleSave} disabled={uploading} className="w-full font-black py-5 rounded-2xl text-xs uppercase tracking-widest italic shadow-xl transition-all disabled:opacity-50"
                                 style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}66` }}

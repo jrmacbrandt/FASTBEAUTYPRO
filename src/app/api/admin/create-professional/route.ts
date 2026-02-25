@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         // 1. Create Auth User
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email,
-            password: password || '123456', // Default simple password if none provided
+            password: password || '12345678', // Senha padrão atualizada a pedido do dono
             email_confirm: true,
             user_metadata: {
                 full_name,
