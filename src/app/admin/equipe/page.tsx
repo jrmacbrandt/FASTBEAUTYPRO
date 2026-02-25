@@ -160,7 +160,8 @@ export default function TeamManagementPage() {
                         product_commission: Number(formData.product_commission || 0),
                         tenant_id: currentUser?.tenant_id,
                         role: 'barber',
-                        password: 'mudar123'
+                        password: 'mudar123',
+                        avatar_url: avatarUrl
                     })
                 });
 

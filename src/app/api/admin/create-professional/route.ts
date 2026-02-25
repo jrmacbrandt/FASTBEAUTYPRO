@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
-        const { email, full_name, cpf, phone, service_commission, product_commission, tenant_id, role, password } = body;
+        const { email, full_name, cpf, phone, service_commission, product_commission, tenant_id, role, password, avatar_url } = body;
 
         // Initialize Supabase Admin Client with Service Role Key
         // This bypasses RLS to allow Auth User creation
@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
             phone: phone,
             service_commission: Number(service_commission || 0),
             product_commission: Number(product_commission || 0),
+            avatar_url: avatar_url || null,
             status: 'active'
         };
 
