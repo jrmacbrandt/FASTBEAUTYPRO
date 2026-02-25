@@ -28,6 +28,14 @@ export async function middleware(request: NextRequest) {
                     );
                 },
             },
+            global: {
+                // 🛡️ [BLINDADO] SECURITY FIX: OVERRIDE EDGE CACHE
+                // Next.js agressively caches fetch() calls. This forces Supabase to ALWAYS read fresh data from the DB,
+                // solving the "Stuck on Pagamento-Pendente" glitch when a tenant is unpaused but Edge cache thinks it's still paused.
+                fetch: (url, init) => {
+                    return fetch(url, { ...init, cache: 'no-store' });
+                }
+            }
         }
     );
 
