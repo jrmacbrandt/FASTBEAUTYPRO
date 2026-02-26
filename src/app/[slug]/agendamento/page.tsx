@@ -254,15 +254,21 @@ export default function DynamicBookingPage() {
 
                 // Format Date for Message
                 const dateFormatted = format(selectedDateObj, "dd/MM (EEEE)", { locale: ptBR });
-                const message = `🗓️ *AGENDAMENTO CONFIRMADO*
+                const message = `*SOLICITAÇÃO DE AGENDAMENTO*
                 
-Olá! Sou o ${selection.name}. 
-Gostaria de agendar: ${selection.service.name} 
-Com: ${selection.barber.full_name} 
-Dia: ${dateFormatted} às ${selection.time}.
-🎂 *Mês de Aniversário:* ${selection.birthMonth}
+Olá, ${selection.barber.full_name}! 
 
-Até lá! 👋`;
+Gostaria de agendar o seguinte serviço:
+
+* Serviço: ${selection.service.name} 
+* Data: ${dateFormatted}
+* Horário: ${selection.time}
+
+* Meu nome: ${selection.name}
+* WhatsApp: ${selection.phone}
+* Mês de aniversário: ${selection.birthMonth}
+
+Aguardo sua confirmação!`;
 
                 WhatsAppService.open(targetPhone, message);
             });
