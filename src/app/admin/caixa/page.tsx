@@ -237,8 +237,8 @@ export default function CashierCheckoutPage() {
 
         try {
             const [servRes, prodRes] = await Promise.all([
-                supabase.from('services').select('id, name, price, duration').eq('tenant_id', tid).order('name'),
-                supabase.from('products').select('id, name, sale_price, current_stock').eq('tenant_id', tid).gt('current_stock', 0).order('name')
+                supabase.from('services').select('*').eq('tenant_id', tid).order('name'),
+                supabase.from('products').select('*').eq('tenant_id', tid).gt('current_stock', 0).order('name')
             ]);
 
             if (servRes.error) console.error('[Caixa] Erro ao buscar serviços:', servRes.error);
