@@ -65,7 +65,17 @@ const MetricCard = ({ title, value, subtext, icon, theme, colorIndex = 0, header
 };
 
 export default function ReportsPage() {
-    const { profile, loading: profileLoading, theme, businessType } = useProfile();
+    const [profile, setProfile] = useState<any>(null);
+    const [theme, setTheme] = useState<any>({
+        primary: '#EAB308',
+        cardBg: '#121212',
+        text: '#FFFFFF',
+        textMuted: '#A1A1AA',
+        border: '#27272A',
+        chartGrid: '#27272A',
+        sidebarBg: '#09090b'
+    });
+    const [debug, setDebug] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [metrics, setMetrics] = useState({
         serviceRevenue: 0,
@@ -80,31 +90,25 @@ export default function ReportsPage() {
     const [historicalData, setHistoricalData] = useState<any[]>([]);
 
     useEffect(() => {
-        if (!profileLoading && profile?.tenant_id) {
-            fetchFinancialData(profile.tenant_id);
-            fetchHistoricalData(profile.tenant_id);
+        const initReports = async () => {
+            setLoading(true);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
 
-            // 🛡️ [BLINDADO] - Atualização em Tempo Real (Checkout no Caixa / Estoque)
-            const channel = supabase.channel('admin_relatorios_changes')
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'orders',
-                    filter: `tenant_id=eq.${profile.tenant_id}`
-                }, () => fetchFinancialData(profile.tenant_id))
-                .on('postgres_changes', {
-                    event: '*',
-                    schema: 'public',
-                    table: 'stock_transactions',
-                    filter: `tenant_id=eq.${profile.tenant_id}`
-                }, () => fetchFinancialData(profile.tenant_id))
-                .subscribe();
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*, tenant:tenants(*)')
+                .eq('id', session.user.id)
+                .single();
 
-            return () => {
-                supabase.removeChannel(channel);
-            };
-        }
-    }, [profileLoading, profile]);
+            if (profileData) {
+                setProfile(profileData);
+                fetchFinancialData(profileData.tenant_id);
+                fetchHistoricalData(profileData.tenant_id);
+            }
+        };
+        initReports();
+    }, []);
 
     const fetchHistoricalData = async (tenantId: string) => {
         const { data, error } = await supabase
@@ -118,43 +122,31 @@ export default function ReportsPage() {
         }
     };
 
-    const fetchFinancialData = async (incomingTid?: string) => {
+    const fetchFinancialData = async (tid: string) => {
+        if (!tid) return;
         try {
             setLoading(true);
 
-            // 🛡️ [BLINDADO] - Unificação de Origem de Dados (Padrão Comissões/Caixa)
-            let tid = incomingTid;
-
-            if (!tid) {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (!session) return;
-
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('tenant_id')
-                    .eq('id', session.user.id)
-                    .single();
-
-                tid = profile?.tenant_id;
-            }
-
-            if (!tid) {
-                console.warn('[Relatórios-Audit] Tenant ID não encontrado.');
-                setLoading(false);
-                return;
-            }
-
-            // 🛡️ [BLINDADO] - Reconstruindo do ZERO: Motor de Relatórios de Alta Precisão
+            // 🛡️ [DIAGNÓSTICO AGRESSIVO] - Escaneamento amplo de dados
             const { data: orders, error: ordersError } = await supabase
                 .from('orders')
                 .select('*')
                 .eq('tenant_id', tid)
-                .eq('status', 'paid')
                 .order('created_at', { ascending: true });
 
             if (ordersError) {
                 console.error('[Relatórios-Audit] Erro SQL Pedidos:', ordersError);
             }
+
+            // Diagnostic logic
+            const diag = {
+                total: orders?.length || 0,
+                statusCounts: {} as Record<string, number>
+            };
+            orders?.forEach(o => diag.statusCounts[o.status] = (diag.statusCounts[o.status] || 0) + 1);
+            setDebug(diag);
+
+            const filteredOrders = orders?.filter(o => o.status === 'paid' || o.status === 'pago') || [];
 
             // 2. Fetch Stock Transactions (Cost) - Últimos 30 dias para performance
             const thirtyDaysAgo = new Date();
@@ -192,7 +184,7 @@ export default function ReportsPage() {
             }
 
             // Processamento unificado de Pedidos
-            orders?.forEach(order => {
+            filteredOrders.forEach(order => {
                 const d = new Date(order.finalized_at || order.created_at);
                 const dStr = d.toLocaleDateString('pt-BR');
 
@@ -263,7 +255,7 @@ export default function ReportsPage() {
         }
     };
 
-    if (profileLoading || loading) {
+    if (!profile || loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
                 <div className="size-12 rounded-full border-4 border-t-transparent animate-spin" style={{ borderColor: theme.primary, borderTopColor: 'transparent' }}></div>
@@ -274,6 +266,12 @@ export default function ReportsPage() {
 
     return (
         <div className="p-4 md:p-8 space-y-8 pb-24" style={{ color: theme.text }}>
+            {debug && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] font-mono text-emerald-400 flex gap-4">
+                    <span>Diagnostic: {debug.total} orders scanned</span>
+                    <span>Stats: {JSON.stringify(debug.statusCounts)}</span>
+                </div>
+            )}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-8 gap-4">
                 <div className="relative">
                     <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-12 rounded-full blur-sm opacity-50" style={{ backgroundColor: theme.primary }}></div>

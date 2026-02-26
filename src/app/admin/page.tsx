@@ -5,11 +5,19 @@ import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { useProfile } from '@/hooks/useProfile';
 
 export default function OwnerDashboardPage() {
-    const { profile, loading: profileLoading, businessType: hookBusinessType, theme } = useProfile();
-    const businessType = hookBusinessType || 'barber';
+    const [profile, setProfile] = React.useState<any>(null);
+    const [loadingStats, setLoadingStats] = React.useState(true);
+    const [theme, setTheme] = React.useState<any>({
+        primary: '#EAB308',
+        cardBg: '#121212',
+        text: '#FFFFFF',
+        textMuted: '#A1A1AA',
+        border: '#27272A',
+        chartGrid: '#27272A',
+        chartStroke: '#52525B'
+    });
 
     const [stats, setStats] = React.useState({
         totalDay: 0,
@@ -25,10 +33,33 @@ export default function OwnerDashboardPage() {
         chartData: [] as { name: string, faturamento: number }[]
     });
 
-    const [tenantInfo, setTenantInfo] = React.useState<{ name: string, slug: string } | null>(null);
-    const [loadingStats, setLoadingStats] = React.useState(true);
+    const [debug, setDebug] = React.useState<any>(null);
+    const [tenantInfo, setTenantInfo] = React.useState<{ name: string, slug: string, business_type: string } | null>(null);
     const [copying, setCopying] = React.useState(false);
     const [pendingCount, setPendingCount] = React.useState(0);
+
+    // 🛡️ [BLINDADO] - Padronização Suprema de Acesso (Unificado com Comissões)
+    React.useEffect(() => {
+        const initDashboard = async () => {
+            setLoadingStats(true);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+
+            const { data: profileData } = await supabase
+                .from('profiles')
+                .select('*, tenant:tenants(*)')
+                .eq('id', session.user.id)
+                .single();
+
+            if (profileData) {
+                setProfile(profileData);
+                setTenantInfo(profileData.tenant);
+                fetchDashboardData(profileData.tenant_id);
+                fetchPending(profileData.tenant_id);
+            }
+        };
+        initDashboard();
+    }, []);
 
     const fetchPending = async (tid: string) => {
         const { count } = await supabase
@@ -66,12 +97,11 @@ export default function OwnerDashboardPage() {
                 return;
             }
 
-            // Busca Inteligente (Real-time Audit)
+            // 🛡️ [DIAGNÓSTICO AGRESSIVO] - Busca ampla para auditoria real-time
             const { data: orders, error } = await supabase
                 .from('orders')
                 .select('*')
                 .eq('tenant_id', tid)
-                .eq('status', 'paid')
                 .order('created_at', { ascending: false })
                 .limit(2000);
 
@@ -81,10 +111,23 @@ export default function OwnerDashboardPage() {
                 return;
             }
 
-            if (!orders || orders.length === 0) {
-                console.warn('[Dashboard-Audit] Nenhum pedido pago encontrado para o tenant:', tid);
-                setLoadingStats(false);
-                return;
+            // Contador de Diagnóstico (O que temos no banco?)
+            const diag = {
+                total: orders?.length || 0,
+                statusCounts: {} as Record<string, number>,
+                lastOrder: orders?.[0] ? { status: orders[0].status, date: orders[0].created_at } : null
+            };
+
+            orders?.forEach(o => {
+                diag.statusCounts[o.status] = (diag.statusCounts[o.status] || 0) + 1;
+            });
+            setDebug(diag);
+
+            // Filtramos apenas os PAGOS para as métricas oficiais
+            const paidOrders = orders?.filter(o => o.status === 'paid' || o.status === 'pago') || [];
+
+            if (paidOrders.length === 0) {
+                console.warn('[Dashboard-Audit] Nenhum pedido pago encontrado.');
             }
 
             const now = new Date();
@@ -119,7 +162,7 @@ export default function OwnerDashboardPage() {
                 last7DaysValues[d.toLocaleDateString('pt-BR')] = 0;
             }
 
-            orders.forEach(o => {
+            paidOrders.forEach(o => {
                 const d = new Date(o.finalized_at || o.created_at);
                 const dStr = d.toLocaleDateString('pt-BR');
                 const val = Number(o.total_value) || 0;
@@ -258,10 +301,19 @@ export default function OwnerDashboardPage() {
         setTimeout(() => setCopying(false), 2000);
     };
 
-    if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando painel...</div>;
+    if (!profile) return <div className="text-center py-20 opacity-40">Carregando painel...</div>;
+
+    const businessType = tenantInfo?.business_type || 'barber';
 
     return (
         <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500 pb-10">
+            {debug && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] font-mono text-emerald-400 flex gap-4">
+                    <span>Diagnostic: {debug.total} orders found</span>
+                    <span>Stats: {JSON.stringify(debug.statusCounts)}</span>
+                    {debug.lastOrder && <span>Last: {debug.lastOrder.status} ({new Date(debug.lastOrder.date).toLocaleDateString()})</span>}
+                </div>
+            )}
             {tenantInfo && (
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 md:p-8 rounded-[2rem] transition-all gap-4 mb-4" style={{ backgroundColor: theme.cardBg }}>
                     <div className="flex items-center gap-4">
