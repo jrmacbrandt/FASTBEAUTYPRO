@@ -118,15 +118,37 @@ export default function ReportsPage() {
         }
     };
 
-    const fetchFinancialData = async (tenantId: string) => {
+    const fetchFinancialData = async (incomingTid?: string) => {
         try {
             setLoading(true);
+
+            // 🛡️ [BLINDADO] - Unificação de Origem de Dados (Padrão Comissões/Caixa)
+            let tid = incomingTid;
+
+            if (!tid) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('tenant_id')
+                    .eq('id', session.user.id)
+                    .single();
+
+                tid = profile?.tenant_id;
+            }
+
+            if (!tid) {
+                console.warn('[Relatórios-Audit] Tenant ID não encontrado.');
+                setLoading(false);
+                return;
+            }
 
             // 🛡️ [BLINDADO] - Reconstruindo do ZERO: Motor de Relatórios de Alta Precisão
             const { data: orders, error: ordersError } = await supabase
                 .from('orders')
                 .select('*')
-                .eq('tenant_id', tenantId)
+                .eq('tenant_id', tid)
                 .eq('status', 'paid')
                 .order('created_at', { ascending: true });
 
@@ -148,7 +170,7 @@ export default function ReportsPage() {
                         cost_price
                     )
                 `)
-                .eq('tenant_id', tenantId)
+                .eq('tenant_id', tid)
                 .eq('type', 'OUT')
                 .gte('created_at', thirtyDaysAgo.toISOString());
 

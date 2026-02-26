@@ -40,11 +40,33 @@ export default function OwnerDashboardPage() {
         setPendingCount(count || 0);
     };
 
-    const fetchDashboardData = async (tid: string) => {
+    const fetchDashboardData = async (incomingTid?: string) => {
         setLoadingStats(true);
         try {
-            // 🛡️ [BLINDADO] - Reconstruindo do ZERO: Busca Inteligente (Real-time Audit)
-            // Buscamos um volume maior para garantir que o JS possa filtrar com precisão local
+            // 🛡️ [BLINDADO] - Unificação de Origem de Dados (Padrão Comissões/Caixa)
+            // Garantimos o ID do tenant diretamente do banco antes de qualquer consulta
+            let tid = incomingTid;
+
+            if (!tid) {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session) return;
+
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('tenant_id')
+                    .eq('id', session.user.id)
+                    .single();
+
+                tid = profile?.tenant_id;
+            }
+
+            if (!tid) {
+                console.warn('[Dashboard-Audit] Tenant ID não encontrado para busca.');
+                setLoadingStats(false);
+                return;
+            }
+
+            // Busca Inteligente (Real-time Audit)
             const { data: orders, error } = await supabase
                 .from('orders')
                 .select('*')
