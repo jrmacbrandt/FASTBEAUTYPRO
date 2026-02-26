@@ -673,7 +673,11 @@ export default function CashierCheckoutPage() {
                                         <span className="text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>Serviço Principal</span>
                                     </div>
                                     <span className="text-xs font-black italic" style={{ color: colors.primary }}>
-                                        R$ {Number(selected.raw.service_total - (selected.raw.items || []).filter((i: any) => i.type === 'service').reduce((acc: number, curr: any) => acc + (curr.price * curr.qty), 0)).toFixed(2)}
+                                        R$ {Number(
+                                            availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id))?.price ||
+                                            selected.raw.appointments?.services?.price ||
+                                            0
+                                        ).toFixed(2)}
                                     </span>
                                 </div>
                                 <select
