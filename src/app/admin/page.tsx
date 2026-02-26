@@ -56,16 +56,29 @@ export default function OwnerDashboardPage() {
 
         if (!error && orders) {
             const now = new Date();
-            const today = new Date(); today.setHours(0, 0, 0, 0);
+
+            // 🛡️ [BLINDADO] Fix Fuso Horário: Definir "Hoje" no horário local do navegador
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const tomorrow = new Date(today);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
 
-            const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
             const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
             const lastMonth = lastMonthDate.getMonth();
             const lastYear = lastMonthDate.getFullYear();
 
-            const todayOrders = orders.filter(o => new Date(o.finalized_at || o.created_at) >= today);
+            // Filtragem robusta baseada em objetos Date
+            const todayOrders = orders.filter(o => {
+                const d = new Date(o.finalized_at || o.created_at);
+                return d >= today && d < tomorrow;
+            });
             const yesterdayOrders = orders.filter(o => {
                 const d = new Date(o.finalized_at || o.created_at);
                 return d >= yesterday && d < today;

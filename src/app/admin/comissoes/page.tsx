@@ -57,33 +57,34 @@ export default function AdminCommissionsPage() {
                 // For now, we simulate or fetch from a hypothetical commissions/orders table
                 // Since the specific table for commissions isn't clear, we'll implement a clean UI
                 // that aggregates data from 'orders' if available
-                // 🛡️ [BLINDADO] - Fetch orders for the period (REAL TIME FIX)
+                // 2. Fetch orders for the current period (FIX: robust date handling)
+                const [year, month] = selectedPeriod.split('-').map(Number);
+                const startDate = `${selectedPeriod}-01T00:00:00Z`;
+                const nextMonthDate = new Date(year, month, 1);
+                const endDate = nextMonthDate.toISOString();
+
                 const { data: orders } = await supabase
                     .from('orders')
                     .select('*')
                     .eq('tenant_id', profile.tenant_id)
                     .eq('status', 'paid')
-                    .gte('finalized_at', `${selectedPeriod}-01`)
-                    .lte('finalized_at', `${selectedPeriod}-31`);
-
+                    .gte('finalized_at', startDate)
+                    .lt('finalized_at', endDate);
 
                 // 3. Fetch orders for the PREVIOUS period to calculate growth
-                const [year, month] = selectedPeriod.split('-').map(Number);
-                const prevDate = new Date(year, month - 2); // month is 0-indexed in Date, so current month-1 is month-2 here? No. 
-                // month - 1 is current month index. prev month index is month - 2.
-                // Actually safer to just use a library or simple string logic
                 const prevYear = month === 1 ? year - 1 : year;
                 const prevMonth = month === 1 ? 12 : month - 1;
-                const prevPeriod = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+                const prevPeriodStr = `${prevYear}-${String(prevMonth).padStart(2, '0')}`;
+                const prevStartDate = `${prevPeriodStr}-01T00:00:00Z`;
+                const prevEndDate = startDate;
 
-                // 🛡️ [BLINDADO] - Fetch orders for the PREVIOUS period (REAL TIME FIX)
                 const { data: prevOrders } = await supabase
                     .from('orders')
                     .select('commission_amount')
                     .eq('tenant_id', profile.tenant_id)
                     .eq('status', 'paid')
-                    .gte('finalized_at', `${prevPeriod}-01`)
-                    .lte('finalized_at', `${prevPeriod}-31`);
+                    .gte('finalized_at', prevStartDate)
+                    .lt('finalized_at', prevEndDate);
 
                 const currentTotalCommission = orders?.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0) || 0;
                 const prevTotalCommission = prevOrders?.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0) || 0;

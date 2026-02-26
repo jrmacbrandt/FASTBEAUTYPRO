@@ -128,12 +128,15 @@ export default function ReportsPage() {
             thirtyDaysAgo.setHours(0, 0, 0, 0);
 
             // 🛡️ [BLINDADO] - Fetch Paid Orders (Full Detail - REAL TIME FIX)
-            const { data: orders } = await supabase
+            const { data: orders, error: ordersError } = await supabase
                 .from('orders')
                 .select('total_value, commission_amount, service_total, product_total, fee_amount_services, fee_amount_products, finalized_at, created_at')
                 .eq('tenant_id', tenantId)
                 .eq('status', 'paid')
-                .gte('finalized_at', thirtyDaysAgo.toISOString());
+                .gte('finalized_at', thirtyDaysAgo.toISOString())
+                .order('finalized_at', { ascending: true });
+
+            if (ordersError) console.error('Error fetching orders:', ordersError);
 
             // 2. Fetch Stock Transactions (Cost)
             const { data: transactions } = await supabase
