@@ -154,11 +154,24 @@ export default function CashierCheckoutPage() {
         if (profile?.tenant_id) {
             if (activeTab === 'pending') fetchPendingOrders(profile.tenant_id);
             if (activeTab === 'history') fetchHistoryOrders(profile.tenant_id);
-            fetchTenantFees(profile.tenant_id);
-            fetchCatalog(profile.tenant_id);
             setSelected(null);
         }
     }, [profile, activeTab]);
+
+    // 🛡️ [BLINDADO] - Estabilização do Catálogo e Configurações (Prevenir listas vazias)
+    useEffect(() => {
+        if (profile?.tenant_id) {
+            fetchCatalog(profile.tenant_id);
+            fetchTenantFees(profile.tenant_id);
+        }
+    }, [profile?.tenant_id]);
+
+    // Garantia extra: Recarregar catálogo ao selecionar comanda se estiver vazio
+    useEffect(() => {
+        if (selected && availableServices.length === 0 && profile?.tenant_id) {
+            fetchCatalog(profile.tenant_id);
+        }
+    }, [selected]);
 
     // 🛡️ [BLINDADO] - REALTIME LISTENERS & POLLING (Auto-Atualização do Caixa)
     useEffect(() => {
@@ -219,9 +232,10 @@ export default function CashierCheckoutPage() {
     }, [profile?.tenant_id]);
 
     const fetchCatalog = async (tid: string) => {
+        if (!tid) return;
         const [servRes, prodRes] = await Promise.all([
-            supabase.from('services').select('id, name, price, duration').eq('tenant_id', tid).eq('is_active', true),
-            supabase.from('products').select('id, name, sale_price, current_stock').eq('tenant_id', tid).gt('current_stock', 0)
+            supabase.from('services').select('id, name, price, duration').eq('tenant_id', tid).order('name'),
+            supabase.from('products').select('id, name, sale_price, current_stock').eq('tenant_id', tid).gt('current_stock', 0).order('name')
         ]);
         if (servRes.data) setAvailableServices(servRes.data);
         if (prodRes.data) setAvailableProducts(prodRes.data);
