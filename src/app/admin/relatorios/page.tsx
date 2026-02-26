@@ -267,9 +267,10 @@ export default function ReportsPage() {
     return (
         <div className="p-4 md:p-8 space-y-8 pb-24" style={{ color: theme.text }}>
             {debug && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] font-mono text-emerald-400 flex gap-4">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] font-mono text-emerald-400 flex gap-4 overflow-x-auto">
                     <span>Diagnostic: {debug.total} orders scanned</span>
                     <span>Stats: {JSON.stringify(debug.statusCounts)}</span>
+                    <span className="opacity-50">TID: {profile?.tenant_id}</span>
                 </div>
             )}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-8 gap-4">

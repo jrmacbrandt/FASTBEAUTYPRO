@@ -308,9 +308,10 @@ export default function OwnerDashboardPage() {
     return (
         <div className="space-y-4 md:space-y-8 animate-in fade-in duration-500 pb-10">
             {debug && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] font-mono text-emerald-400 flex gap-4">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg text-[10px] font-mono text-emerald-400 flex gap-4 overflow-x-auto">
                     <span>Diagnostic: {debug.total} orders found</span>
                     <span>Stats: {JSON.stringify(debug.statusCounts)}</span>
+                    <span className="opacity-50">TID: {profile?.tenant_id}</span>
                     {debug.lastOrder && <span>Last: {debug.lastOrder.status} ({new Date(debug.lastOrder.date).toLocaleDateString()})</span>}
                 </div>
             )}
