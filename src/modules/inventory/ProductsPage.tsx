@@ -182,7 +182,7 @@ export default function ProductsPage() {
                             <p className="text-[10px] font-bold mb-6 line-clamp-2 uppercase tracking-widest" style={{ color: colors.textMuted }}>{product.description || 'Sem descrição'}</p>
 
                             <div className="flex items-center justify-between mt-auto pt-6 border-t" style={{ borderColor: colors.border }}>
-                                <span className="font-black text-2xl italic tracking-tighter" style={{ color: colors.primary }}>R$ {product.sale_price?.toFixed(2) || '0.00'}</span>
+                                <span className="font-black text-2xl italic tracking-tighter" style={{ color: colors.primary }}>R$ {(activeTab === 'sale' ? product.sale_price : product.cost_price)?.toFixed(2) || '0.00'}</span>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => handleMovement(product)}
