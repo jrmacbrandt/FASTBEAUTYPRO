@@ -233,12 +233,28 @@ export default function CashierCheckoutPage() {
 
     const fetchCatalog = async (tid: string) => {
         if (!tid) return;
-        const [servRes, prodRes] = await Promise.all([
-            supabase.from('services').select('id, name, price, duration').eq('tenant_id', tid).order('name'),
-            supabase.from('products').select('id, name, sale_price, current_stock').eq('tenant_id', tid).gt('current_stock', 0).order('name')
-        ]);
-        if (servRes.data) setAvailableServices(servRes.data);
-        if (prodRes.data) setAvailableProducts(prodRes.data);
+        console.log('[Caixa] Buscando catálogo para tenant:', tid);
+
+        try {
+            const [servRes, prodRes] = await Promise.all([
+                supabase.from('services').select('id, name, price, duration').eq('tenant_id', tid).order('name'),
+                supabase.from('products').select('id, name, sale_price, current_stock').eq('tenant_id', tid).gt('current_stock', 0).order('name')
+            ]);
+
+            if (servRes.error) console.error('[Caixa] Erro ao buscar serviços:', servRes.error);
+            if (prodRes.error) console.error('[Caixa] Erro ao buscar produtos:', prodRes.error);
+
+            if (servRes.data) {
+                console.log(`[Caixa] ${servRes.data.length} serviços encontrados.`);
+                setAvailableServices(servRes.data);
+            }
+            if (prodRes.data) {
+                console.log(`[Caixa] ${prodRes.data.length} produtos encontrados.`);
+                setAvailableProducts(prodRes.data);
+            }
+        } catch (err) {
+            console.error('[Caixa] Erro critico no fetchCatalog:', err);
+        }
     };
 
     // 🛡️ [BLINDADO] - Injeção Dinâmica de Itens Extras na Comanda
@@ -666,18 +682,24 @@ export default function CashierCheckoutPage() {
                                     onChange={(e) => handleUpdateMainService(e.target.value)}
                                     disabled={isUpdatingOrder}
                                 >
-                                    {/* Sempre incluir o serviço atual na lista via map se ele estiver no catálogo, ou manualmente se não estiver */}
-                                    {availableServices.map(s => (
-                                        <option key={s.id} value={s.id}>{s.name} - R$ {Number(s.price).toFixed(2)}</option>
-                                    ))}
-                                    {/* Caso bizarro: serviço atual não está no catálogo ativo (ex: deletado) */}
-                                    {availableServices.length > 0 && !availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id)) && (
-                                        <option value={selected.raw.appointments?.services?.id}>
-                                            {selected.raw.appointments?.services?.name} (Inativo)
+                                    {/* PRIORIDADE: Mostrar todos os serviços carregados do catálogo */}
+                                    {availableServices.length > 0 ? (
+                                        <>
+                                            {availableServices.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name} - R$ {Number(s.price).toFixed(2)}</option>
+                                            ))}
+                                            {/* Segurança: Se o serviço atual não estiver no catálogo carregado, mostra ele em destaque */}
+                                            {!availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id)) && (
+                                                <option value={selected.raw.appointments?.services?.id}>
+                                                    {selected.raw.appointments?.services?.name} (Serviço Atual)
+                                                </option>
+                                            )}
+                                        </>
+                                    ) : (
+                                        /* FALLBACK: Durante o carregamento ou se a lista falhar, mostra pelo menos o serviço atual */
+                                        <option value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}>
+                                            {selected.raw.appointments?.services?.name || 'Carregando serviços...'}
                                         </option>
-                                    )}
-                                    {availableServices.length === 0 && (
-                                        <option value="">Carregando serviços...</option>
                                     )}
                                 </select>
                             </div>
