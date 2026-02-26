@@ -287,6 +287,66 @@ export default function CashierCheckoutPage() {
         setIsUpdatingOrder(false);
     };
 
+    const handleRemoveItem = async (idx: number) => {
+        if (!selected || isUpdatingOrder) return;
+        if (!confirm('Deseja remover este item da fatura?')) return;
+        setIsUpdatingOrder(true);
+
+        const currentItems = [...(selected.raw.items || [])];
+        const itemToRemove = currentItems[idx];
+        if (!itemToRemove) {
+            setIsUpdatingOrder(false);
+            return;
+        }
+
+        const type = itemToRemove.type;
+        const itemTotalPrice = Number(itemToRemove.price) * (itemToRemove.qty || 1);
+
+        // Remove the item
+        const newItems = currentItems.filter((_, i) => i !== idx);
+
+        // Recalculate totals
+        let newServiceTotal = Number(selected.raw.service_total) || 0;
+        let newProductTotal = Number(selected.raw.product_total) || 0;
+        let newCommission = Number(selected.commission) || 0;
+
+        const sRate = Number(selected.barber_commission.service) / 100;
+        const pRate = Number(selected.barber_commission.product) / 100;
+
+        if (type === 'service') {
+            newServiceTotal -= itemTotalPrice;
+            newCommission -= (itemTotalPrice * sRate);
+        } else {
+            newProductTotal -= itemTotalPrice;
+            newCommission -= (itemTotalPrice * pRate);
+        }
+
+        const newTotalValue = newServiceTotal + newProductTotal;
+
+        const updatePayload = {
+            items: newItems,
+            service_total: Math.max(0, newServiceTotal),
+            product_total: Math.max(0, newProductTotal),
+            total_value: Math.max(0, newTotalValue),
+            commission_amount: Math.max(0, newCommission)
+        };
+
+        const { error } = await supabase.from('orders').update(updatePayload).eq('id', selected.id);
+
+        if (!error) {
+            // Optimistic update
+            setSelected({
+                ...selected,
+                total_price: updatePayload.total_value,
+                commission: updatePayload.commission_amount,
+                raw: { ...selected.raw, ...updatePayload }
+            });
+        } else {
+            alert('Erro ao remover item.');
+        }
+        setIsUpdatingOrder(false);
+    };
+
     const fetchTenantFees = async (tid: string) => {
         const { data } = await supabase.from('tenants').select('fee_percent_pix, fee_percent_cash, fee_percent_credit, fee_percent_debit, payment_methods').eq('id', tid).single();
         if (data) {
@@ -505,12 +565,21 @@ export default function CashierCheckoutPage() {
                         <div className="space-y-3 md:space-y-4 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
                             {selected.raw?.items && selected.raw.items.length > 0 ? (
                                 selected.raw.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2" style={{ borderColor: colors.border }}>
-                                        <div className="flex flex-col">
-                                            <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
-                                                {item.qty > 1 && `${item.qty}x `}{item.name}
-                                            </span>
-                                            <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
+                                    <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2 group/item" style={{ borderColor: colors.border }}>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => handleRemoveItem(idx)}
+                                                className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
+                                                title="Remover Item"
+                                            >
+                                                <span className="material-symbols-outlined text-lg">delete</span>
+                                            </button>
+                                            <div className="flex flex-col">
+                                                <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
+                                                    {item.qty > 1 && `${item.qty}x `}{item.name}
+                                                </span>
+                                                <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
+                                            </div>
                                         </div>
                                         <span style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
                                     </div>
