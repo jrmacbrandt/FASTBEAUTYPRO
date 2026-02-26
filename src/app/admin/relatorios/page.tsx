@@ -130,11 +130,14 @@ export default function ReportsPage() {
             // 🛡️ [BLINDADO] - Fetch Paid Orders (Full Detail - REAL TIME FIX)
             const { data: orders, error: ordersError } = await supabase
                 .from('orders')
-                .select('total_value, commission_amount, service_total, product_total, fee_amount_services, fee_amount_products, finalized_at, created_at')
+                .select('*')
                 .eq('tenant_id', tenantId)
                 .eq('status', 'paid')
-                .gte('finalized_at', thirtyDaysAgo.toISOString())
-                .order('finalized_at', { ascending: true });
+                .order('created_at', { ascending: true });
+
+            if (ordersError) {
+                console.error('[Relatórios] Erro ao buscar pedidos:', ordersError);
+            }
 
             if (ordersError) console.error('Error fetching orders:', ordersError);
 
@@ -169,8 +172,13 @@ export default function ReportsPage() {
                 dailyStats[dateKey] = { revenue: 0, cost: 0 };
             }
 
-            // Process Orders Breakdown
-            orders?.forEach(order => {
+            // Process Orders Breakdown (Filtered by 30 days in JS for robustness)
+            const thirtyDaysOrders = orders?.filter(o => {
+                const d = new Date(o.finalized_at || o.created_at);
+                return d >= thirtyDaysAgo;
+            }) || [];
+
+            thirtyDaysOrders.forEach(order => {
                 const sRev = Number(order.service_total) || Number(order.total_value) || 0;
                 const pRev = Number(order.product_total) || 0;
                 const comm = Number(order.commission_amount) || 0;

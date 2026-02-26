@@ -166,7 +166,7 @@ export default function AdminCommissionsPage() {
                         </div>
                         <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Comissões a Pagar (Líquido)</p>
                         <h3 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter">
-                            R$ {professionals.reduce((acc, curr) => acc + curr.netCommission, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            R$ {professionals.reduce((acc, curr) => acc + curr.netCommission, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </h3>
                         <div className={`mt-6 flex items-center gap-2 ${growth >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                             <span className="material-symbols-outlined text-sm">{growth >= 0 ? 'trending_up' : 'trending_down'}</span>
@@ -240,10 +240,10 @@ export default function AdminCommissionsPage() {
                                                 <td className="px-4 py-4 text-right">
                                                     <div className="flex flex-col items-end">
                                                         <span className="text-[#f2b90d] font-black italic text-sm md:text-lg">
-                                                            R$ {pro.netCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            R$ {pro.netCommission.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </span>
                                                         <span className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-1">
-                                                            BRUTO: R$ {pro.commission.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                            BRUTO: R$ {pro.commission.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                         </span>
                                                     </div>
                                                 </td>

@@ -49,10 +49,15 @@ export default function OwnerDashboardPage() {
 
         const { data: orders, error } = await supabase
             .from('orders')
-            .select('total_value, finalized_at, created_at')
+            .select('*')
             .eq('tenant_id', tid)
             .eq('status', 'paid')
-            .gte('finalized_at', ninetyDaysAgo.toISOString());
+            .order('created_at', { ascending: false })
+            .limit(1000);
+
+        if (error) {
+            console.error('[Dashboard] Erro ao buscar pedidos:', error);
+        }
 
         if (!error && orders) {
             const now = new Date();
