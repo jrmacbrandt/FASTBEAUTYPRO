@@ -308,19 +308,20 @@ export default function CashierCheckoutPage() {
             commission_amount: newCommission
         };
 
+        // 🛡️ [BLINDADO] Optimistic update for instant UI feedback
+        setSelected({
+            ...selected,
+            total_price: newTotalValue,
+            commission: newCommission,
+            raw: { ...selected.raw, ...updatePayload }
+        });
+        setShowAddItem(false);
+
         const { error } = await supabase.from('orders').update(updatePayload).eq('id', selected.id);
 
-        if (!error) {
-            // Optimistic update
-            setSelected({
-                ...selected,
-                total_price: newTotalValue,
-                commission: newCommission,
-                raw: { ...selected.raw, ...updatePayload }
-            });
-            setShowAddItem(false);
-        } else {
-            alert('Erro ao adicionar item.');
+        if (error) {
+            console.error('Error syncing order:', error);
+            alert('Erro ao sincronizar com banco de dados.');
         }
         setIsUpdatingOrder(false);
     };
@@ -370,18 +371,19 @@ export default function CashierCheckoutPage() {
             commission_amount: newCommission
         };
 
+        // 🛡️ [BLINDADO] Optimistic update for instant UI feedback
+        setSelected({
+            ...selected,
+            total_price: updatePayload.total_value,
+            commission: updatePayload.commission_amount,
+            raw: { ...selected.raw, ...updatePayload }
+        });
+
         const { error } = await supabase.from('orders').update(updatePayload).eq('id', selected.id);
 
-        if (!error) {
-            // Optimistic update
-            setSelected({
-                ...selected,
-                total_price: updatePayload.total_value,
-                commission: updatePayload.commission_amount,
-                raw: { ...selected.raw, ...updatePayload }
-            });
-        } else {
-            alert('Erro ao remover item.');
+        if (error) {
+            console.error('Error syncing order:', error);
+            alert('Erro ao sincronizar com banco de dados.');
         }
         setIsUpdatingOrder(false);
     };
@@ -417,6 +419,26 @@ export default function CashierCheckoutPage() {
         const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
 
         try {
+            // 🛡️ [BLINDADO] Optimistic update for instant UI feedback
+            const updatedSelected = {
+                ...selected,
+                service_name: service.name,
+                total_price: newTotalValue,
+                commission: newCommission,
+                raw: {
+                    ...selected.raw,
+                    service_total: newServiceTotal,
+                    total_value: newTotalValue,
+                    commission_amount: newCommission,
+                    appointments: {
+                        ...selected.raw.appointments,
+                        service_id: serviceId,
+                        services: { ...service }
+                    }
+                }
+            };
+            setSelected(updatedSelected);
+
             // Update appointment service
             const { error: apptError } = await supabase
                 .from('appointments')
@@ -436,27 +458,9 @@ export default function CashierCheckoutPage() {
                 .eq('id', selected.id);
 
             if (orderError) throw orderError;
-
-            // Optimistic update
-            setSelected({
-                ...selected,
-                service_name: service.name,
-                total_price: newTotalValue,
-                commission: newCommission,
-                raw: {
-                    ...selected.raw,
-                    service_total: newServiceTotal,
-                    total_value: newTotalValue,
-                    commission_amount: newCommission,
-                    appointments: {
-                        ...selected.raw.appointments,
-                        service_id: serviceId,
-                        services: { ...service }
-                    }
-                }
-            });
         } catch (err: any) {
-            alert('Erro ao atualizar serviço principal: ' + err.message);
+            console.error('Error syncing main service:', err);
+            alert('Erro ao sincronizar serviço principal: ' + err.message);
         } finally {
             setIsUpdatingOrder(false);
         }
@@ -648,231 +652,243 @@ export default function CashierCheckoutPage() {
 
             <aside className="w-full">
                 {selected ? (
-                    <div className="border p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 shadow-2xl sticky top-4 md:top-10"
-                        style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}4d` }}>
+                    (() => {
+                        // 🛡️ [BLINDADO] Realtime Dynamic Calculation (Same as Professional Panel)
+                        const currentMainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
+                        const mainService = availableServices.find(s => s.id === currentMainServiceId);
+                        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
 
-                        {/* 🛡️ [BLINDADO] Actions row for Cancel/Return */}
-                        <div className="flex justify-between items-center -mt-2 mb-4">
-                            <button
-                                onClick={() => setSelected(null)}
-                                className="text-[9px] md:text-[10px] font-black tracking-widest uppercase transition-all opacity-60 hover:opacity-100 flex items-center gap-1"
-                                style={{ color: colors.text }}
-                            >
-                                <span className="material-symbols-outlined text-sm">arrow_back</span>
-                                Voltar
-                            </button>
-                            {/* 🛡️ [BLINDADO] Prevenção de Duplicidade ao Devolver Comanda */}
-                            <button
-                                disabled={isReturningOrder}
-                                onClick={handleReturnOrder}
-                                className={`text-[8px] md:text-[9px] font-black tracking-widest uppercase transition-all text-orange-500 hover:text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg bg-orange-500/5 hover:bg-orange-500/10 flex items-center gap-1 ${isReturningOrder ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            >
-                                <span className="material-symbols-outlined text-sm">undo</span>
-                                {isReturningOrder ? 'DEVOLVENDO...' : 'Devolver Mão de Obra'}
-                            </button>
-                        </div>
+                        const extraItemsTotal = (selected.raw.items || []).reduce((acc: number, item: any) => acc + (Number(item.price) * (item.qty || 1)), 0);
+                        const calculatedTotal = mainServicePrice + extraItemsTotal;
 
-                        <div className="text-center">
-                            <h3 className="text-xl md:text-2xl font-black italic tracking-tight mb-1 md:mb-2 uppercase" style={{ color: colors.text }}>Recebimento</h3>
-                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>{selected.customer_name}</p>
-                        </div>
+                        return (
+                            <div className="border p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 shadow-2xl sticky top-4 md:top-10"
+                                style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}4d` }}>
 
-                        <div className="space-y-4 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                            {/* SERVIÇO PRINCIPAL (SEMPRE VISÍVEL E EDITÁVEL) */}
-                            <div className="p-4 rounded-2xl border bg-black/40 space-y-3" style={{ borderColor: `${colors.primary}33` }}>
-                                <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-sm" style={{ color: colors.primary }}>star</span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>Serviço Principal</span>
-                                    </div>
-                                    <span className="text-xs font-black italic" style={{ color: colors.primary }}>
-                                        R$ {Number(
-                                            availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id))?.price ||
-                                            selected.raw.appointments?.services?.price ||
-                                            0
-                                        ).toFixed(2)}
-                                    </span>
+                                {/* 🛡️ [BLINDADO] Actions row for Cancel/Return */}
+                                <div className="flex justify-between items-center -mt-2 mb-4">
+                                    <button
+                                        onClick={() => setSelected(null)}
+                                        className="text-[9px] md:text-[10px] font-black tracking-widest uppercase transition-all opacity-60 hover:opacity-100 flex items-center gap-1"
+                                        style={{ color: colors.text }}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">arrow_back</span>
+                                        Voltar
+                                    </button>
+                                    {/* 🛡️ [BLINDADO] Prevenção de Duplicidade ao Devolver Comanda */}
+                                    <button
+                                        disabled={isReturningOrder}
+                                        onClick={handleReturnOrder}
+                                        className={`text-[8px] md:text-[9px] font-black tracking-widest uppercase transition-all text-orange-500 hover:text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg bg-orange-500/5 hover:bg-orange-500/10 flex items-center gap-1 ${isReturningOrder ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <span className="material-symbols-outlined text-sm">undo</span>
+                                        {isReturningOrder ? 'DEVOLVENDO...' : 'Devolver Mão de Obra'}
+                                    </button>
                                 </div>
-                                <select
-                                    className="w-full bg-black/60 border border-white/5 rounded-xl py-3 px-3 text-[11px] font-bold text-white focus:border-primary outline-none transition-all cursor-pointer"
-                                    value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}
-                                    onChange={(e) => handleUpdateMainService(e.target.value)}
-                                    disabled={isUpdatingOrder}
-                                >
-                                    {/* PRIORIDADE: Mostrar todos os serviços carregados do catálogo */}
-                                    {availableServices.length > 0 ? (
-                                        <>
-                                            {availableServices.map(s => (
-                                                <option key={s.id} value={s.id}>{s.name} - R$ {Number(s.price).toFixed(2)}</option>
-                                            ))}
-                                            {/* Segurança: Se o serviço atual não estiver no catálogo carregado, mostra ele em destaque */}
-                                            {!availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id)) && (
-                                                <option value={selected.raw.appointments?.services?.id}>
-                                                    {selected.raw.appointments?.services?.name} (Serviço Atual)
+
+                                <div className="text-center">
+                                    <h3 className="text-xl md:text-2xl font-black italic tracking-tight mb-1 md:mb-2 uppercase" style={{ color: colors.text }}>Recebimento</h3>
+                                    <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>{selected.customer_name}</p>
+                                </div>
+
+                                <div className="space-y-4 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                                    {/* SERVIÇO PRINCIPAL (SEMPRE VISÍVEL E EDITÁVEL) */}
+                                    <div className="p-4 rounded-2xl border bg-black/40 space-y-3" style={{ borderColor: `${colors.primary}33` }}>
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <span className="material-symbols-outlined text-sm" style={{ color: colors.primary }}>star</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>Serviço Principal</span>
+                                            </div>
+                                            <span className="text-xs font-black italic" style={{ color: colors.primary }}>
+                                                R$ {Number(
+                                                    availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id))?.price ||
+                                                    selected.raw.appointments?.services?.price ||
+                                                    0
+                                                ).toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <select
+                                            className="w-full bg-black/60 border border-white/5 rounded-xl py-3 px-3 text-[11px] font-bold text-white focus:border-primary outline-none transition-all cursor-pointer"
+                                            value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}
+                                            onChange={(e) => handleUpdateMainService(e.target.value)}
+                                            disabled={isUpdatingOrder}
+                                        >
+                                            {/* PRIORIDADE: Mostrar todos os serviços carregados do catálogo */}
+                                            {availableServices.length > 0 ? (
+                                                <>
+                                                    {availableServices.map(s => (
+                                                        <option key={s.id} value={s.id}>{s.name} - R$ {Number(s.price).toFixed(2)}</option>
+                                                    ))}
+                                                    {/* Segurança: Se o serviço atual não estiver no catálogo carregado, mostra ele em destaque */}
+                                                    {!availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id)) && (
+                                                        <option value={selected.raw.appointments?.services?.id}>
+                                                            {selected.raw.appointments?.services?.name} (Serviço Atual)
+                                                        </option>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                /* FALLBACK: Durante o carregamento ou se a lista falhar, mostra pelo menos o serviço atual */
+                                                <option value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}>
+                                                    {selected.raw.appointments?.services?.name || 'Carregando serviços...'}
                                                 </option>
                                             )}
-                                        </>
-                                    ) : (
-                                        /* FALLBACK: Durante o carregamento ou se a lista falhar, mostra pelo menos o serviço atual */
-                                        <option value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}>
-                                            {selected.raw.appointments?.services?.name || 'Carregando serviços...'}
-                                        </option>
-                                    )}
-                                </select>
-                            </div>
-
-                            {/* ITENS EXTRAS */}
-                            {selected.raw?.items && selected.raw.items.length > 0 && selected.raw.items.map((item: any, idx: number) => (
-                                <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2 group/item" style={{ borderColor: colors.border }}>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => handleRemoveItem(idx)}
-                                            className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
-                                            title="Remover Item"
-                                        >
-                                            <span className="material-symbols-outlined text-lg">delete</span>
-                                        </button>
-                                        <div className="flex flex-col">
-                                            <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
-                                                {item.qty > 1 && `${item.qty}x `}{item.name}
-                                            </span>
-                                            <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
-                                        </div>
+                                        </select>
                                     </div>
-                                    <span style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
-                                </div>
-                            ))}
-                        </div>
 
-                        {/* ADD EXTRA ITEMS UI */}
-                        {activeTab === 'pending' && (
-                            <div className="pt-2">
-                                {showAddItem ? (
-                                    <div className="space-y-3 p-4 rounded-xl border bg-black/20" style={{ borderColor: colors.border }}>
-                                        <div className="flex justify-between items-center mb-2">
-                                            <span className="text-[10px] uppercase font-black tracking-widest" style={{ color: colors.text }}>Adicionar Item</span>
-                                            <button onClick={() => setShowAddItem(false)} className="opacity-50 hover:opacity-100">
-                                                <span className="material-symbols-outlined text-sm">close</span>
+                                    {/* ITENS EXTRAS */}
+                                    {selected.raw?.items && selected.raw.items.length > 0 && selected.raw.items.map((item: any, idx: number) => (
+                                        <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2 group/item" style={{ borderColor: colors.border }}>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => handleRemoveItem(idx)}
+                                                    className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
+                                                    title="Remover Item"
+                                                >
+                                                    <span className="material-symbols-outlined text-lg">delete</span>
+                                                </button>
+                                                <div className="flex flex-col">
+                                                    <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
+                                                        {item.qty > 1 && `${item.qty}x `}{item.name}
+                                                    </span>
+                                                    <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
+                                                </div>
+                                            </div>
+                                            <span style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* ADD EXTRA ITEMS UI */}
+                                {activeTab === 'pending' && (
+                                    <div className="pt-2">
+                                        {showAddItem ? (
+                                            <div className="space-y-3 p-4 rounded-xl border bg-black/20" style={{ borderColor: colors.border }}>
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-[10px] uppercase font-black tracking-widest" style={{ color: colors.text }}>Adicionar Item</span>
+                                                    <button onClick={() => setShowAddItem(false)} className="opacity-50 hover:opacity-100">
+                                                        <span className="material-symbols-outlined text-sm">close</span>
+                                                    </button>
+                                                </div>
+
+                                                <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
+                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1" style={{ color: colors.primary }}>Serviços</p>
+                                                    {availableServices.map(s => (
+                                                        <button key={s.id} onClick={() => handleAddExtraItem(s, 'service')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                                                            <span className="text-[10px] font-bold" style={{ color: colors.text }}>{s.name}</span>
+                                                            <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(s.price).toFixed(2)}</span>
+                                                        </button>
+                                                    ))}
+
+                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1 mt-4" style={{ color: colors.primary }}>Produtos</p>
+                                                    {availableProducts.map(p => (
+                                                        <button key={p.id} onClick={() => handleAddExtraItem(p, 'product')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-[10px] font-bold" style={{ color: colors.text }}>{p.name}</span>
+                                                                <span className="text-[8px] opacity-50" style={{ color: colors.textMuted }}>Estoque: {p.current_stock}</span>
+                                                            </div>
+                                                            <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(p.sale_price).toFixed(2)}</span>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => setShowAddItem(true)}
+                                                className="w-full py-2 rounded-xl border border-dashed flex items-center justify-center gap-2 transition-all hover:bg-white/5 opacity-70 hover:opacity-100"
+                                                style={{ borderColor: colors.primary, color: colors.primary }}
+                                            >
+                                                <span className="material-symbols-outlined text-sm">add_circle</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Venda Extra</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div className="space-y-3">
+                                    <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60" style={{ color: colors.textMuted }}>Escolha o Método</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { label: 'PIX', val: 'PIX' },
+                                            { label: 'CRÉDITO', val: 'CARTÃO' },
+                                            { label: 'DINHEIRO', val: 'DINHEIRO' },
+                                            { label: 'DÉBITO', val: 'DÉBITO' }
+                                        ]
+                                            .filter(m => tenantFees.payment_methods?.includes(m.val))
+                                            .map(m => (
+                                                <button
+                                                    key={m.val}
+                                                    onClick={() => setPaymentMethod(m.val)}
+                                                    className={`border font-black py-3 md:py-4 rounded-xl transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95 ${paymentMethod === m.val ? 'bg-primary text-black' : 'bg-black/40 text-white'}`}
+                                                    style={{
+                                                        borderColor: paymentMethod === m.val ? colors.primary : colors.border,
+                                                        backgroundColor: paymentMethod === m.val ? colors.primary : `${colors.text}0d`,
+                                                        color: paymentMethod === m.val ? (isSalon ? 'white' : 'black') : colors.text
+                                                    }}
+                                                >
+                                                    {m.label}
+                                                </button>
+                                            ))}
+                                    </div>
+
+                                    {voucher && (
+                                        <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between animate-in fade-in">
+                                            <div className="flex items-center gap-3">
+                                                <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
+                                                <div>
+                                                    <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Corte Grátis Disponível</p>
+                                                    <p className="text-emerald-500/60 text-[8px] font-bold">Fidelidade Atingida</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!selected || !profile?.tenant_id) return;
+                                                    if (confirm('Confirmar uso do cartão fidelidade? O total será zerado e o cartão será reiniciado.')) {
+                                                        try {
+                                                            const { LoyaltyService } = await import('@/lib/loyalty');
+                                                            const success = await LoyaltyService.redeemReward(profile.tenant_id, selected.client_phone);
+
+                                                            if (success) {
+                                                                await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
+                                                                setSelected({ ...selected, total_price: 0 });
+                                                                setVoucher(null);
+                                                                alert('Cortesia aplicada e cartão reiniciado!');
+                                                            } else {
+                                                                alert('Erro ao resgatar recompensa. Verifique o saldo de selos.');
+                                                            }
+                                                        } catch (err) {
+                                                            console.error('Redeem Error:', err);
+                                                        }
+                                                    }
+                                                }}
+                                                className="bg-emerald-500 text-black text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg hover:bg-emerald-400"
+                                            >
+                                                Aplicar
                                             </button>
                                         </div>
+                                    )}
+                                </div>
 
-                                        <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
-                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1" style={{ color: colors.primary }}>Serviços</p>
-                                            {availableServices.map(s => (
-                                                <button key={s.id} onClick={() => handleAddExtraItem(s, 'service')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-                                                    <span className="text-[10px] font-bold" style={{ color: colors.text }}>{s.name}</span>
-                                                    <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(s.price).toFixed(2)}</span>
-                                                </button>
-                                            ))}
+                                {/* Fee Breakdown Visual (REMOVIDO A PEDIDO DO CLIENTE - BLINDADO) */}
 
-                                            <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1 mt-4" style={{ color: colors.primary }}>Produtos</p>
-                                            {availableProducts.map(p => (
-                                                <button key={p.id} onClick={() => handleAddExtraItem(p, 'product')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-bold" style={{ color: colors.text }}>{p.name}</span>
-                                                        <span className="text-[8px] opacity-50" style={{ color: colors.textMuted }}>Estoque: {p.current_stock}</span>
-                                                    </div>
-                                                    <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(p.sale_price).toFixed(2)}</span>
-                                                </button>
-                                            ))}
-                                        </div>
+                                <div className="pt-5 md:pt-6 border-t mt-4" style={{ borderColor: colors.border }}>
+                                    <div className="flex justify-between items-end mb-5 md:mb-6">
+                                        <span className="font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Cobrado do Cliente</span>
+                                        <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {calculatedTotal.toFixed(2)}</span>
                                     </div>
-                                ) : (
+                                    {/* 🛡️ [BLINDADO] Prevenção de Double Checkout */}
                                     <button
-                                        onClick={() => setShowAddItem(true)}
-                                        className="w-full py-2 rounded-xl border border-dashed flex items-center justify-center gap-2 transition-all hover:bg-white/5 opacity-70 hover:opacity-100"
-                                        style={{ borderColor: colors.primary, color: colors.primary }}
+                                        disabled={isProcessingPayment || isUpdatingOrder}
+                                        onClick={handleConfirmPayment}
+                                        className={`w-full font-black py-4 md:py-5 rounded-xl md:rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95 ${(isProcessingPayment || isUpdatingOrder) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
                                     >
-                                        <span className="material-symbols-outlined text-sm">add_circle</span>
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Venda Extra</span>
-                                    </button>
-                                )}
-                            </div>
-                        )}
-
-                        <div className="space-y-3">
-                            <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60" style={{ color: colors.textMuted }}>Escolha o Método</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {[
-                                    { label: 'PIX', val: 'PIX' },
-                                    { label: 'CRÉDITO', val: 'CARTÃO' },
-                                    { label: 'DINHEIRO', val: 'DINHEIRO' },
-                                    { label: 'DÉBITO', val: 'DÉBITO' }
-                                ]
-                                    .filter(m => tenantFees.payment_methods?.includes(m.val))
-                                    .map(m => (
-                                        <button
-                                            key={m.val}
-                                            onClick={() => setPaymentMethod(m.val)}
-                                            className={`border font-black py-3 md:py-4 rounded-xl transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95 ${paymentMethod === m.val ? 'bg-primary text-black' : 'bg-black/40 text-white'}`}
-                                            style={{
-                                                borderColor: paymentMethod === m.val ? colors.primary : colors.border,
-                                                backgroundColor: paymentMethod === m.val ? colors.primary : `${colors.text}0d`,
-                                                color: paymentMethod === m.val ? (isSalon ? 'white' : 'black') : colors.text
-                                            }}
-                                        >
-                                            {m.label}
-                                        </button>
-                                    ))}
-                            </div>
-
-                            {voucher && (
-                                <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between animate-in fade-in">
-                                    <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
-                                        <div>
-                                            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Corte Grátis Disponível</p>
-                                            <p className="text-emerald-500/60 text-[8px] font-bold">Fidelidade Atingida</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={async () => {
-                                            if (!selected || !profile?.tenant_id) return;
-                                            if (confirm('Confirmar uso do cartão fidelidade? O total será zerado e o cartão será reiniciado.')) {
-                                                try {
-                                                    const { LoyaltyService } = await import('@/lib/loyalty');
-                                                    const success = await LoyaltyService.redeemReward(profile.tenant_id, selected.client_phone);
-
-                                                    if (success) {
-                                                        await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
-                                                        setSelected({ ...selected, total_price: 0 });
-                                                        setVoucher(null);
-                                                        alert('Cortesia aplicada e cartão reiniciado!');
-                                                    } else {
-                                                        alert('Erro ao resgatar recompensa. Verifique o saldo de selos.');
-                                                    }
-                                                } catch (err) {
-                                                    console.error('Redeem Error:', err);
-                                                }
-                                            }
-                                        }}
-                                        className="bg-emerald-500 text-black text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg hover:bg-emerald-400"
-                                    >
-                                        Aplicar
+                                        {isProcessingPayment ? 'PROCESSANDO...' : 'FINALIZAR PAGAMENTO'}
+                                        <span className="material-symbols-outlined text-xl md:text-2xl">check_circle</span>
                                     </button>
                                 </div>
-                            )}
-                        </div>
-
-                        {/* Fee Breakdown Visual (REMOVIDO A PEDIDO DO CLIENTE - BLINDADO) */}
-
-                        <div className="pt-5 md:pt-6 border-t mt-4" style={{ borderColor: colors.border }}>
-                            <div className="flex justify-between items-end mb-5 md:mb-6">
-                                <span className="font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Cobrado do Cliente</span>
-                                <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {(selected.total_price || 0).toFixed(2)}</span>
                             </div>
-                            {/* 🛡️ [BLINDADO] Prevenção de Double Checkout */}
-                            <button
-                                disabled={isProcessingPayment}
-                                onClick={handleConfirmPayment}
-                                className={`w-full font-black py-4 md:py-5 rounded-xl md:rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95 ${isProcessingPayment ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
-                            >
-                                {isProcessingPayment ? 'PROCESSANDO...' : 'CONFIRMAR'}
-                                <span className="material-symbols-outlined text-xl md:text-2xl">check_circle</span>
-                            </button>
-                        </div>
-                    </div>
+                        );
+                    })()
                 ) : (
                     <div className="h-full min-h-[300px] md:min-h-[400px] border border-dashed rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center p-6 md:p-8 text-center sticky top-4 md:top-10"
                         style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border }}>
