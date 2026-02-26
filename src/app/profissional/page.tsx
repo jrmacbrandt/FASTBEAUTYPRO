@@ -1,5 +1,12 @@
 "use client";
 
+// Helper to get local ISO string (YYYY-MM-DD)
+const formatLocalISO = (date: Date) => {
+    const offset = date.getTimezoneOffset();
+    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+    return localDate.toISOString();
+};
+
 // 🛡️ [BLINDADO] Professional Panel - Core Access & Logic Locked. Do not modify.
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -38,11 +45,12 @@ export default function ProfessionalAgendaPage() {
             .order('scheduled_at', { ascending: true });
 
         if (!error && data) {
-            const today = new Date();
-            const todayStr = today.toISOString().split('T')[0];
+            // 🛡️ [BLINDADO] Fix Timezone - Use local date string instead of UTC to define 'Today'
+            const now = new Date();
+            const todayStr = formatLocalISO(now).split('T')[0];
             const endOfToday = todayStr + 'T23:59:59.999Z';
 
-            setTodayAgenda(data.filter(a => a.status === 'scheduled' && a.scheduled_at <= endOfToday));
+            setTodayAgenda(data.filter(a => a.status === 'scheduled' && a.scheduled_at.startsWith(todayStr)));
             setUpcomingAgenda(data.filter(a => a.status === 'scheduled' && a.scheduled_at > endOfToday));
             setHistoryAgenda(data.filter(a => a.status === 'completed' || a.status === 'paid' || a.status === 'absent').reverse());
         }
@@ -669,8 +677,10 @@ export default function ProfessionalAgendaPage() {
 // 🛡️ [BLINDADO] PREMIUM AGENDA CARD COMPONENT (Renderização Sensível ao Tempo)
 // Esta lógica calcula atrasos e devoluções. Não refatorar regras de 'Hoje' / 'Atrasado'.
 const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onDelete, onStart, onFinalize, showDate }: any) => {
-    const isActualToday = item.scheduled_at?.startsWith(new Date().toISOString().split('T')[0]);
-    const displayLabel = (isActualToday && !showDate) ? 'Hoje' : new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const todayStr = formatLocalISO(new Date()).split('T')[0];
+    const isActualToday = item.scheduled_at?.startsWith(todayStr);
+    const itemDate = new Date(item.scheduled_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const displayLabel = (isActualToday && !showDate) ? `Hoje` : itemDate;
     const isOverdue = !isActualToday && !showDate; // Se está na aba 'Hoje' mas não é de hoje, está atrasado
     const labelColor = isOverdue ? '#ef4444' : colors.primary;
 
@@ -680,10 +690,13 @@ const AgendaCard = ({ item, colors, businessType, onAbsent, onUndo, onDelete, on
     return (
         <div className="group border p-4 md:p-6 rounded-[2rem] transition-all flex flex-col md:flex-row items-center justify-between gap-4 hover:shadow-lg" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
             <div className="flex items-center gap-5 w-full md:w-auto">
-                <div className="size-14 md:size-20 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg gap-0.5" style={{ backgroundColor: `${labelColor}1a`, color: labelColor, borderColor: `${labelColor}33` }}>
-                    <span className="text-sm md:text-2xl opacity-90 uppercase tracking-tighter leading-none font-black drop-shadow-md" style={{ color: isOverdue ? '#ef4444' : '#ffffff' }}>
+                <div className="size-14 md:size-20 rounded-2xl flex flex-col items-center justify-center font-black shrink-0 border transition-transform group-hover:scale-105 shadow-lg gap-0" style={{ backgroundColor: `${labelColor}1a`, color: labelColor, borderColor: `${labelColor}33` }}>
+                    <span className="text-[10px] md:text-sm opacity-90 uppercase tracking-tighter leading-none font-black drop-shadow-md" style={{ color: isOverdue ? '#ef4444' : '#ffffff' }}>
                         {displayLabel}
                     </span>
+                    {isActualToday && !showDate && (
+                        <span className="text-[8px] md:text-[10px] opacity-60 font-black mb-0.5">{itemDate}</span>
+                    )}
                     <span className="text-[10px] md:text-xs opacity-60 leading-none tracking-widest">
                         {item.scheduled_at?.split('T')[1]?.substring(0, 5) || '00:00'}
                     </span>
