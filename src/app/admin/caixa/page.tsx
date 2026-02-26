@@ -662,16 +662,22 @@ export default function CashierCheckoutPage() {
                                 </div>
                                 <select
                                     className="w-full bg-black/60 border border-white/5 rounded-xl py-3 px-3 text-[11px] font-bold text-white focus:border-primary outline-none transition-all cursor-pointer"
-                                    value={selected.raw.appointments?.services?.id || selected.raw.appointments?.service_id}
+                                    value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}
                                     onChange={(e) => handleUpdateMainService(e.target.value)}
                                     disabled={isUpdatingOrder}
                                 >
-                                    {availableServices.length > 0 ? (
-                                        availableServices.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name} - R$ {Number(s.price).toFixed(2)}</option>
-                                        ))
-                                    ) : (
-                                        <option value={selected.raw.appointments?.services?.id}>{selected.raw.appointments?.services?.name || 'Serviço Atual'}</option>
+                                    {/* Sempre incluir o serviço atual na lista via map se ele estiver no catálogo, ou manualmente se não estiver */}
+                                    {availableServices.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name} - R$ {Number(s.price).toFixed(2)}</option>
+                                    ))}
+                                    {/* Caso bizarro: serviço atual não está no catálogo ativo (ex: deletado) */}
+                                    {availableServices.length > 0 && !availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id)) && (
+                                        <option value={selected.raw.appointments?.services?.id}>
+                                            {selected.raw.appointments?.services?.name} (Inativo)
+                                        </option>
+                                    )}
+                                    {availableServices.length === 0 && (
+                                        <option value="">Carregando serviços...</option>
                                     )}
                                 </select>
                             </div>
