@@ -42,35 +42,35 @@ export default function OwnerDashboardPage() {
 
     const fetchDashboardData = async (tid: string) => {
         setLoadingStats(true);
-        // 🛡️ [BLINDADO] - Limite de 90 dias de histórico para perfomance (Sincronizado com o robô de limpeza)
-        const ninetyDaysAgo = new Date();
-        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-        ninetyDaysAgo.setHours(0, 0, 0, 0);
+        try {
+            // 🛡️ [BLINDADO] - Reconstruindo do ZERO: Busca Inteligente (Real-time Audit)
+            // Buscamos um volume maior para garantir que o JS possa filtrar com precisão local
+            const { data: orders, error } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('tenant_id', tid)
+                .eq('status', 'paid')
+                .order('created_at', { ascending: false })
+                .limit(2000);
 
-        const { data: orders, error } = await supabase
-            .from('orders')
-            .select('*')
-            .eq('tenant_id', tid)
-            .eq('status', 'paid')
-            .order('created_at', { ascending: false })
-            .limit(1000);
+            if (error) {
+                console.error('[Dashboard-Audit] Erro SQL:', error);
+                setLoadingStats(false);
+                return;
+            }
 
-        if (error) {
-            console.error('[Dashboard] Erro ao buscar pedidos:', error);
-        }
+            if (!orders || orders.length === 0) {
+                console.warn('[Dashboard-Audit] Nenhum pedido pago encontrado para o tenant:', tid);
+                setLoadingStats(false);
+                return;
+            }
 
-        if (!error && orders) {
             const now = new Date();
+            const todayStr = now.toLocaleDateString('pt-BR');
 
-            // 🛡️ [BLINDADO] Fix Fuso Horário: Definir "Hoje" no horário local do navegador
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            const tomorrow = new Date(today);
-            tomorrow.setDate(tomorrow.getDate() + 1);
-
-            const yesterday = new Date(today);
+            const yesterday = new Date();
             yesterday.setDate(yesterday.getDate() - 1);
+            const yesterdayStr = yesterday.toLocaleDateString('pt-BR');
 
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
@@ -79,35 +79,60 @@ export default function OwnerDashboardPage() {
             const lastMonth = lastMonthDate.getMonth();
             const lastYear = lastMonthDate.getFullYear();
 
-            // Filtragem robusta baseada em objetos Date
-            const todayOrders = orders.filter(o => {
+            // Métricas
+            let totalDay = 0;
+            let totalYesterday = 0;
+            let totalMonth = 0;
+            let totalLastMonth = 0;
+            let ticketsDay = 0;
+            let ticketsYesterday = 0;
+
+            const daysMap = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            const last7DaysValues: Record<string, number> = {};
+
+            // Inicializar últimos 7 dias
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                last7DaysValues[d.toLocaleDateString('pt-BR')] = 0;
+            }
+
+            orders.forEach(o => {
                 const d = new Date(o.finalized_at || o.created_at);
-                return d >= today && d < tomorrow;
-            });
-            const yesterdayOrders = orders.filter(o => {
-                const d = new Date(o.finalized_at || o.created_at);
-                return d >= yesterday && d < today;
+                const dStr = d.toLocaleDateString('pt-BR');
+                const val = Number(o.total_value) || 0;
+
+                // 1. Faturamento do Dia
+                if (dStr === todayStr) {
+                    totalDay += val;
+                    ticketsDay++;
+                }
+
+                // 2. Faturamento Ontem
+                if (dStr === yesterdayStr) {
+                    totalYesterday += val;
+                    ticketsYesterday++;
+                }
+
+                // 3. Faturamento Mensal
+                if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+                    totalMonth += val;
+                }
+
+                // 4. Mês Anterior
+                if (d.getMonth() === lastMonth && d.getFullYear() === lastYear) {
+                    totalLastMonth += val;
+                }
+
+                // 5. Gráfico (Últimos 7 dias)
+                if (last7DaysValues[dStr] !== undefined) {
+                    last7DaysValues[dStr] += val;
+                }
             });
 
-            const totalDay = todayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
-            const totalYesterday = yesterdayOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
+            // Trends
             const dayTrend = totalYesterday > 0 ? ((totalDay - totalYesterday) / totalYesterday * 100) : 0;
-
-            const monthOrders = orders.filter(o => {
-                const d = new Date(o.finalized_at || o.created_at);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-            });
-            const lastMonthOrders = orders.filter(o => {
-                const d = new Date(o.finalized_at || o.created_at);
-                return d.getMonth() === lastMonth && d.getFullYear() === lastYear;
-            });
-
-            const totalMonth = monthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
-            const totalLastMonth = lastMonthOrders.reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
             const monthTrend = totalLastMonth > 0 ? ((totalMonth - totalLastMonth) / totalLastMonth * 100) : 0;
-
-            const ticketsDay = todayOrders.length;
-            const ticketsYesterday = yesterdayOrders.length;
             const ticketTrend = ticketsYesterday > 0 ? ((ticketsDay - ticketsYesterday) / ticketsYesterday * 100) : 0;
 
             const avgDay = ticketsDay > 0 ? totalDay / ticketsDay : 0;
@@ -116,39 +141,35 @@ export default function OwnerDashboardPage() {
 
             const formatTrend = (val: number) => (val >= 0 ? '+' : '') + val.toFixed(1).replace('.', ',') + '%';
 
-            const daysMap = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-            const weekData = [];
-            for (let i = 6; i >= 0; i--) {
-                const targetDate = new Date();
-                targetDate.setDate(targetDate.getDate() - i);
-                targetDate.setHours(0, 0, 0, 0);
-
-                const dayRev = orders
-                    .filter(o => {
-                        const d = new Date(o.finalized_at || o.created_at);
-                        d.setHours(0, 0, 0, 0);
-                        return d.getTime() === targetDate.getTime();
-                    })
-                    .reduce((acc, o) => acc + (Number(o.total_value) || 0), 0);
-
-                weekData.push({
-                    name: daysMap[targetDate.getDay()],
-                    faturamento: dayRev
-                });
-            }
+            // Chart Data Formatting
+            const chartData = Object.keys(last7DaysValues).map(date => {
+                const [d, m] = date.split('/');
+                const dayObj = new Date(now.getFullYear(), Number(m) - 1, Number(d));
+                return {
+                    name: daysMap[dayObj.getDay()],
+                    faturamento: last7DaysValues[date]
+                };
+            });
 
             setStats({
-                totalDay, totalMonth, ticketsDay, avgTicketDay: avgDay,
+                totalDay,
+                totalMonth,
+                ticketsDay,
+                avgTicketDay: avgDay,
                 trends: {
                     day: formatTrend(dayTrend),
                     month: formatTrend(monthTrend),
                     tickets: formatTrend(ticketTrend),
                     avg: formatTrend(avgTrend)
                 },
-                chartData: weekData
+                chartData
             });
+
+        } catch (e) {
+            console.error('[Dashboard-Audit] Erro crítico na reconstrução:', e);
+        } finally {
+            setLoadingStats(false);
         }
-        setLoadingStats(false);
     };
 
     React.useEffect(() => {

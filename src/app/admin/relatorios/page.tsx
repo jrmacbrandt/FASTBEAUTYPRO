@@ -122,12 +122,7 @@ export default function ReportsPage() {
         try {
             setLoading(true);
 
-            // Fetch last 30 days
-            const thirtyDaysAgo = new Date();
-            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            thirtyDaysAgo.setHours(0, 0, 0, 0);
-
-            // 🛡️ [BLINDADO] - Fetch Paid Orders (Full Detail - REAL TIME FIX)
+            // 🛡️ [BLINDADO] - Reconstruindo do ZERO: Motor de Relatórios de Alta Precisão
             const { data: orders, error: ordersError } = await supabase
                 .from('orders')
                 .select('*')
@@ -136,12 +131,14 @@ export default function ReportsPage() {
                 .order('created_at', { ascending: true });
 
             if (ordersError) {
-                console.error('[Relatórios] Erro ao buscar pedidos:', ordersError);
+                console.error('[Relatórios-Audit] Erro SQL Pedidos:', ordersError);
             }
 
-            if (ordersError) console.error('Error fetching orders:', ordersError);
+            // 2. Fetch Stock Transactions (Cost) - Últimos 30 dias para performance
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-            // 2. Fetch Stock Transactions (Cost)
             const { data: transactions } = await supabase
                 .from('stock_transactions')
                 .select(`
@@ -155,7 +152,7 @@ export default function ReportsPage() {
                 .eq('type', 'OUT')
                 .gte('created_at', thirtyDaysAgo.toISOString());
 
-            // --- Calculation Logic ---
+            // --- Calculation Engine ---
             let totalServiceRevenue = 0;
             let totalProductRevenue = 0;
             let totalCommissions = 0;
@@ -163,38 +160,49 @@ export default function ReportsPage() {
             let totalProductFees = 0;
 
             const dailyStats: Record<string, { revenue: number, cost: number }> = {};
+            const now = new Date();
 
-            // Initialize last 7 days in dailyStats
-            for (let i = 6; i >= 0; i--) {
-                const date = new Date();
-                date.setDate(date.getDate() - i);
-                const dateKey = date.toLocaleDateString('pt-BR');
-                dailyStats[dateKey] = { revenue: 0, cost: 0 };
+            // Inicializar últimos 30 dias no dailyStats
+            for (let i = 29; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                dailyStats[d.toLocaleDateString('pt-BR')] = { revenue: 0, cost: 0 };
             }
 
-            // Process Orders Breakdown (Filtered by 30 days in JS for robustness)
-            const thirtyDaysOrders = orders?.filter(o => {
-                const d = new Date(o.finalized_at || o.created_at);
-                return d >= thirtyDaysAgo;
-            }) || [];
+            // Processamento unificado de Pedidos
+            orders?.forEach(order => {
+                const d = new Date(order.finalized_at || order.created_at);
+                const dStr = d.toLocaleDateString('pt-BR');
 
-            thirtyDaysOrders.forEach(order => {
+                // Só processamos para o dashboard se estiver nos últimos 30 dias (local)
+                const isWithin30Days = d >= thirtyDaysAgo;
+
                 const sRev = Number(order.service_total) || Number(order.total_value) || 0;
                 const pRev = Number(order.product_total) || 0;
                 const comm = Number(order.commission_amount) || 0;
                 const sFee = Number(order.fee_amount_services) || 0;
                 const pFee = Number(order.fee_amount_products) || 0;
 
-                totalServiceRevenue += sRev;
-                totalProductRevenue += pRev;
-                totalCommissions += comm;
-                totalServiceFees += sFee;
-                totalProductFees += pFee;
+                if (isWithin30Days) {
+                    totalServiceRevenue += sRev;
+                    totalProductRevenue += pRev;
+                    totalCommissions += comm;
+                    totalServiceFees += sFee;
+                    totalProductFees += pFee;
 
-                const d = new Date(order.finalized_at || order.created_at);
-                const dateKey = d.toLocaleDateString('pt-BR');
-                if (dailyStats[dateKey]) {
-                    dailyStats[dateKey].revenue += (sRev + pRev);
+                    if (dailyStats[dStr]) {
+                        dailyStats[dStr].revenue += (sRev + pRev);
+                    }
+                }
+            });
+
+            // Processamento de Custos (Transactions)
+            transactions?.forEach((t: any) => {
+                const cost = (Number(t.quantity) || 0) * (Number(t.products?.cost_price) || 0);
+                const d = new Date(t.created_at);
+                const dStr = d.toLocaleDateString('pt-BR');
+                if (dailyStats[dStr]) {
+                    dailyStats[dStr].cost += cost;
                 }
             });
 
@@ -211,8 +219,9 @@ export default function ReportsPage() {
                 profit: netProfit
             });
 
+            // Chart Data Formatting (Últimos 30 dias filtrados para os 7 dias visíveis por padrão no componente ou exibição total)
             const formattedChartData = Object.keys(dailyStats).map(date => ({
-                name: date.split('/')[0] + '/' + date.split('/')[1], // Just DD/MM
+                name: date.split('/')[0] + '/' + date.split('/')[1], // Apenas DD/MM
                 Receita: dailyStats[date].revenue,
                 Custo: dailyStats[date].cost,
                 Lucro: dailyStats[date].revenue - dailyStats[date].cost
@@ -222,10 +231,11 @@ export default function ReportsPage() {
                 return Number(monthA + dayA) - Number(monthB + dayB);
             });
 
-            setChartData(formattedChartData);
+            // Mostramos apenas os últimos 15 dias no gráfico para não poluir
+            setChartData(formattedChartData.slice(-15));
 
         } catch (error) {
-            console.error('Error fetching reports:', error);
+            console.error('[Relatórios-Audit] Erro fatal:', error);
         } finally {
             setLoading(false);
         }
