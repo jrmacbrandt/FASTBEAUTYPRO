@@ -148,7 +148,8 @@ export default function DynamicBookingPage() {
         return {
             primary: tenant?.primary_color || '#f2b90d',
             secondary: tenant?.secondary_color || '#09090b',
-            tertiary: tenant?.tertiary_color || '#09090b'
+            tertiary: tenant?.tertiary_color || '#09090b',
+            quaternary: tenant?.quaternary_color || tenant?.primary_color || '#f2b90d'
         };
     }, [tenant]);
 
@@ -326,8 +327,8 @@ Aguardo sua confirmação!`;
             }}
         >
             {/* Decorative background */}
-            <div className="absolute -top-24 -right-24 size-96 blur-[120px] rounded-full opacity-20 pointer-events-none transition-all duration-1000" style={{ backgroundColor: primaryColor }}></div>
-            <div className="absolute bottom-0 -left-24 size-96 blur-[150px] rounded-full opacity-10 pointer-events-none" style={{ backgroundColor: primaryColor }}></div>
+            <div className="absolute -top-24 -right-24 size-96 blur-[120px] rounded-full opacity-20 pointer-events-none transition-all duration-1000" style={{ backgroundColor: theme.quaternary }}></div>
+            <div className="absolute bottom-0 -left-24 size-96 blur-[150px] rounded-full opacity-10 pointer-events-none" style={{ backgroundColor: theme.quaternary }}></div>
 
             <header className="px-6 md:px-10 py-5 md:py-8 border-b border-white/5 flex justify-between items-center bg-black/60 backdrop-blur-3xl sticky top-0 z-50">
                 <button onClick={() => router.push(`/${slug}`)} className="flex items-center gap-4 group transition-all">

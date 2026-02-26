@@ -124,7 +124,8 @@ export default function ShopLandingPage() {
         return {
             primary: tenant?.primary_color || '#f2b90d',
             secondary: tenant?.secondary_color || '#000000',
-            tertiary: tenant?.tertiary_color || '#000000'
+            tertiary: tenant?.tertiary_color || '#000000',
+            quaternary: tenant?.quaternary_color || tenant?.primary_color || '#f2b90d'
         };
     }, [tenant]);
 
@@ -299,7 +300,7 @@ Aguardo sua confirmação! 😊`;
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div
                     className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-[120px] opacity-20"
-                    style={{ background: `radial-gradient(circle, ${theme.primary} 0%, transparent 70%)` }}
+                    style={{ background: `radial-gradient(circle, ${theme.quaternary} 0%, transparent 70%)` }}
                 />
             </div>
 

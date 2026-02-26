@@ -109,6 +109,7 @@ export default function EstablishmentSettingsPage() {
                 fee_percent_pix: tenant.fee_percent_pix,
                 fee_percent_credit: tenant.fee_percent_credit,
                 fee_percent_debit: tenant.fee_percent_debit,
+                quaternary_color: tenant.quaternary_color,
                 primary_color: tenant.primary_color,
                 secondary_color: tenant.secondary_color,
                 tertiary_color: tenant.tertiary_color
@@ -568,6 +569,22 @@ export default function EstablishmentSettingsPage() {
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Cor Quaternária (Brilho)</label>
+                                <div className="flex items-center gap-4 bg-black/40 border border-white/5 rounded-2xl p-4">
+                                    <input
+                                        type="color"
+                                        value={tenant.quaternary_color || tenant.primary_color || '#f2b90d'}
+                                        onChange={e => setTenant({ ...tenant, quaternary_color: e.target.value })}
+                                        className="size-10 rounded-lg cursor-pointer bg-transparent border-none appearance-none"
+                                    />
+                                    <div className="flex-1">
+                                        <p className="text-white font-bold uppercase">{tenant.quaternary_color || tenant.primary_color || '#f2b90d'}</p>
+                                        <p className="text-[10px] text-slate-500 uppercase">Ajuste da cor do brilho de fundo</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Preview Section - Side by Side Desktop & Mobile */}
@@ -591,7 +608,7 @@ export default function EstablishmentSettingsPage() {
                                     />
                                     <div
                                         className="absolute inset-0 pointer-events-none transition-all duration-700 ease-in-out opacity-20"
-                                        style={{ background: `radial-gradient(circle, ${tenant.primary_color || '#f2b90d'} 0%, transparent 70%)` }}
+                                        style={{ background: `radial-gradient(circle, ${tenant.quaternary_color || tenant.primary_color || '#f2b90d'} 0%, transparent 70%)` }}
                                     />
 
                                     <div className="relative flex-1 flex flex-col p-6 lg:p-10">
@@ -644,7 +661,7 @@ export default function EstablishmentSettingsPage() {
                                     />
                                     <div
                                         className="absolute inset-0 pointer-events-none transition-all duration-700 ease-in-out opacity-20"
-                                        style={{ background: `radial-gradient(circle, ${tenant.primary_color || '#f2b90d'} 0%, transparent 70%)` }}
+                                        style={{ background: `radial-gradient(circle, ${tenant.quaternary_color || tenant.primary_color || '#f2b90d'} 0%, transparent 70%)` }}
                                     />
 
                                     <div className="relative flex-1 flex flex-col p-5 pt-10">

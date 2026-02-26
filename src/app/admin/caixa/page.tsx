@@ -288,13 +288,14 @@ export default function CashierCheckoutPage() {
     };
 
     const fetchTenantFees = async (tid: string) => {
-        const { data } = await supabase.from('tenants').select('fee_percent_pix, fee_percent_cash, fee_percent_credit, fee_percent_debit').eq('id', tid).single();
+        const { data } = await supabase.from('tenants').select('fee_percent_pix, fee_percent_cash, fee_percent_credit, fee_percent_debit, payment_methods').eq('id', tid).single();
         if (data) {
             setTenantFees({
                 pix: Number(data.fee_percent_pix) || 0,
                 cash: Number(data.fee_percent_cash) || 0,
                 credit: Number(data.fee_percent_credit) || 4.99,
-                debit: Number(data.fee_percent_debit) || 1.99
+                debit: Number(data.fee_percent_debit) || 1.99,
+                payment_methods: data.payment_methods || ['PIX', 'CARTÃO', 'DINHEIRO', 'DÉBITO']
             });
         }
     };
