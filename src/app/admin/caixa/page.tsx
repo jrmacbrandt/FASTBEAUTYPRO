@@ -45,7 +45,7 @@ export default function CashierCheckoutPage() {
                     client_id,
                     barber_id,
                     profiles!appointments_barber_id_fkey(full_name, service_commission, product_commission),
-                    services(name)
+                    services(id, name, price)
                 )
             `)
             .eq('tenant_id', tid)
@@ -347,6 +347,78 @@ export default function CashierCheckoutPage() {
         setIsUpdatingOrder(false);
     };
 
+    const handleUpdateMainService = async (serviceId: string) => {
+        if (!selected || !selected.raw.appointments || isUpdatingOrder) return;
+        setIsUpdatingOrder(true);
+
+        const service = availableServices.find(s => s.id === serviceId);
+        if (!service) {
+            setIsUpdatingOrder(false);
+            return;
+        }
+
+        const newMainPrice = Number(service.price);
+
+        // Sum of additional services in items
+        const additionalServicesTotal = (selected.raw.items || [])
+            .filter((i: any) => i.type === 'service')
+            .reduce((acc: number, curr: any) => acc + (Number(curr.price) * curr.qty), 0);
+
+        const newServiceTotal = newMainPrice + additionalServicesTotal;
+        const newProductTotal = Number(selected.raw.product_total) || 0;
+        const newTotalValue = newServiceTotal + newProductTotal;
+
+        // Recalculate commission
+        const sRate = Number(selected.barber_commission.service) / 100;
+        const pRate = Number(selected.barber_commission.product) / 100;
+        const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
+
+        try {
+            // Update appointment service
+            const { error: apptError } = await supabase
+                .from('appointments')
+                .update({ service_id: serviceId })
+                .eq('id', selected.appointment_id);
+
+            if (apptError) throw apptError;
+
+            // Update order totals
+            const { error: orderError } = await supabase
+                .from('orders')
+                .update({
+                    service_total: newServiceTotal,
+                    total_value: newTotalValue,
+                    commission_amount: newCommission
+                })
+                .eq('id', selected.id);
+
+            if (orderError) throw orderError;
+
+            // Optimistic update
+            setSelected({
+                ...selected,
+                service_name: service.name,
+                total_price: newTotalValue,
+                commission: newCommission,
+                raw: {
+                    ...selected.raw,
+                    service_total: newServiceTotal,
+                    total_value: newTotalValue,
+                    commission_amount: newCommission,
+                    appointments: {
+                        ...selected.raw.appointments,
+                        service_id: serviceId,
+                        services: { ...service }
+                    }
+                }
+            });
+        } catch (err: any) {
+            alert('Erro ao atualizar serviço principal: ' + err.message);
+        } finally {
+            setIsUpdatingOrder(false);
+        }
+    };
+
     const fetchTenantFees = async (tid: string) => {
         const { data } = await supabase.from('tenants').select('fee_percent_pix, fee_percent_cash, fee_percent_credit, fee_percent_debit, payment_methods').eq('id', tid).single();
         if (data) {
@@ -562,33 +634,51 @@ export default function CashierCheckoutPage() {
                             <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>{selected.customer_name}</p>
                         </div>
 
-                        <div className="space-y-3 md:space-y-4 max-h-[150px] overflow-y-auto custom-scrollbar pr-2">
-                            {selected.raw?.items && selected.raw.items.length > 0 ? (
-                                selected.raw.items.map((item: any, idx: number) => (
-                                    <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2 group/item" style={{ borderColor: colors.border }}>
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() => handleRemoveItem(idx)}
-                                                className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
-                                                title="Remover Item"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">delete</span>
-                                            </button>
-                                            <div className="flex flex-col">
-                                                <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
-                                                    {item.qty > 1 && `${item.qty}x `}{item.name}
-                                                </span>
-                                                <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
-                                            </div>
-                                        </div>
-                                        <span style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                        <div className="space-y-4 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
+                            {/* SERVIÇO PRINCIPAL (SEMPRE VISÍVEL E EDITÁVEL) */}
+                            <div className="p-4 rounded-2xl border bg-black/40 space-y-3" style={{ borderColor: `${colors.primary}33` }}>
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm" style={{ color: colors.primary }}>star</span>
+                                        <span className="text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>Serviço Principal</span>
                                     </div>
-                                ))
-                            ) : (
-                                <div className="flex justify-between items-center text-xs font-bold border-b pb-2" style={{ borderColor: colors.border }}>
-                                    <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>{selected.service_name} (Serviço Base)</span>
+                                    <span className="text-xs font-black italic" style={{ color: colors.primary }}>
+                                        R$ {Number(selected.raw.service_total - (selected.raw.items || []).filter((i: any) => i.type === 'service').reduce((acc: number, curr: any) => acc + (curr.price * curr.qty), 0)).toFixed(2)}
+                                    </span>
                                 </div>
-                            )}
+                                <select
+                                    className="w-full bg-black/60 border border-white/5 rounded-xl py-3 px-3 text-[11px] font-bold text-white focus:border-primary outline-none transition-all cursor-pointer"
+                                    value={selected.raw.appointments?.services?.id}
+                                    onChange={(e) => handleUpdateMainService(e.target.value)}
+                                    disabled={isUpdatingOrder}
+                                >
+                                    {availableServices.map(s => (
+                                        <option key={s.id} value={s.id}>{s.name} - R$ {s.price}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* ITENS EXTRAS */}
+                            {selected.raw?.items && selected.raw.items.length > 0 && selected.raw.items.map((item: any, idx: number) => (
+                                <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2 group/item" style={{ borderColor: colors.border }}>
+                                    <div className="flex items-center gap-3">
+                                        <button
+                                            onClick={() => handleRemoveItem(idx)}
+                                            className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
+                                            title="Remover Item"
+                                        >
+                                            <span className="material-symbols-outlined text-lg">delete</span>
+                                        </button>
+                                        <div className="flex flex-col">
+                                            <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
+                                                {item.qty > 1 && `${item.qty}x `}{item.name}
+                                            </span>
+                                            <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
+                                        </div>
+                                    </div>
+                                    <span style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                                </div>
+                            ))}
                         </div>
 
                         {/* ADD EXTRA ITEMS UI */}
