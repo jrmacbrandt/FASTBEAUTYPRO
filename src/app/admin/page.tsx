@@ -6,6 +6,8 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 export default function OwnerDashboardPage() {
     const [profile, setProfile] = React.useState<any>(null);
     const [loadingStats, setLoadingStats] = React.useState(true);
@@ -54,8 +56,23 @@ export default function OwnerDashboardPage() {
             if (profileData) {
                 setProfile(profileData);
                 setTenantInfo(profileData.tenant);
+                // 🛡️ [DIAGNOSTIC] First load
                 fetchDashboardData(profileData.tenant_id);
                 fetchPending(profileData.tenant_id);
+
+                // 🛡️ [REALTIME] - Sincronização Ativa
+                const channel = supabase.channel('admin_dashboard_realtime')
+                    .on('postgres_changes', {
+                        event: '*',
+                        schema: 'public',
+                        table: 'orders',
+                        filter: `tenant_id=eq.${profileData.tenant_id}`
+                    }, () => fetchDashboardData(profileData.tenant_id))
+                    .subscribe();
+
+                return () => {
+                    supabase.removeChannel(channel);
+                };
             }
         };
         initDashboard();
@@ -237,43 +254,7 @@ export default function OwnerDashboardPage() {
         }
     };
 
-    React.useEffect(() => {
-        if (profile?.tenant_id) {
-            setTenantInfo(profile.tenant);
-            fetchDashboardData(profile.tenant_id);
-            fetchPending(profile.tenant_id);
-        }
-    }, [profile]);
-
-    React.useEffect(() => {
-        const handleUpdate = () => {
-            if (profile?.tenant_id) {
-                fetchPending(profile.tenant_id);
-                fetchDashboardData(profile.tenant_id);
-            }
-        };
-
-        // 🛡️ [BLINDADO] - Atualização em Tempo Real via Supabase WebSockets (Checkout no Caixa)
-        const channel = supabase.channel('admin_dashboard_orders')
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'orders',
-                filter: profile?.tenant_id ? `tenant_id=eq.${profile.tenant_id}` : undefined
-            }, () => {
-                handleUpdate();
-            })
-            .subscribe();
-
-        window.addEventListener('professional-approved', handleUpdate);
-        window.addEventListener('order-paid', handleUpdate); // Mantém fallback local
-
-        return () => {
-            supabase.removeChannel(channel);
-            window.removeEventListener('professional-approved', handleUpdate);
-            window.removeEventListener('order-paid', handleUpdate);
-        };
-    }, [profile]);
+    // Eliminei os useEffects redundantes que causavam loops ou inconsistência
 
     const formatBRL = (val: number) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val);

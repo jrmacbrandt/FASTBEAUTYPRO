@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
-import { useProfile } from '@/hooks/useProfile';
+
+export const dynamic = 'force-dynamic';
 import {
     BarChart,
     Bar,
