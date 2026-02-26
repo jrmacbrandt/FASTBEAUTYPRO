@@ -78,6 +78,13 @@ export default function CashierCheckoutPage() {
                 raw: o
             }));
             setOrders(formatted);
+
+            // 🛡️ [BLINDADO] Realtime Sync: Maintain the currently selected item fresh
+            setSelected((prevSelected: any) => {
+                if (!prevSelected) return prevSelected;
+                const freshData = formatted.find(o => o.id === prevSelected.id);
+                return freshData ? freshData : prevSelected;
+            });
         }
         setLoading(false);
     };
@@ -274,23 +281,24 @@ export default function CashierCheckoutPage() {
             newItems.push({ ...item, price: itemPrice, type, qty: 1 });
         }
 
-        // Recalculate totals
-        let newServiceTotal = Number(selected.raw.service_total) || 0;
-        let newProductTotal = Number(selected.raw.product_total) || 0;
-        let newCommission = Number(selected.commission) || 0;
+        // 🛡️ [BLINDADO] Recalculate everything from scratch to guarantee accuracy
+        const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
+        const mainService = availableServices.find(s => s.id === mainServiceId);
+        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
 
-        const sRate = Number(selected.barber_commission.service) / 100;
-        const pRate = Number(selected.barber_commission.product) / 100;
+        let newServiceTotal = mainServicePrice;
+        let newProductTotal = 0;
 
-        if (type === 'service') {
-            newServiceTotal += itemPrice;
-            newCommission += (itemPrice * sRate);
-        } else {
-            newProductTotal += itemPrice;
-            newCommission += (itemPrice * pRate);
-        }
+        newItems.forEach((i: any) => {
+            const itemVal = Number(i.price) * (i.qty || 1);
+            if (i.type === 'service') newServiceTotal += itemVal;
+            else newProductTotal += itemVal;
+        });
 
         const newTotalValue = newServiceTotal + newProductTotal;
+        const sRate = Number(selected.barber_commission.service) / 100;
+        const pRate = Number(selected.barber_commission.product) / 100;
+        const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
 
         const updatePayload = {
             items: newItems,
@@ -335,30 +343,31 @@ export default function CashierCheckoutPage() {
         // Remove the item
         const newItems = currentItems.filter((_, i) => i !== idx);
 
-        // Recalculate totals
-        let newServiceTotal = Number(selected.raw.service_total) || 0;
-        let newProductTotal = Number(selected.raw.product_total) || 0;
-        let newCommission = Number(selected.commission) || 0;
+        // 🛡️ [BLINDADO] Recalculate everything from scratch to guarantee accuracy
+        const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
+        const mainService = availableServices.find(s => s.id === mainServiceId);
+        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
 
-        const sRate = Number(selected.barber_commission.service) / 100;
-        const pRate = Number(selected.barber_commission.product) / 100;
+        let newServiceTotal = mainServicePrice;
+        let newProductTotal = 0;
 
-        if (type === 'service') {
-            newServiceTotal -= itemTotalPrice;
-            newCommission -= (itemTotalPrice * sRate);
-        } else {
-            newProductTotal -= itemTotalPrice;
-            newCommission -= (itemTotalPrice * pRate);
-        }
+        newItems.forEach((i: any) => {
+            const itemVal = Number(i.price) * (i.qty || 1);
+            if (i.type === 'service') newServiceTotal += itemVal;
+            else newProductTotal += itemVal;
+        });
 
         const newTotalValue = newServiceTotal + newProductTotal;
+        const sRate = Number(selected.barber_commission.service) / 100;
+        const pRate = Number(selected.barber_commission.product) / 100;
+        const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
 
         const updatePayload = {
             items: newItems,
-            service_total: Math.max(0, newServiceTotal),
-            product_total: Math.max(0, newProductTotal),
-            total_value: Math.max(0, newTotalValue),
-            commission_amount: Math.max(0, newCommission)
+            service_total: newServiceTotal,
+            product_total: newProductTotal,
+            total_value: newTotalValue,
+            commission_amount: newCommission
         };
 
         const { error } = await supabase.from('orders').update(updatePayload).eq('id', selected.id);
@@ -389,16 +398,20 @@ export default function CashierCheckoutPage() {
 
         const newMainPrice = Number(service.price);
 
-        // Sum of additional services in items
-        const additionalServicesTotal = (selected.raw.items || [])
-            .filter((i: any) => i.type === 'service')
-            .reduce((acc: number, curr: any) => acc + (Number(curr.price) * curr.qty), 0);
+        // 🛡️ [BLINDADO] Recalculate everything from scratch to guarantee accuracy
+        const mainServicePrice = Number(service.price);
+        const currentItems = selected.raw.items || [];
 
-        const newServiceTotal = newMainPrice + additionalServicesTotal;
-        const newProductTotal = Number(selected.raw.product_total) || 0;
+        let newServiceTotal = mainServicePrice;
+        let newProductTotal = 0;
+
+        currentItems.forEach((i: any) => {
+            const itemVal = Number(i.price) * (i.qty || 1);
+            if (i.type === 'service') newServiceTotal += itemVal;
+            else newProductTotal += itemVal;
+        });
+
         const newTotalValue = newServiceTotal + newProductTotal;
-
-        // Recalculate commission
         const sRate = Number(selected.barber_commission.service) / 100;
         const pRate = Number(selected.barber_commission.product) / 100;
         const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
