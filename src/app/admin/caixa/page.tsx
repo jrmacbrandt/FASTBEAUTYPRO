@@ -22,6 +22,8 @@ export default function CashierCheckoutPage() {
     const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
     // 🛡️ [BLINDADO] Prevenção de duplo clique em devoluções
     const [isReturningOrder, setIsReturningOrder] = useState(false);
+    const [inclusionTab, setInclusionTab] = useState<'services' | 'products'>('services');
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
     const fetchPendingOrders = async (tid: string) => {
@@ -54,11 +56,9 @@ export default function CashierCheckoutPage() {
 
         if (error) {
             console.error('[Caixa] Erro ao buscar comandas pendentes:', error);
-            console.warn('[Caixa] Detalhes do Tenant ID:', tid);
         }
 
         if (!error && data) {
-            console.log(`[Caixa] ${data.length} comandas pendentes encontradas.`);
             const formatted = data.map((o: any) => ({
                 id: o.id,
                 appointment_id: o.appointments?.id,
@@ -134,13 +134,12 @@ export default function CashierCheckoutPage() {
         const { data: client } = await supabase.from('clients').select('phone').eq('id', clientId).single();
         if (!client?.phone || !profile?.tenant_id) return;
 
-        // Check stamps via LoyaltyService
         try {
             const { LoyaltyService } = await import('@/lib/loyalty');
             const hasReward = await LoyaltyService.checkReward(profile.tenant_id, client.phone);
 
             if (hasReward) {
-                setVoucher({ type: 'loyalty_reward', phone: client.phone }); // Minimal object for UI
+                setVoucher({ type: 'loyalty_reward', phone: client.phone });
             } else {
                 setVoucher(null);
             }
@@ -150,7 +149,6 @@ export default function CashierCheckoutPage() {
         }
     };
 
-    // Helper Ref to hold the latest tenant_id and avoid stale closures in listeners
     const tenantIdRef = React.useRef(profile?.tenant_id);
     const activeTabRef = React.useRef(activeTab);
 
@@ -161,11 +159,9 @@ export default function CashierCheckoutPage() {
         if (profile?.tenant_id) {
             if (activeTab === 'pending') fetchPendingOrders(profile.tenant_id);
             if (activeTab === 'history') fetchHistoryOrders(profile.tenant_id);
-            setSelected(null);
         }
     }, [profile, activeTab]);
 
-    // 🛡️ [BLINDADO] - Estabilização do Catálogo e Configurações (Prevenir listas vazias)
     useEffect(() => {
         if (profile?.tenant_id) {
             fetchCatalog(profile.tenant_id);
@@ -173,14 +169,12 @@ export default function CashierCheckoutPage() {
         }
     }, [profile?.tenant_id]);
 
-    // Garantia extra: Recarregar catálogo ao selecionar comanda se estiver vazio
     useEffect(() => {
         if (selected && availableServices.length === 0 && profile?.tenant_id) {
             fetchCatalog(profile.tenant_id);
         }
     }, [selected]);
 
-    // 🛡️ [BLINDADO] - REALTIME LISTENERS & POLLING (Auto-Atualização do Caixa)
     useEffect(() => {
         let channel: ReturnType<typeof supabase.channel> | null = null;
         let pollInterval: ReturnType<typeof setInterval> | null = null;
@@ -189,9 +183,6 @@ export default function CashierCheckoutPage() {
             const currentTenant = tenantIdRef.current;
             if (!currentTenant) return;
 
-            console.log('[Caixa Realtime] Initializing Subscription for tenant:', currentTenant);
-
-            // Channel listening for orders table modifications for this tenant
             channel = supabase
                 .channel(`caixa-orders-${currentTenant}`)
                 .on(
@@ -203,7 +194,6 @@ export default function CashierCheckoutPage() {
                         filter: `tenant_id=eq.${currentTenant}`
                     },
                     (payload) => {
-                        console.log('[Caixa Realtime] Orders modification detected:', payload.eventType);
                         const tab = activeTabRef.current;
                         const tid = tenantIdRef.current;
                         if (tid) {
@@ -212,11 +202,8 @@ export default function CashierCheckoutPage() {
                         }
                     }
                 )
-                .subscribe((status) => {
-                    console.log('[Caixa Realtime] Status:', status);
-                });
+                .subscribe();
 
-            // Fallback Polling (15s) in case WebSocket connection is interrupted or missed
             pollInterval = setInterval(() => {
                 const tab = activeTabRef.current;
                 const tid = tenantIdRef.current;
@@ -227,7 +214,6 @@ export default function CashierCheckoutPage() {
             }, 15000);
         };
 
-        // Delayed start to ensure profile is completely loaded
         if (profile?.tenant_id) {
             setupRealtime();
         }
@@ -240,90 +226,17 @@ export default function CashierCheckoutPage() {
 
     const fetchCatalog = async (tid: string) => {
         if (!tid) return;
-        console.log('[Caixa] Buscando catálogo para tenant:', tid);
-
         try {
             const [servRes, prodRes] = await Promise.all([
                 supabase.from('services').select('*').eq('tenant_id', tid).order('name'),
                 supabase.from('products').select('*').eq('tenant_id', tid).gt('current_stock', 0).order('name')
             ]);
 
-            if (servRes.error) console.error('[Caixa] Erro ao buscar serviços:', servRes.error);
-            if (prodRes.error) console.error('[Caixa] Erro ao buscar produtos:', prodRes.error);
-
-            if (servRes.data) {
-                console.log(`[Caixa] ${servRes.data.length} serviços encontrados.`);
-                setAvailableServices(servRes.data);
-            }
-            if (prodRes.data) {
-                console.log(`[Caixa] ${prodRes.data.length} produtos encontrados.`);
-                setAvailableProducts(prodRes.data);
-            }
+            if (servRes.data) setAvailableServices(servRes.data);
+            if (prodRes.data) setAvailableProducts(prodRes.data);
         } catch (err) {
             console.error('[Caixa] Erro critico no fetchCatalog:', err);
         }
-    };
-
-    // 🛡️ [BLINDADO] - Injeção Dinâmica de Itens Extras na Comanda
-    const handleAddExtraItem = async (item: any, type: 'service' | 'product') => {
-        if (!selected || isUpdatingOrder) return;
-        setIsUpdatingOrder(true);
-
-        const currentItems = selected.raw.items || [];
-        const itemPrice = Number(type === 'product' ? item.sale_price : item.price) || 0;
-
-        let newItems = [...currentItems];
-        const existing = newItems.find(i => i.id === item.id);
-
-        if (existing) {
-            newItems = newItems.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
-        } else {
-            newItems.push({ ...item, price: itemPrice, type, qty: 1 });
-        }
-
-        // 🛡️ [BLINDADO] Recalculate everything from scratch to guarantee accuracy
-        const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
-        const mainService = availableServices.find(s => s.id === mainServiceId);
-        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
-
-        let newServiceTotal = mainServicePrice;
-        let newProductTotal = 0;
-
-        newItems.forEach((i: any) => {
-            const itemVal = Number(i.price) * (i.qty || 1);
-            if (i.type === 'service') newServiceTotal += itemVal;
-            else newProductTotal += itemVal;
-        });
-
-        const newTotalValue = newServiceTotal + newProductTotal;
-        const sRate = Number(selected.barber_commission.service) / 100;
-        const pRate = Number(selected.barber_commission.product) / 100;
-        const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
-
-        const updatePayload = {
-            items: newItems,
-            service_total: newServiceTotal,
-            product_total: newProductTotal,
-            total_value: newTotalValue,
-            commission_amount: newCommission
-        };
-
-        // 🛡️ [BLINDADO] Optimistic update for instant UI feedback
-        setSelected({
-            ...selected,
-            total_price: newTotalValue,
-            commission: newCommission,
-            raw: { ...selected.raw, ...updatePayload }
-        });
-        setShowAddItem(false);
-
-        const { error } = await supabase.from('orders').update(updatePayload).eq('id', selected.id);
-
-        if (error) {
-            console.error('Error syncing order:', error);
-            alert('Erro ao sincronizar com banco de dados.');
-        }
-        setIsUpdatingOrder(false);
     };
 
     const handleRemoveItem = async (idx: number) => {
@@ -332,19 +245,8 @@ export default function CashierCheckoutPage() {
         setIsUpdatingOrder(true);
 
         const currentItems = [...(selected.raw.items || [])];
-        const itemToRemove = currentItems[idx];
-        if (!itemToRemove) {
-            setIsUpdatingOrder(false);
-            return;
-        }
-
-        const type = itemToRemove.type;
-        const itemTotalPrice = Number(itemToRemove.price) * (itemToRemove.qty || 1);
-
-        // Remove the item
         const newItems = currentItems.filter((_, i) => i !== idx);
 
-        // 🛡️ [BLINDADO] Recalculate everything from scratch to guarantee accuracy
         const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
         const mainService = availableServices.find(s => s.id === mainServiceId);
         const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
@@ -371,20 +273,14 @@ export default function CashierCheckoutPage() {
             commission_amount: newCommission
         };
 
-        // 🛡️ [BLINDADO] Optimistic update for instant UI feedback
         setSelected({
             ...selected,
-            total_price: updatePayload.total_value,
-            commission: updatePayload.commission_amount,
+            total_price: newTotalValue,
+            commission: newCommission,
             raw: { ...selected.raw, ...updatePayload }
         });
 
-        const { error } = await supabase.from('orders').update(updatePayload).eq('id', selected.id);
-
-        if (error) {
-            console.error('Error syncing order:', error);
-            alert('Erro ao sincronizar com banco de dados.');
-        }
+        await supabase.from('orders').update(updatePayload).eq('id', selected.id);
         setIsUpdatingOrder(false);
     };
 
@@ -398,9 +294,6 @@ export default function CashierCheckoutPage() {
             return;
         }
 
-        const newMainPrice = Number(service.price);
-
-        // 🛡️ [BLINDADO] Recalculate everything from scratch to guarantee accuracy
         const mainServicePrice = Number(service.price);
         const currentItems = selected.raw.items || [];
 
@@ -419,7 +312,6 @@ export default function CashierCheckoutPage() {
         const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
 
         try {
-            // 🛡️ [BLINDADO] Optimistic update for instant UI feedback
             const updatedSelected = {
                 ...selected,
                 service_name: service.name,
@@ -439,28 +331,14 @@ export default function CashierCheckoutPage() {
             };
             setSelected(updatedSelected);
 
-            // Update appointment service
-            const { error: apptError } = await supabase
-                .from('appointments')
-                .update({ service_id: serviceId })
-                .eq('id', selected.appointment_id);
-
-            if (apptError) throw apptError;
-
-            // Update order totals
-            const { error: orderError } = await supabase
-                .from('orders')
-                .update({
-                    service_total: newServiceTotal,
-                    total_value: newTotalValue,
-                    commission_amount: newCommission
-                })
-                .eq('id', selected.id);
-
-            if (orderError) throw orderError;
+            await supabase.from('appointments').update({ service_id: serviceId }).eq('id', selected.appointment_id);
+            await supabase.from('orders').update({
+                service_total: newServiceTotal,
+                total_value: newTotalValue,
+                commission_amount: newCommission
+            }).eq('id', selected.id);
         } catch (err: any) {
             console.error('Error syncing main service:', err);
-            alert('Erro ao sincronizar serviço principal: ' + err.message);
         } finally {
             setIsUpdatingOrder(false);
         }
@@ -479,44 +357,26 @@ export default function CashierCheckoutPage() {
         }
     };
 
-    useEffect(() => {
-        if (selected?.client_id) {
-            checkLoyaltyVoucher(selected.client_id);
-        } else {
-            setVoucher(null);
-        }
-    }, [selected]);
-
-    // 🛡️ [BLINDADO] - Fluxo de Devolução Segura (Protegido contra Duplicidade)
     const handleReturnOrder = async () => {
         if (!selected || isReturningOrder) return;
-        if (!confirm('Devolver esta comanda para a fila do profissional? Status voltará para em andamento.')) return;
-
+        if (!confirm('Devolver esta comanda para a fila do profissional?')) return;
         setIsReturningOrder(true);
         try {
-            // Executamos a RPC atômica para proteger a integridade no banco
             const { data, error } = await supabase.rpc('return_order_to_professional', {
                 p_order_id: selected.id,
                 p_appointment_id: selected.appointment_id || null
             });
-
-            if (error || (data && !data.success)) {
-                console.error('RPC Error:', error || data);
-                alert(`Erro ao devolver comanda.\nDetalhes: ${error?.message || data?.error || 'Desconhecido'}`);
-            } else {
-                alert('Comanda devolvida com sucesso!');
+            if (!error && data?.success) {
                 setSelected(null);
                 if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
             }
-        } catch (err: any) {
-            console.error('Caught Exception:', err);
-            alert(`Erro critico: ${err.message}`);
+        } catch (err) {
+            console.error('Return Error:', err);
         } finally {
             setIsReturningOrder(false);
         }
     };
 
-    // 🛡️ [BLINDADO] - Fluxo de Checkout Seguro (Protegido contra Duplicidade)
     const handleConfirmPayment = async () => {
         if (!selected || !profile?.tenant_id || isProcessingPayment) return;
         setIsProcessingPayment(true);
@@ -533,7 +393,6 @@ export default function CashierCheckoutPage() {
         const cartItems = selected.raw.items || [];
         const productsInCart = cartItems.filter((i: any) => i.type === 'product');
 
-        // ── Transação atômica v2: pagamento + CRM + fidelidade + BAIXA DE ESTOQUE ──
         const { data: rpcResult, error: rpcError } = await supabase.rpc('process_checkout_v2', {
             p_order_id: selected.id,
             p_appointment_id: selected.appointment_id,
@@ -546,361 +405,479 @@ export default function CashierCheckoutPage() {
         });
 
         if (rpcError || !rpcResult?.success) {
-            const msg = rpcError?.message || rpcResult?.error || 'Erro desconhecido';
-            alert('Erro ao processar pagamento: ' + msg);
+            alert('Erro ao processar pagamento.');
             setIsProcessingPayment(false);
             return;
         }
 
-        // Notificar recompensa de fidelidade se conquistada
         if (rpcResult.reward_granted) {
-            alert(`🎉 PARABÉNS! ${selected.customer_name} completou o cartão fidelidade!\nPrêmio liberado.`);
+            alert(`🎉 PARABÉNS! ${selected.customer_name} completou o cartão fidelidade!`);
         }
 
-        alert(`Pagamento de R$ ${selected.total_price.toFixed(2)} confirmado!\nEstoque atualizado.`);
         setSelected(null);
         if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
         setIsProcessingPayment(false);
     };
 
+    const toggleSelectItem = (id: string) => {
+        setSelectedItems(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const addSelectedToCart = async () => {
+        if (!selected || selectedItems.length === 0 || isUpdatingOrder) return;
+        setIsUpdatingOrder(true);
+
+        const itemsToAdd: any[] = [];
+        selectedItems.forEach(id => {
+            if (inclusionTab === 'services') {
+                const s = availableServices.find(x => x.id === id);
+                if (s) itemsToAdd.push({ ...s, type: 'service', qty: 1 });
+            } else {
+                const p = availableProducts.find(x => x.id === id);
+                if (p) itemsToAdd.push({ ...p, price: p.sale_price, type: 'product', qty: 1 });
+            }
+        });
+
+        const currentItems = [...(selected.raw.items || [])];
+        itemsToAdd.forEach(item => {
+            const existing = currentItems.find(i => i.id === item.id);
+            if (existing) {
+                existing.qty = (existing.qty || 1) + 1;
+            } else {
+                currentItems.push(item);
+            }
+        });
+
+        const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
+        const mainService = availableServices.find(s => s.id === mainServiceId);
+        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
+
+        let newServiceTotal = mainServicePrice;
+        let newProductTotal = 0;
+
+        currentItems.forEach((i: any) => {
+            const itemVal = Number(i.price) * (i.qty || 1);
+            if (i.type === 'service') newServiceTotal += itemVal;
+            else newProductTotal += itemVal;
+        });
+
+        const newTotalValue = newServiceTotal + newProductTotal;
+        const sRate = Number(selected.barber_commission.service) / 100;
+        const pRate = Number(selected.barber_commission.product) / 100;
+        const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
+
+        const updatePayload = {
+            items: currentItems,
+            service_total: newServiceTotal,
+            product_total: newProductTotal,
+            total_value: newTotalValue,
+            commission_amount: newCommission
+        };
+
+        setSelected({
+            ...selected,
+            total_price: newTotalValue,
+            commission: newCommission,
+            raw: { ...selected.raw, ...updatePayload }
+        });
+
+        await supabase.from('orders').update(updatePayload).eq('id', selected.id);
+        setSelectedItems([]);
+        setIsUpdatingOrder(false);
+    };
+
     if (profileLoading) return <div className="text-center py-20 opacity-40">Carregando caixa...</div>;
 
     const isSalon = profile?.tenant?.business_type === 'salon';
+    const businessType = profile?.tenant?.business_type;
+
+    const calculatedTotal = selected ? (
+        (Number(availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id))?.price || selected.raw.appointments?.services?.price || 0)) +
+        (selected.raw.items || []).reduce((acc: number, item: any) => acc + (Number(item.price) * (item.qty || 1)), 0)
+    ) : 0;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 animate-in fade-in duration-500 pb-10">
-            <div className="lg:col-span-2 space-y-4 md:space-y-6">
-                <div className="flex items-center justify-between px-2 md:px-0 mb-4">
-                    <div className="flex gap-4">
-                        <button
-                            onClick={() => setActiveTab('pending')}
-                            className={`text-sm md:text-base font-black italic uppercase transition-all ${activeTab === 'pending' ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
-                            style={{ color: activeTab === 'pending' ? colors.primary : colors.text }}
-                        >
-                            Fila Pendente
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('history')}
-                            className={`text-sm md:text-base font-black italic uppercase transition-all ${activeTab === 'history' ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
-                            style={{ color: activeTab === 'history' ? colors.primary : colors.text }}
-                        >
-                            Histórico (90 Dias)
-                        </button>
-                    </div>
-                    {activeTab === 'pending' && (
-                        <span className="text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full border uppercase"
-                            style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
-                            {orders.length} FILA
-                        </span>
-                    )}
-                </div>
-
-                <div className="grid gap-3 md:gap-4">
-                    {loading ? (
-                        <div className="text-center py-20 opacity-40">
-                            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
-                        </div>
-                    ) : (activeTab === 'pending' ? orders : historyOrders).length > 0 ? (
-                        (activeTab === 'pending' ? orders : historyOrders).map(cmd => (
-                            <button
-                                key={cmd.id}
-                                onClick={() => activeTab === 'pending' ? setSelected(cmd) : null}
-                                className={`w-full p-4 md:p-6 rounded-3xl border text-left transition-all flex items-center justify-between group ${selected?.id === cmd.id ? 'shadow-xl scale-[1.01]' : 'hover:border-white/20'} ${activeTab === 'history' ? 'cursor-default border-white/5 opacity-80' : ''}`}
-                                style={{
-                                    backgroundColor: selected?.id === cmd.id ? `${colors.primary}1a` : colors.cardBg,
-                                    borderColor: selected?.id === cmd.id ? colors.primary : colors.border
-                                }}
-                            >
-                                <div className="flex items-center gap-3 md:gap-4 w-full">
-                                    <div className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-colors shrink-0"
-                                        style={{ backgroundColor: selected?.id === cmd.id ? colors.primary : `${colors.primary}1a`, color: selected?.id === cmd.id ? (isSalon ? 'white' : 'black') : colors.primary }}>
-                                        <span className="material-symbols-outlined text-[20px] md:text-[24px]">
-                                            {activeTab === 'pending' ? 'receipt' : 'check_circle'}
-                                        </span>
-                                    </div>
-                                    <div className="min-w-0">
-                                        <h4 className="font-bold text-base md:text-lg italic tracking-tight truncate" style={{ color: activeTab === 'history' ? colors.primary : colors.text }}>
-                                            {cmd.customer_name}
-                                        </h4>
-                                        <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate flex items-center gap-2" style={{ color: colors.textMuted }}>
-                                            <span>Prof: {cmd.barber_name}</span>
-                                            {activeTab === 'history' && cmd.payment_method && (
-                                                <span className="font-black" style={{ color: colors.textMuted }}>• {cmd.payment_method}</span>
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="text-right shrink-0">
-                                    <p className="text-xl md:text-2xl font-black italic tracking-tighter" style={{ color: activeTab === 'history' ? colors.text : colors.primary }}>
-                                        R$ {(cmd.total_price || 0).toFixed(2)}
-                                    </p>
-                                    <p className="text-[8px] md:text-[10px] font-black uppercase" style={{ color: colors.textMuted }}>
-                                        {cmd.time ? new Date(cmd.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                                        {activeTab === 'history' && cmd.time && ` - ${new Date(cmd.time).toLocaleDateString()}`}
-                                    </p>
-                                </div>
-                            </button>
-                        ))
-                    ) : (
-                        <div className="py-16 md:py-20 border border-dashed rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center opacity-40" style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border }}>
-                            <span className="material-symbols-outlined text-4xl md:text-6xl mb-4 italic" style={{ color: colors.text }}>check_circle</span>
-                            <p className="font-black uppercase text-[10px] md:text-xs tracking-[0.4em]" style={{ color: colors.text }}>Tudo em dia</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            <aside className="w-full">
+        <div className="flex flex-col xl:flex-row gap-6 md:gap-8 animate-in slide-in-from-right duration-500 pb-10">
+            {/* CENTRAL AREA */}
+            <div className="flex-1 space-y-6 md:space-y-8">
                 {selected ? (
-                    (() => {
-                        // 🛡️ [BLINDADO] Realtime Dynamic Calculation (Same as Professional Panel)
-                        const currentMainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
-                        const mainService = availableServices.find(s => s.id === currentMainServiceId);
-                        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
-
-                        const extraItemsTotal = (selected.raw.items || []).reduce((acc: number, item: any) => acc + (Number(item.price) * (item.qty || 1)), 0);
-                        const calculatedTotal = mainServicePrice + extraItemsTotal;
-
-                        return (
-                            <div className="border p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] space-y-6 md:space-y-8 animate-in slide-in-from-bottom-4 shadow-2xl sticky top-4 md:top-10"
-                                style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}4d` }}>
-
-                                {/* 🛡️ [BLINDADO] Actions row for Cancel/Return */}
-                                <div className="flex justify-between items-center -mt-2 mb-4">
-                                    <button
-                                        onClick={() => setSelected(null)}
-                                        className="text-[9px] md:text-[10px] font-black tracking-widest uppercase transition-all opacity-60 hover:opacity-100 flex items-center gap-1"
-                                        style={{ color: colors.text }}
-                                    >
-                                        <span className="material-symbols-outlined text-sm">arrow_back</span>
-                                        Voltar
-                                    </button>
-                                    {/* 🛡️ [BLINDADO] Prevenção de Duplicidade ao Devolver Comanda */}
-                                    <button
-                                        disabled={isReturningOrder}
-                                        onClick={handleReturnOrder}
-                                        className={`text-[8px] md:text-[9px] font-black tracking-widest uppercase transition-all text-orange-500 hover:text-orange-400 border border-orange-500/30 px-3 py-1.5 rounded-lg bg-orange-500/5 hover:bg-orange-500/10 flex items-center gap-1 ${isReturningOrder ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        <span className="material-symbols-outlined text-sm">undo</span>
-                                        {isReturningOrder ? 'DEVOLVENDO...' : 'Devolver Mão de Obra'}
-                                    </button>
+                    <>
+                        {/* HEADER COMANDA (MIRROR PROFISSIONAL) */}
+                        <div className="border p-5 md:p-8 rounded-3xl md:rounded-[2.5rem] flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}>
+                            <div className="flex items-center gap-3 md:gap-4 w-full">
+                                <button onClick={() => setSelected(null)} className="transition-colors hover:scale-110 active:scale-90" style={{ color: colors.textMuted }}>
+                                    <span className="material-symbols-outlined text-2xl md:text-3xl">arrow_back</span>
+                                </button>
+                                <div className="size-12 md:size-16 rounded-xl md:rounded-2xl flex items-center justify-center border shadow-inner shrink-0" style={{ backgroundColor: `${colors.primary}33`, color: colors.primary, borderColor: `${colors.primary}33` }}>
+                                    <span className="material-symbols-outlined text-2xl md:text-4xl text-white">person</span>
                                 </div>
-
-                                <div className="text-center">
-                                    <h3 className="text-xl md:text-2xl font-black italic tracking-tight mb-1 md:mb-2 uppercase" style={{ color: colors.text }}>Recebimento</h3>
-                                    <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest italic" style={{ color: colors.textMuted }}>{selected.customer_name}</p>
+                                <div className="min-w-0 flex-1">
+                                    <h3 className="text-lg md:text-2xl font-black italic uppercase tracking-tight truncate" style={{ color: colors.text }}>{selected.customer_name}</h3>
+                                    <p className="font-black text-[11px] md:text-[12px] uppercase tracking-[0.2em] opacity-60 truncate" style={{ color: colors.textMuted }}>
+                                        {selected.raw.appointments?.scheduled_at ? (
+                                            `${new Date(selected.raw.appointments.scheduled_at).toLocaleDateString('pt-BR')} às ${selected.raw.appointments.scheduled_at.split('T')[1].substring(0, 5)}`
+                                        ) : 'COMANDA AVULSA'}
+                                    </p>
                                 </div>
+                                <div className="hidden md:flex flex-col items-end">
+                                    <span className="text-[10px] font-black opacity-40 uppercase tracking-widest" style={{ color: colors.text }}>STATUS</span>
+                                    <span className="text-xs font-black italic px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 uppercase">PENDENTE</span>
+                                </div>
+                            </div>
+                        </div>
 
-                                <div className="space-y-4 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                                    {/* SERVIÇO PRINCIPAL (SEMPRE VISÍVEL E EDITÁVEL) */}
-                                    <div className="p-4 rounded-2xl border bg-black/40 space-y-3" style={{ borderColor: `${colors.primary}33` }}>
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-2">
-                                                <span className="material-symbols-outlined text-sm" style={{ color: colors.primary }}>star</span>
-                                                <span className="text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>Serviço Principal</span>
-                                            </div>
-                                            <span className="text-xs font-black italic" style={{ color: colors.primary }}>
-                                                R$ {Number(
-                                                    availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id))?.price ||
-                                                    selected.raw.appointments?.services?.price ||
-                                                    0
-                                                ).toFixed(2)}
-                                            </span>
-                                        </div>
+                        <div className="px-2 md:px-0 space-y-8">
+                            <div className="p-6 md:p-8 rounded-3xl border" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                                <h4 className="text-base md:text-lg font-black uppercase italic tracking-tight mb-6 flex items-center gap-2" style={{ color: colors.text }}>
+                                    <span className="material-symbols-outlined text-primary">edit_note</span> SERVIÇOS
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase tracking-widest opacity-50 ml-1" style={{ color: colors.textMuted }}>Serviço Agendado</label>
                                         <select
-                                            className="w-full bg-black/60 border border-white/5 rounded-xl py-3 px-3 text-[11px] font-bold text-white focus:border-primary outline-none transition-all cursor-pointer"
+                                            className="w-full bg-black border border-white/10 rounded-xl py-4 px-4 text-sm font-bold text-white focus:border-primary outline-none transition-all cursor-pointer"
                                             value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}
                                             onChange={(e) => handleUpdateMainService(e.target.value)}
                                             disabled={isUpdatingOrder}
                                         >
-                                            {/* PRIORIDADE: Mostrar todos os serviços carregados do catálogo */}
-                                            {availableServices.length > 0 ? (
-                                                <>
-                                                    {availableServices.map(s => (
-                                                        <option key={s.id} value={s.id}>{s.name} - R$ {Number(s.price).toFixed(2)}</option>
-                                                    ))}
-                                                    {/* Segurança: Se o serviço atual não estiver no catálogo carregado, mostra ele em destaque */}
-                                                    {!availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id)) && (
-                                                        <option value={selected.raw.appointments?.services?.id}>
-                                                            {selected.raw.appointments?.services?.name} (Serviço Atual)
-                                                        </option>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                /* FALLBACK: Durante o carregamento ou se a lista falhar, mostra pelo menos o serviço atual */
-                                                <option value={selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id}>
-                                                    {selected.raw.appointments?.services?.name || 'Carregando serviços...'}
-                                                </option>
-                                            )}
+                                            {availableServices.map(s => (
+                                                <option key={s.id} value={s.id}>{s.name}</option>
+                                            ))}
                                         </select>
                                     </div>
-
-                                    {/* ITENS EXTRAS */}
-                                    {selected.raw?.items && selected.raw.items.length > 0 && selected.raw.items.map((item: any, idx: number) => (
-                                        <div key={idx} className="flex justify-between items-center text-xs font-bold border-b pb-2 group/item" style={{ borderColor: colors.border }}>
-                                            <div className="flex items-center gap-3">
-                                                <button
-                                                    onClick={() => handleRemoveItem(idx)}
-                                                    className="transition-opacity text-rose-500 hover:scale-110 active:scale-90"
-                                                    title="Remover Item"
-                                                >
-                                                    <span className="material-symbols-outlined text-lg">delete</span>
-                                                </button>
-                                                <div className="flex flex-col">
-                                                    <span className="italic font-black uppercase tracking-widest text-[9px] mr-4" style={{ color: colors.textMuted }}>
-                                                        {item.qty > 1 && `${item.qty}x `}{item.name}
-                                                    </span>
-                                                    <span className="text-[8px] opacity-50" style={{ color: colors.primary }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</span>
-                                                </div>
-                                            </div>
-                                            <span style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black uppercase tracking-widest opacity-50 ml-1" style={{ color: colors.textMuted }}>Valor do Serviço (R$)</label>
+                                        <div className="w-full bg-black/40 border border-white/5 rounded-xl py-4 px-4 text-sm font-bold text-zinc-400 opacity-60">
+                                            {Number(availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id))?.price || selected.raw.appointments?.services?.price || 0).toFixed(2)}
                                         </div>
-                                    ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                                    <h4 className="text-base md:text-lg font-black uppercase italic tracking-tight flex items-center gap-2" style={{ color: colors.text }}>
+                                        <span className="material-symbols-outlined text-primary">add_circle</span> + INCLUIR
+                                    </h4>
+
+                                    <div className="flex p-1 rounded-2xl bg-black/40 border border-white/5 w-fit gap-1">
+                                        <button
+                                            onClick={() => setInclusionTab('services')}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${inclusionTab === 'services' ? 'bg-primary text-black italic' : 'text-zinc-500 hover:text-white'}`}
+                                            style={inclusionTab === 'services' ? { backgroundColor: colors.primary } : {}}
+                                        > SERVIÇOS </button>
+                                        <button
+                                            onClick={() => setInclusionTab('products')}
+                                            className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${inclusionTab === 'products' ? 'bg-primary text-black italic' : 'text-zinc-500 hover:text-white'}`}
+                                            style={inclusionTab === 'products' ? { backgroundColor: colors.primary } : {}}
+                                        > PRODUTOS </button>
+                                    </div>
                                 </div>
 
-                                {/* ADD EXTRA ITEMS UI */}
-                                {activeTab === 'pending' && (
-                                    <div className="pt-2">
-                                        {showAddItem ? (
-                                            <div className="space-y-3 p-4 rounded-xl border bg-black/20" style={{ borderColor: colors.border }}>
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-[10px] uppercase font-black tracking-widest" style={{ color: colors.text }}>Adicionar Item</span>
-                                                    <button onClick={() => setShowAddItem(false)} className="opacity-50 hover:opacity-100">
-                                                        <span className="material-symbols-outlined text-sm">close</span>
-                                                    </button>
-                                                </div>
-
-                                                <div className="max-h-[150px] overflow-y-auto custom-scrollbar space-y-2 pr-1">
-                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1" style={{ color: colors.primary }}>Serviços</p>
-                                                    {availableServices.map(s => (
-                                                        <button key={s.id} onClick={() => handleAddExtraItem(s, 'service')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-                                                            <span className="text-[10px] font-bold" style={{ color: colors.text }}>{s.name}</span>
-                                                            <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(s.price).toFixed(2)}</span>
-                                                        </button>
-                                                    ))}
-
-                                                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mb-1 mt-4" style={{ color: colors.primary }}>Produtos</p>
-                                                    {availableProducts.map(p => (
-                                                        <button key={p.id} onClick={() => handleAddExtraItem(p, 'product')} disabled={isUpdatingOrder} className="w-full text-left p-2 rounded-lg border hover:border-white/20 transition-all flex justify-between items-center" style={{ backgroundColor: colors.cardBg, borderColor: colors.border }}>
-                                                            <div className="flex flex-col">
-                                                                <span className="text-[10px] font-bold" style={{ color: colors.text }}>{p.name}</span>
-                                                                <span className="text-[8px] opacity-50" style={{ color: colors.textMuted }}>Estoque: {p.current_stock}</span>
-                                                            </div>
-                                                            <span className="text-[10px] font-black" style={{ color: colors.primary }}>R$ {Number(p.sale_price).toFixed(2)}</span>
-                                                        </button>
-                                                    ))}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                                    {inclusionTab === 'services' ? (
+                                        availableServices.filter(s => s.id !== (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id) && !selected.raw.items?.some((c: any) => c.id === s.id)).map(s => (
+                                            <div key={s.id} className={`p-4 rounded-3xl border group transition-all relative ${selectedItems.includes(s.id) ? 'ring-2 ring-primary ring-offset-2 ring-offset-black' : ''}`} style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                                                <div className="flex gap-4 mb-4">
+                                                    <div className="size-20 rounded-2xl flex items-center justify-center border overflow-hidden shrink-0" style={{ backgroundColor: `${colors.primary}1a`, borderColor: `${colors.primary}33`, color: colors.primary }}>
+                                                        {s.image_url ? (
+                                                            <img src={s.image_url} alt={s.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <span className="material-symbols-outlined text-3xl">brush</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                                                        <h4 className="font-bold text-sm truncate uppercase italic" style={{ color: colors.text }}>{s.name}</h4>
+                                                        <div className="flex justify-between items-end">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="size-5 rounded border-white/20 bg-black accent-primary cursor-pointer"
+                                                                checked={selectedItems.includes(s.id)}
+                                                                onChange={() => toggleSelectItem(s.id)}
+                                                            />
+                                                            <span className="font-black text-base italic" style={{ color: colors.primary }}>R$ {s.price}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        ) : (
-                                            <button
-                                                onClick={() => setShowAddItem(true)}
-                                                className="w-full py-2 rounded-xl border border-dashed flex items-center justify-center gap-2 transition-all hover:bg-white/5 opacity-70 hover:opacity-100"
-                                                style={{ borderColor: colors.primary, color: colors.primary }}
-                                            >
-                                                <span className="material-symbols-outlined text-sm">add_circle</span>
-                                                <span className="text-[10px] font-black uppercase tracking-widest">Adicionar Venda Extra</span>
-                                            </button>
-                                        )}
-                                    </div>
-                                )}
-
-                                <div className="space-y-3">
-                                    <p className="text-[9px] md:text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60" style={{ color: colors.textMuted }}>Escolha o Método</p>
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { label: 'PIX', val: 'PIX' },
-                                            { label: 'CRÉDITO', val: 'CARTÃO' },
-                                            { label: 'DINHEIRO', val: 'DINHEIRO' },
-                                            { label: 'DÉBITO', val: 'DÉBITO' }
-                                        ]
-                                            .filter(m => tenantFees.payment_methods?.includes(m.val))
-                                            .map(m => (
-                                                <button
-                                                    key={m.val}
-                                                    onClick={() => setPaymentMethod(m.val)}
-                                                    className={`border font-black py-3 md:py-4 rounded-xl transition-all text-[9px] md:text-[10px] tracking-widest uppercase active:scale-95 ${paymentMethod === m.val ? 'bg-primary text-black' : 'bg-black/40 text-white'}`}
-                                                    style={{
-                                                        borderColor: paymentMethod === m.val ? colors.primary : colors.border,
-                                                        backgroundColor: paymentMethod === m.val ? colors.primary : `${colors.text}0d`,
-                                                        color: paymentMethod === m.val ? (isSalon ? 'white' : 'black') : colors.text
-                                                    }}
-                                                >
-                                                    {m.label}
-                                                </button>
-                                            ))}
-                                    </div>
-
-                                    {voucher && (
-                                        <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between animate-in fade-in">
-                                            <div className="flex items-center gap-3">
-                                                <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
-                                                <div>
-                                                    <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Corte Grátis Disponível</p>
-                                                    <p className="text-emerald-500/60 text-[8px] font-bold">Fidelidade Atingida</p>
+                                        ))
+                                    ) : (
+                                        availableProducts.filter(p => !selected.raw.items?.some((c: any) => c.id === p.id)).map(p => (
+                                            <div key={p.id} className={`p-4 rounded-3xl border group transition-all relative ${selectedItems.includes(p.id) ? 'ring-2 ring-primary ring-offset-2 ring-offset-black' : ''}`} style={{ backgroundColor: colors.cardBg, borderColor: `${colors.text}0d` }}>
+                                                <div className="flex gap-4 mb-4">
+                                                    <div className="size-20 rounded-2xl flex items-center justify-center border overflow-hidden shrink-0 bg-black/20" style={{ borderColor: `${colors.primary}1a`, color: colors.primary }}>
+                                                        {p.image_url ? (
+                                                            <img alt={p.name} src={p.image_url} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                        ) : (
+                                                            <span className="material-symbols-outlined text-3xl">inventory_2</span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+                                                        <h4 className="font-bold text-sm truncate uppercase italic" style={{ color: colors.text }}>{p.name}</h4>
+                                                        <div className="flex justify-between items-end">
+                                                            <input
+                                                                type="checkbox"
+                                                                className="size-5 rounded border-white/20 bg-black accent-primary cursor-pointer"
+                                                                checked={selectedItems.includes(p.id)}
+                                                                onChange={() => toggleSelectItem(p.id)}
+                                                            />
+                                                            <span className="font-black text-base italic" style={{ color: colors.primary }}>R$ {p.sale_price}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={async () => {
-                                                    if (!selected || !profile?.tenant_id) return;
-                                                    if (confirm('Confirmar uso do cartão fidelidade? O total será zerado e o cartão será reiniciado.')) {
-                                                        try {
-                                                            const { LoyaltyService } = await import('@/lib/loyalty');
-                                                            const success = await LoyaltyService.redeemReward(profile.tenant_id, selected.client_phone);
-
-                                                            if (success) {
-                                                                await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
-                                                                setSelected({ ...selected, total_price: 0 });
-                                                                setVoucher(null);
-                                                                alert('Cortesia aplicada e cartão reiniciado!');
-                                                            } else {
-                                                                alert('Erro ao resgatar recompensa. Verifique o saldo de selos.');
-                                                            }
-                                                        } catch (err) {
-                                                            console.error('Redeem Error:', err);
-                                                        }
-                                                    }
-                                                }}
-                                                className="bg-emerald-500 text-black text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg hover:bg-emerald-400"
-                                            >
-                                                Aplicar
-                                            </button>
-                                        </div>
+                                        ))
                                     )}
                                 </div>
 
-                                {/* Fee Breakdown Visual (REMOVIDO A PEDIDO DO CLIENTE - BLINDADO) */}
-
-                                <div className="pt-5 md:pt-6 border-t mt-4" style={{ borderColor: colors.border }}>
-                                    <div className="flex justify-between items-end mb-5 md:mb-6">
-                                        <span className="font-bold uppercase text-[9px] md:text-[10px] tracking-widest italic opacity-50" style={{ color: colors.textMuted }}>Total Cobrado do Cliente</span>
-                                        <span className="text-3xl md:text-4xl font-black italic tracking-tighter" style={{ color: colors.primary }}>R$ {calculatedTotal.toFixed(2)}</span>
+                                {selectedItems.length > 0 && (
+                                    <div className="mt-8 flex justify-center animate-in fade-in slide-in-from-bottom-4 duration-300">
+                                        <button
+                                            onClick={addSelectedToCart}
+                                            disabled={isUpdatingOrder}
+                                            className="px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl transition-all flex items-center gap-3 hover:scale-105 active:scale-95 italic"
+                                            style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? '#fff' : '#000' }}
+                                        >
+                                            <span className="material-symbols-outlined">add_shopping_cart</span>
+                                            INCLUIR SELECIONADOS ({selectedItems.length})
+                                        </button>
                                     </div>
-                                    {/* 🛡️ [BLINDADO] Prevenção de Double Checkout */}
+                                )}
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between px-2 md:px-0 mb-4">
+                            <div className="flex gap-4">
+                                <button
+                                    onClick={() => setActiveTab('pending')}
+                                    className={`text-sm md:text-base font-black italic uppercase transition-all ${activeTab === 'pending' ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
+                                    style={{ color: activeTab === 'pending' ? colors.primary : colors.text }}
+                                >
+                                    Fila Pendente
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('history')}
+                                    className={`text-sm md:text-base font-black italic uppercase transition-all ${activeTab === 'history' ? 'opacity-100' : 'opacity-40 hover:opacity-70'}`}
+                                    style={{ color: activeTab === 'history' ? colors.primary : colors.text }}
+                                >
+                                    Histórico (90 Dias)
+                                </button>
+                            </div>
+                            {activeTab === 'pending' && (
+                                <span className="text-[9px] md:text-[10px] font-black px-3 py-1 rounded-full border uppercase"
+                                    style={{ backgroundColor: `${colors.primary}1a`, color: colors.primary, borderColor: `${colors.primary}33` }}>
+                                    {orders.length} FILA
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="grid gap-3 md:gap-4">
+                            {loading ? (
+                                <div className="text-center py-20 opacity-40">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 mx-auto" style={{ borderColor: colors.primary }}></div>
+                                </div>
+                            ) : (activeTab === 'pending' ? orders : historyOrders).length > 0 ? (
+                                (activeTab === 'pending' ? orders : historyOrders).map(cmd => (
                                     <button
-                                        disabled={isProcessingPayment || isUpdatingOrder}
-                                        onClick={handleConfirmPayment}
-                                        className={`w-full font-black py-4 md:py-5 rounded-xl md:rounded-2xl text-base md:text-lg shadow-2xl transition-all flex items-center justify-center gap-2 uppercase italic active:scale-95 ${(isProcessingPayment || isUpdatingOrder) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 10px 20px -5px ${colors.primary}33` }}
+                                        key={cmd.id}
+                                        onClick={() => activeTab === 'pending' ? setSelected(cmd) : null}
+                                        className={`w-full p-4 md:p-6 rounded-3xl border text-left transition-all flex items-center justify-between group ${selected?.id === cmd.id ? 'shadow-xl scale-[1.01]' : 'hover:border-white/20'} ${activeTab === 'history' ? 'cursor-default border-white/5 opacity-80' : ''}`}
+                                        style={{
+                                            backgroundColor: selected?.id === cmd.id ? `${colors.primary}1a` : colors.cardBg,
+                                            borderColor: selected?.id === cmd.id ? colors.primary : colors.border
+                                        }}
                                     >
-                                        {isProcessingPayment ? 'PROCESSANDO...' : 'FINALIZAR PAGAMENTO'}
-                                        <span className="material-symbols-outlined text-xl md:text-2xl">check_circle</span>
+                                        <div className="flex items-center gap-3 md:gap-4 w-full">
+                                            <div className="size-10 md:size-12 rounded-xl flex items-center justify-center transition-colors shrink-0"
+                                                style={{ backgroundColor: selected?.id === cmd.id ? colors.primary : `${colors.primary}1a`, color: selected?.id === cmd.id ? (isSalon ? 'white' : 'black') : colors.primary }}>
+                                                <span className="material-symbols-outlined text-[20px] md:text-[24px]">
+                                                    {activeTab === 'pending' ? 'receipt' : 'check_circle'}
+                                                </span>
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="font-bold text-base md:text-lg italic tracking-tight truncate" style={{ color: activeTab === 'history' ? colors.primary : colors.text }}>
+                                                    {cmd.customer_name}
+                                                </h4>
+                                                <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest truncate flex items-center gap-2" style={{ color: colors.textMuted }}>
+                                                    <span>Prof: {cmd.barber_name}</span>
+                                                    {activeTab === 'history' && cmd.payment_method && (
+                                                        <span className="font-black" style={{ color: colors.textMuted }}>• {cmd.payment_method}</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-xl md:text-2xl font-black italic tracking-tighter" style={{ color: activeTab === 'history' ? colors.text : colors.primary }}>
+                                                R$ {(cmd.total_price || 0).toFixed(2)}
+                                            </p>
+                                            <p className="text-[8px] md:text-[10px] font-black uppercase" style={{ color: colors.textMuted }}>
+                                                {cmd.time ? new Date(cmd.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                                                {activeTab === 'history' && cmd.time && ` - ${new Date(cmd.time).toLocaleDateString()}`}
+                                            </p>
+                                        </div>
                                     </button>
+                                ))
+                            ) : (
+                                <div className="py-16 md:py-20 border border-dashed rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center opacity-40" style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border }}>
+                                    <span className="material-symbols-outlined text-4xl md:text-6xl mb-4 italic" style={{ color: colors.text }}>check_circle</span>
+                                    <p className="font-black uppercase text-[10px] md:text-xs tracking-[0.4em]" style={{ color: colors.text }}>Tudo em dia</p>
+                                </div>
+                            )}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* SIDEBAR - RECEBIMENTO / COMANDA VIRTUAL (MIRROR PROFISSIONAL) */}
+            <div className="w-full xl:w-[400px] shrink-0 h-fit">
+                {selected ? (
+                    <div className="p-6 md:p-8 rounded-[2.5rem] md:rounded-[3rem] border animate-in slide-in-from-right duration-500 shadow-2xl sticky top-8" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}>
+                        <div className="flex justify-between items-center mb-8">
+                            <button onClick={() => setSelected(null)} className="flex items-center gap-2 group">
+                                <span className="material-symbols-outlined text-base md:text-lg transition-transform group-hover:-translate-x-1" style={{ color: colors.textMuted }}>arrow_back</span>
+                                <span className="text-[10px] md:text-[11px] font-black uppercase tracking-widest" style={{ color: colors.textMuted }}>VOLTAR</span>
+                            </button>
+                            <button onClick={handleReturnOrder} disabled={isReturningOrder || isProcessingPayment} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 transition-all">
+                                <span className="material-symbols-outlined text-sm">undo</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest">DEVOLVER MÃO DE OBRA</span>
+                            </button>
+                        </div>
+
+                        <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tight mb-8 text-center" style={{ color: colors.text }}> RECEBIMENTO </h2>
+
+                        <div className="space-y-6">
+                            <div className="p-5 md:p-6 rounded-2xl md:rounded-3xl bg-black/40 border space-y-4" style={{ borderColor: `${colors.text}0d` }}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="material-symbols-outlined text-primary text-sm">star</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest" style={{ color: colors.textMuted }}>Serviço Principal</span>
+                                    <span className="ml-auto text-xs font-black italic" style={{ color: colors.primary }}>R$ {Number(availableServices.find(s => s.id === (selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id))?.price || selected.raw.appointments?.services?.price || 0).toFixed(2)}</span>
+                                </div>
+                                <div className="w-full py-3 px-4 rounded-xl border bg-black/60 text-[11px] font-bold text-white flex justify-between items-center group cursor-default" style={{ borderColor: `${colors.primary}33` }}>
+                                    <span className="truncate">{selected.raw.appointments?.services?.name || 'Carregando...'}</span>
+                                    <span className="material-symbols-outlined text-xs opacity-40">lock</span>
+                                </div>
+
+                                {/* ITEMS LIST (MIRROR PROFISSIONAL SIDEBAR) */}
+                                {selected.raw?.items && selected.raw.items.length > 0 && (
+                                    <div className="pt-4 border-t space-y-3" style={{ borderColor: `${colors.text}0d` }}>
+                                        {selected.raw.items.map((item: any, idx: number) => (
+                                            <div key={idx} className="flex justify-between items-center group/item animate-in fade-in slide-in-from-right-2 duration-300">
+                                                <div className="flex items-center gap-3">
+                                                    <button onClick={() => handleRemoveItem(idx)} className="size-8 rounded-lg flex items-center justify-center bg-rose-500/10 text-rose-500 hover:bg-rose-500 opacity-40 hover:opacity-100 transition-all group-hover/item:opacity-100">
+                                                        <span className="material-symbols-outlined text-lg">delete</span>
+                                                    </button>
+                                                    <div className="flex flex-col">
+                                                        <p className="text-[10px] font-black uppercase italic truncate max-w-[150px]" style={{ color: colors.text }}>{item.qty > 1 && `${item.qty}x `}{item.name}</p>
+                                                        <p className="text-[8px] font-bold opacity-40 uppercase tracking-widest" style={{ color: colors.textMuted }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs font-black italic" style={{ color: colors.textMuted }}>R$ {(item.price * item.qty).toFixed(2)}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black uppercase tracking-widest ml-1 italic opacity-60" style={{ color: colors.textMuted }}>Escolha o Método</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { label: 'PIX', val: 'PIX' },
+                                        { label: 'CRÉDITO', val: 'CARTÃO' },
+                                        { label: 'DINHEIRO', val: 'DINHEIRO' },
+                                        { label: 'DÉBITO', val: 'DÉBITO' }
+                                    ]
+                                        .filter(m => tenantFees.payment_methods?.includes(m.val))
+                                        .map(m => (
+                                            <button
+                                                key={m.val}
+                                                onClick={() => setPaymentMethod(m.val)}
+                                                className={`border font-black py-4 rounded-2xl transition-all text-[10px] tracking-widest uppercase active:scale-95 ${paymentMethod === m.val ? 'bg-primary text-black' : 'bg-black/40 text-white'}`}
+                                                style={{
+                                                    borderColor: paymentMethod === m.val ? colors.primary : `${colors.text}0d`,
+                                                    backgroundColor: paymentMethod === m.val ? colors.primary : `${colors.text}08`,
+                                                    color: paymentMethod === m.val ? (isSalon ? 'white' : 'black') : colors.text
+                                                }}
+                                            > {m.label} </button>
+                                        ))}
                                 </div>
                             </div>
-                        );
-                    })()
-                ) : (
-                    <div className="h-full min-h-[300px] md:min-h-[400px] border border-dashed rounded-3xl md:rounded-[2.5rem] flex flex-col items-center justify-center p-6 md:p-8 text-center sticky top-4 md:top-10"
-                        style={{ backgroundColor: `${colors.text}08`, borderColor: colors.border }}>
-                        <div className="size-16 md:size-20 rounded-full flex items-center justify-center mb-4 md:mb-6" style={{ backgroundColor: `${colors.text}0d`, color: colors.textMuted }}>
-                            <span className="material-symbols-outlined text-4xl md:text-5xl">point_of_sale</span>
+
+                            {voucher && (
+                                <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between animate-in fade-in">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
+                                        <div>
+                                            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Corte Grátis Disponível</p>
+                                            <p className="text-emerald-500/60 text-[8px] font-bold">Fidelidade Atingida</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (!selected || !profile?.tenant_id) return;
+                                            if (confirm('Confirmar uso do cartão fidelidade? O total será zerado e o cartão será reiniciado.')) {
+                                                try {
+                                                    const { LoyaltyService } = await import('@/lib/loyalty');
+                                                    const success = await LoyaltyService.redeemReward(profile.tenant_id, selected.client_phone);
+
+                                                    if (success) {
+                                                        await supabase.from('orders').update({ total_value: 0 }).eq('id', selected.id);
+                                                        setSelected({ ...selected, total_price: 0 });
+                                                        setVoucher(null);
+                                                        alert('Cortesia aplicada e cartão reiniciado!');
+                                                    } else {
+                                                        alert('Erro ao resgatar recompensa. Verifique o saldo de selos.');
+                                                    }
+                                                } catch (err) {
+                                                    console.error('Redeem Error:', err);
+                                                }
+                                            }
+                                        }}
+                                        className="bg-emerald-500 text-black text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-lg hover:bg-emerald-400"
+                                    >
+                                        Aplicar
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="pt-8 md:pt-10 border-t" style={{ borderColor: `${colors.text}0d` }}>
+                                <div className="flex justify-between items-end mb-8">
+                                    <span className="font-black uppercase text-[10px] tracking-[0.2em] italic opacity-40" style={{ color: colors.textMuted }}>TOTAL GERAL</span>
+                                    <span className="text-4xl md:text-5xl font-black italic tracking-tighter" style={{ color: colors.primary }}>
+                                        <span className="text-base mr-1 tracking-normal">R$</span>
+                                        {calculatedTotal.toFixed(2).split('.')[0]}
+                                        <span className="text-xl opacity-60">.{calculatedTotal.toFixed(2).split('.')[1]}</span>
+                                    </span>
+                                </div>
+
+                                <button
+                                    disabled={isProcessingPayment || isUpdatingOrder}
+                                    onClick={handleConfirmPayment}
+                                    className={`w-full font-black py-5 md:py-6 rounded-2xl md:rounded-[2rem] text-lg shadow-2xl transition-all flex items-center justify-center gap-3 uppercase italic active:scale-95 ${(isProcessingPayment || isUpdatingOrder) ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] hover:-translate-y-1'}`}
+                                    style={{ backgroundColor: colors.primary, color: isSalon ? 'white' : 'black', boxShadow: `0 20px 40px -10px ${colors.primary}4d` }}
+                                >
+                                    {isProcessingPayment ? 'PROCESSANDO...' : 'FINALIZAR'}
+                                    <span className="material-symbols-outlined text-2xl">check_circle</span>
+                                </button>
+                            </div>
                         </div>
-                        <p className="font-bold uppercase text-[10px] md:text-xs tracking-widest leading-relaxed" style={{ color: colors.textMuted }}>
-                            Selecione uma comanda <br className="hidden md:block" /> para processar
+                    </div>
+                ) : (
+                    <div className="h-[500px] border border-dashed rounded-[3rem] flex flex-col items-center justify-center p-8 text-center sticky top-8"
+                        style={{ backgroundColor: `${colors.text}05`, borderColor: `${colors.text}0d` }}>
+                        <div className="size-20 rounded-full flex items-center justify-center mb-6" style={{ backgroundColor: `${colors.text}08`, color: colors.textMuted }}>
+                            <span className="material-symbols-outlined text-5xl">point_of_sale</span>
+                        </div>
+                        <p className="font-black uppercase text-[11px] tracking-[0.3em] leading-relaxed opacity-40" style={{ color: colors.textMuted }}>
+                            Selecione uma <br /> comanda para <br /> processar
                         </p>
                     </div>
                 )}
-            </aside>
+            </div>
         </div>
     );
 }
