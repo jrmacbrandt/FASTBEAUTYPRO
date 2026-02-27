@@ -13,6 +13,10 @@ export default function AdminCommissionsPage() {
     const [selectedPeriod, setSelectedPeriod] = useState(new Date().toISOString().slice(0, 7)); // YYYY-MM
     const [growth, setGrowth] = useState(0);
 
+    // Funções de Arredondamento Monetário
+    const roundMoney = (val: number) => Math.round(val * 100) / 100;
+
+
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
         if (savedType) setBusinessType(savedType);
@@ -99,25 +103,40 @@ export default function AdminCommissionsPage() {
 
                 const prosWithStats = pros.map(p => {
                     const proOrders = orders?.filter(o => o.barber_id === p.id) || [];
-                    const totalSales = proOrders.reduce((acc, curr) => acc + (curr.total_value || 0), 0);
-                    const commission = proOrders.reduce((acc, curr) => acc + (curr.commission_amount || 0), 0);
-                    const feeCost = proOrders.reduce((acc, curr) => acc + (curr.fee_amount_services || 0) + (curr.fee_amount_products || 0), 0);
 
-                    // Cálculo da Fração Proporcional das Taxas (Salão/Profissional)
-                    const commissionRate = totalSales > 0 ? (commission / totalSales) : 0;
-                    const professionalFeeShare = feeCost * commissionRate;
-                    const netCommission = commission - professionalFeeShare;
+                    // 1. Venda Bruta (Soma total_value)
+                    const totalSales = proOrders.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0);
+
+                    // 2. Taxas Totais (Rateio Integral conforme solicitado)
+                    const totalFees = proOrders.reduce((acc, curr) => acc + (Number(curr.fee_amount_services) || 0) + (Number(curr.fee_amount_products) || 0), 0);
+
+                    // 3. Cálculo de Comissão Líquida (Sobre o valor após as taxas)
+                    // Iteramos pedido a pedido para manter a precisão das taxas/comissões individuais
+                    const netCommission = proOrders.reduce((acc, curr) => {
+                        const orderGross = Number(curr.total_value) || 0;
+                        const orderFees = (Number(curr.fee_amount_services) || 0) + (Number(curr.fee_amount_products) || 0);
+                        const orderNet = orderGross - orderFees;
+
+                        const orderGrossComm = Number(curr.commission_amount) || 0;
+                        const orderCommRate = orderGross > 0 ? (orderGrossComm / orderGross) : 0;
+
+                        return acc + (orderNet * orderCommRate);
+                    }, 0);
+
+                    // Soma da Comissão Bruta gravada (apenas para exibição/referência)
+                    const grossCommission = proOrders.reduce((acc, curr) => acc + (Number(curr.commission_amount) || 0), 0);
 
                     return {
                         ...p,
-                        totalSales,
-                        commission,
-                        feeCost,
-                        professionalFeeShare,
-                        netCommission,
+                        totalSales: roundMoney(totalSales),
+                        commission: roundMoney(grossCommission),
+                        feeCost: roundMoney(totalFees),
+                        professionalFeeShare: roundMoney(totalFees), // Rateio agora mostra o total das taxas deduzidas
+                        netCommission: roundMoney(netCommission),
                         orderCount: proOrders.length
                     };
                 });
+
 
                 setProfessionals(prosWithStats);
             }
