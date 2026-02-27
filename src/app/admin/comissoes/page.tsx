@@ -203,7 +203,30 @@ export default function AdminCommissionsPage() {
                         </h3>
                         <p className="text-[8px] md:text-[9px] font-bold text-slate-500 uppercase mt-4 tracking-widest">Atendimentos finalizados no período</p>
                     </div>
+
+                    {/* Novo Card: Venda Bruta Acumulada */}
+                    <div className="p-6 md:p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-7xl md:text-8xl" style={{ color: colors.primary }}>trending_up</span>
+                        </div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Venda Bruta do Período</p>
+                        <h3 className="text-3xl md:text-4xl font-black text-white italic tracking-tighter">
+                            R$ {professionals.reduce((acc, curr) => acc + curr.totalSales, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
+                    </div>
+
+                    {/* Novo Card: Total Taxas (Rateio) */}
+                    <div className="p-6 md:p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform">
+                            <span className="material-symbols-outlined text-7xl md:text-8xl" style={{ color: '#f43f5e' }}>percent</span>
+                        </div>
+                        <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-2">Taxas Totais (Rateio)</p>
+                        <h3 className="text-3xl md:text-4xl font-black text-rose-500 italic tracking-tighter">
+                            - R$ {professionals.reduce((acc, curr) => acc + curr.feeCost, 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </h3>
+                    </div>
                 </div>
+
 
                 {/* Lista de Profissionais */}
                 <div className="lg:col-span-3">

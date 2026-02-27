@@ -807,6 +807,25 @@ export default function CashierCheckoutPage() {
                                 </div>
                             </div>
 
+                            {/* Fee Transparency Preview */}
+                            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="flex justify-between items-center bg-black/40 border border-white/5 p-4 rounded-2xl">
+                                    <div className="flex items-center gap-2">
+                                        <span className="material-symbols-outlined text-sm opacity-40">percent</span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest opacity-40">Taxa Estimada ({paymentMethod})</span>
+                                    </div>
+                                    <div className="text-rose-500/80 font-black italic text-xs">
+                                        {(() => {
+                                            const feeKey = paymentMethod === 'PIX' ? 'pix' : paymentMethod === 'CARTÃO' ? 'credit' : paymentMethod === 'DÉBITO' ? 'debit' : 'cash';
+                                            const feeRate = (tenantFees[feeKey] || 0) / 100;
+                                            const estimatedFee = calculatedTotal * feeRate;
+                                            return `- R$ ${estimatedFee.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+
+
                             {voucher && (
                                 <div className="mt-4 bg-emerald-500/10 border border-emerald-500/30 p-4 rounded-xl flex items-center justify-between animate-in fade-in">
                                     <div className="flex items-center gap-3">
