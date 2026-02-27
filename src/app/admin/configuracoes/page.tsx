@@ -46,8 +46,10 @@ export default function EstablishmentSettingsPage() {
             setUserEmail(profile.email || '');
             setCurrentLoginEmail(profile.email || '');
             if (profile.tenant?.logo_url) setLogoPreview(profile.tenant.logo_url);
-            if (profile.tenant?.monthly_goal) {
+            if (profile.tenant?.monthly_goal && profile.tenant.monthly_goal > 0) {
                 setMaskedGoal(maskCurrency(profile.tenant.monthly_goal.toString().replace('.', '')));
+            } else {
+                setMaskedGoal('');
             }
         }
     }, [profile]);
@@ -410,8 +412,8 @@ export default function EstablishmentSettingsPage() {
                                         const numericValue = parseFloat(masked.replace(/\./g, '').replace(',', '.')) || 0;
                                         setTenant({ ...tenant, monthly_goal: numericValue });
                                     }}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 font-black text-white text-lg outline-none focus:border-[#f2b90d]/50 transition-all text-right"
-                                    placeholder="0,00"
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 font-black text-white text-lg outline-none focus:border-[#f2b90d]/50 transition-all text-right placeholder:text-white/10"
+                                    placeholder="Ex: 10.000,00"
                                 />
                             </div>
                         </div>
