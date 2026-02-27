@@ -10,7 +10,7 @@ export default function AdminDashboardPage() {
     const [stats, setStats] = useState({
         todayRevenue: 0,
         monthlyRevenue: 0,
-        monthlyGoal: 10000,
+        monthlyGoal: profile?.tenant?.monthly_goal || 10000,
         todayAppointments: { realized: 0, total: 0 },
         idleHours: 0,
         lowStockItems: [] as any[],
@@ -97,7 +97,7 @@ export default function AdminDashboardPage() {
             setStats({
                 todayRevenue: todayRev,
                 monthlyRevenue: monthRev,
-                monthlyGoal: 10000, // Hardcoded target for now
+                monthlyGoal: profile?.tenant?.monthly_goal || 10000,
                 todayAppointments: { realized: appsRealized, total: appsTotal },
                 idleHours: idleHrs,
                 lowStockItems: [...(lowStockProducts || []), ...(lowStockSupplies || [])],

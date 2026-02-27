@@ -111,7 +111,8 @@ export default function EstablishmentSettingsPage() {
                 fee_percent_debit: tenant.fee_percent_debit,
                 primary_color: tenant.primary_color,
                 secondary_color: tenant.secondary_color,
-                tertiary_color: tenant.tertiary_color
+                tertiary_color: tenant.tertiary_color,
+                monthly_goal: tenant.monthly_goal
             })
             .eq('id', tenant.id);
 
@@ -377,7 +378,33 @@ export default function EstablishmentSettingsPage() {
             {activeTab === 'finance' && (
                 <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in">
                     <h4 className="text-lg md:text-xl font-black italic uppercase text-white mb-2">Configurações Financeiras</h4>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-6 block">Habilite os métodos aceitos e defina as taxas da sua maquininha (%)</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-6 block">Habilite os métodos aceitos, defina as taxas e sua meta mensal</p>
+
+                    <div className="bg-black/20 p-8 rounded-3xl border border-white/5 mb-8">
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="size-12 bg-[#f2b90d]/10 rounded-2xl flex items-center justify-center text-[#f2b90d]">
+                                    <span className="material-symbols-outlined text-2xl">target</span>
+                                </div>
+                                <div>
+                                    <h5 className="text-sm font-black uppercase text-white">Meta de Faturamento Mensal</h5>
+                                    <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Base de cálculo para a barra de progresso do dashboard</p>
+                                </div>
+                            </div>
+                            <div className="w-full md:w-64 relative">
+                                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#f2b90d] font-black text-sm">R$</span>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={tenant.monthly_goal || 0}
+                                    onChange={(e) => setTenant({ ...tenant, monthly_goal: parseFloat(e.target.value) || 0 })}
+                                    className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 font-black text-white text-lg outline-none focus:border-[#f2b90d]/50 transition-all text-right"
+                                    placeholder="0.00"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
                         {['PIX', 'CARTÃO', 'DÉBITO', 'DINHEIRO'].map(m => {
