@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
-import { maskPhone, maskCPF, maskCEP } from '@/lib/masks';
+import { maskPhone, maskCPF, maskCEP, maskCurrency } from '@/lib/masks';
 import { processImage } from '@/lib/image-processing';
 import ImageUpload from '@/components/ui/ImageUpload';
 
@@ -17,6 +17,7 @@ export default function EstablishmentSettingsPage() {
     const [origin, setOrigin] = useState('');
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [maskedGoal, setMaskedGoal] = useState('');
 
     // Auth State
     const [userEmail, setUserEmail] = useState('');
@@ -45,6 +46,9 @@ export default function EstablishmentSettingsPage() {
             setUserEmail(profile.email || '');
             setCurrentLoginEmail(profile.email || '');
             if (profile.tenant?.logo_url) setLogoPreview(profile.tenant.logo_url);
+            if (profile.tenant?.monthly_goal) {
+                setMaskedGoal(maskCurrency(profile.tenant.monthly_goal.toString().replace('.', '')));
+            }
         }
     }, [profile]);
 
@@ -394,13 +398,20 @@ export default function EstablishmentSettingsPage() {
                             <div className="w-full md:w-64 relative">
                                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#f2b90d] font-black text-sm">R$</span>
                                 <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={tenant.monthly_goal || 0}
-                                    onChange={(e) => setTenant({ ...tenant, monthly_goal: parseFloat(e.target.value) || 0 })}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={maskedGoal}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        const masked = maskCurrency(val);
+                                        setMaskedGoal(masked);
+                                        
+                                        // Unmask for DB: "1.000,00" -> 1000
+                                        const numericValue = parseFloat(masked.replace(/\./g, '').replace(',', '.')) || 0;
+                                        setTenant({ ...tenant, monthly_goal: numericValue });
+                                    }}
                                     className="w-full bg-black/40 border border-white/10 rounded-2xl pl-12 pr-4 py-4 font-black text-white text-lg outline-none focus:border-[#f2b90d]/50 transition-all text-right"
-                                    placeholder="0.00"
+                                    placeholder="0,00"
                                 />
                             </div>
                         </div>
