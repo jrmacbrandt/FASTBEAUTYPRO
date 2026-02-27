@@ -47,7 +47,10 @@ export default function EstablishmentSettingsPage() {
             setCurrentLoginEmail(profile.email || '');
             if (profile.tenant?.logo_url) setLogoPreview(profile.tenant.logo_url);
             if (profile.tenant?.monthly_goal && profile.tenant.monthly_goal > 0) {
-                setMaskedGoal(maskCurrency(profile.tenant.monthly_goal.toString().replace('.', '')));
+                // IMPORTANT: maskCurrency expects a string of digits representing cents.
+                // Since DB stores units (e.g. 20000), we must multiply by 100.
+                const centsString = (Math.round(profile.tenant.monthly_goal * 100)).toString();
+                setMaskedGoal(maskCurrency(centsString));
             } else {
                 setMaskedGoal('');
             }
