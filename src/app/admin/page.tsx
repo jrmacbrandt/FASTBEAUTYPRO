@@ -45,12 +45,9 @@ export default function AdminDashboardPage() {
         if (!profile?.tenant_id) return;
         setLoading(true);
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+        const now = new Date();
+        const localDateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
         try {
             const [
@@ -62,12 +59,12 @@ export default function AdminDashboardPage() {
                 { data: clientStats },
                 { data: loyaltyData }
             ] = await Promise.all([
-                // Today Revenue
-                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', today.toISOString()).lt('finalized_at', tomorrow.toISOString()).eq('tenant_id', profile.tenant_id),
+                // Today Revenue - Using simple string match for reliability
+                supabase.from('orders').select('total_value').eq('status', 'paid').like('finalized_at', `${localDateStr}%`).eq('tenant_id', profile.tenant_id),
                 // Monthly Revenue
-                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth.toISOString()).eq('tenant_id', profile.tenant_id),
-                // Today Appointments
-                supabase.from('appointments').select('status, scheduled_at').gte('scheduled_at', today.toISOString()).lt('scheduled_at', tomorrow.toISOString()).eq('tenant_id', profile.tenant_id),
+                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth).eq('tenant_id', profile.tenant_id),
+                // Today Appointments - Using simple string match for reliability
+                supabase.from('appointments').select('status, scheduled_at').like('scheduled_at', `${localDateStr}%`).eq('tenant_id', profile.tenant_id),
                 // Low Stock Sale Products
                 supabase.from('products').select('*').lte('current_stock', 'min_threshold').eq('active', true).eq('tenant_id', profile.tenant_id),
                 // Low Stock Supplies
@@ -81,8 +78,11 @@ export default function AdminDashboardPage() {
             const todayRev = todayOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             const monthRev = monthlyOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             
-            const appsTotal = todayApps?.length || 0;
-            const appsRealized = todayApps?.filter(a => a.status === 'paid').length || 0;
+            // Filter appointments to only count ACTIVE ones (paid, scheduled or confirmed)
+            // Exclude 'absent' and 'cancelled' from the denominator
+            const validApps = todayApps?.filter(a => ['paid', 'scheduled', 'confirmed'].includes(a.status)) || [];
+            const appsTotal = validApps.length;
+            const appsRealized = validApps.filter(a => a.status === 'paid').length;
 
             // Simple Idle Calculation: Standard 10h workday - (Average 45min per appointment)
             const workDayMinutes = 600; // 10 hours
