@@ -82,7 +82,7 @@ export default function AdminDashboardPage() {
             const monthRev = monthlyOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             
             const appsTotal = todayApps?.length || 0;
-            const appsRealized = todayApps?.filter(a => a.status === 'paid' || a.status === 'confirmed').length || 0;
+            const appsRealized = todayApps?.filter(a => a.status === 'paid').length || 0;
 
             // Simple Idle Calculation: Standard 10h workday - (Average 45min per appointment)
             const workDayMinutes = 600; // 10 hours
