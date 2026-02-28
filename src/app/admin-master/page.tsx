@@ -22,6 +22,61 @@ export default function MasterDashboardPage() {
     const [isResetting, setIsResetting] = useState(false);
     const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
 
+    // Nuclear Loading System
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [processMessage, setProcessMessage] = useState('');
+
+    const NuclearLoading = ({ message }: { message: string }) => (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/80 backdrop-blur-2xl animate-in fade-in duration-500">
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-amber-500/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-scan"></div>
+            </div>
+
+            <div className="relative flex flex-col items-center gap-8 p-12 rounded-[3rem] border border-amber-500/20 bg-black/40 shadow-2xl scale-110">
+                <div className="relative size-32">
+                    <div className="absolute inset-0 rounded-full border-4 border-amber-500/10 border-t-amber-500 animate-spin"></div>
+                    <div className="absolute inset-4 rounded-full border-4 border-amber-500/20 border-b-amber-500 animate-spin-reverse"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="material-symbols-outlined text-5xl text-amber-500 animate-pulse">nuclear_services</span>
+                    </div>
+                </div>
+
+                <div className="flex flex-col items-center gap-2 text-center">
+                    <h2 className="text-3xl font-black italic tracking-tighter text-white uppercase">{message || 'PROCESSANDO OPERAÇÃO SUPREMA'}</h2>
+                    <div className="flex items-center gap-2">
+                        <span className="w-12 h-0.5 bg-amber-500/30"></span>
+                        <p className="text-[10px] font-black uppercase tracking-[0.4em] text-amber-500 animate-pulse">Sistema Blindado em Ação</p>
+                        <span className="w-12 h-0.5 bg-amber-500/30"></span>
+                    </div>
+                </div>
+
+                <div className="w-64 h-1 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
+                    <div className="h-full bg-amber-500 animate-progress"></div>
+                </div>
+            </div>
+
+            <style jsx>{`
+                @keyframes scan {
+                    0% { transform: translateY(-100vh); opacity: 0; }
+                    50% { opacity: 1; }
+                    100% { transform: translateY(100vh); opacity: 0; }
+                }
+                @keyframes spin-reverse {
+                    to { transform: rotate(-360deg); }
+                }
+                @keyframes progress {
+                    0% { width: 0%; }
+                    50% { width: 70%; }
+                    100% { width: 100%; }
+                }
+                .animate-scan { animation: scan 3s linear infinite; }
+                .animate-spin-reverse { animation: spin-reverse 1.5s linear infinite; }
+                .animate-progress { animation: progress 5s ease-in-out infinite; }
+            `}</style>
+        </div>
+    );
+
     useEffect(() => {
         const savedType = localStorage.getItem('elite_business_type') as 'barber' | 'salon';
         if (savedType) setBusinessType(savedType);
@@ -152,6 +207,8 @@ export default function MasterDashboardPage() {
         if (!confirmed) return;
 
         setIsResetting(true);
+        setIsProcessing(true);
+        setProcessMessage(`Executando Reset de Fábrica: ${tenant.name}...`);
         try {
             const { data, error } = await supabase.rpc('reset_tenant_to_factory', {
                 p_tenant_id: tenant.id
@@ -168,6 +225,7 @@ export default function MasterDashboardPage() {
             alert(`Falha Crítica ao conectar com RPC de Reset: ${err.message}`);
         } finally {
             setIsResetting(false);
+            setIsProcessing(false);
         }
     };
 
@@ -192,6 +250,9 @@ export default function MasterDashboardPage() {
                     setSaving(false);
                     return;
                 }
+
+                setIsProcessing(true);
+                setProcessMessage(`Excluindo Unidade: ${targetTenant.name}...`);
 
                 console.log('[MasterAction-V3] ✅ User confirmed deletion');
                 console.log('[MasterAction-V3] Starting cleanup for:', targetTenant.id);
@@ -330,6 +391,7 @@ export default function MasterDashboardPage() {
             alert('ERRO (V3): ' + (err.message || 'Falha na operação'));
         } finally {
             setSaving(false);
+            setIsProcessing(false);
         }
     };
 
@@ -338,6 +400,8 @@ export default function MasterDashboardPage() {
 
         const originalLoading = loading;
         setLoading(true);
+        setIsProcessing(true);
+        setProcessMessage('Iniciando Faxina Completa (Banco & Storage)...');
         try {
             const res = await fetch('/api/admin/master/cleanup-storage', { method: 'POST' });
             const data = await res.json();
@@ -383,6 +447,7 @@ export default function MasterDashboardPage() {
             alert('❌ Erro na limpeza: ' + error.message);
         } finally {
             setLoading(originalLoading); // Restore previous loading state logic
+            setIsProcessing(false);
         }
     };
 
@@ -865,6 +930,7 @@ export default function MasterDashboardPage() {
                     </div>
                 )
             }
+            {isProcessing && <NuclearLoading message={processMessage} />}
         </div >
     );
 }
