@@ -233,7 +233,7 @@ export default function MasterDashboardPage() {
                     fetchPendingCount(); // Refresh count of other units
                     setIsEditModalOpen(false);
 
-                    alert('UNIDADE EXCLUÍDA COM SUCESSO! (V4-RPC)');
+                    alert('UNIDADE EXCLUÍDA COM SUCESSO! (V6-Supreme-Nuclear)');
                 }
             } else if (action === 'pause' || action === 'resume') {
                 const newStatus = action === 'resume';

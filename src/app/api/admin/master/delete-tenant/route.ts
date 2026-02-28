@@ -79,8 +79,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        console.log(`[HardDelete] SUCCESS: Tenant ${tenant_id} and all dependencies removed.`);
-        return NextResponse.json({ success: true, message: 'Unidade e usuários removidos permanentemente (Cascading Delete OK)' });
+        console.log(`[HardDelete] SUCCESS: Tenant ${tenant_id} and all dependencies removed via V6-Supreme RPC.`);
+        return NextResponse.json({ success: true, message: 'Unidade e usuários removidos permanentemente (V6-Supreme Nuclear OK)' });
 
     } catch (error: any) {
         console.error('[HardDelete] Unexpected error:', error);
