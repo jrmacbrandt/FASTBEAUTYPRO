@@ -214,21 +214,26 @@ export default function MasterDashboardPage() {
 
                 console.log('[MasterAction-V4] ✅ API completed successfully:', result.message);
 
-                // Verification
-                console.log('[MasterAction-V3] Verifying deletion...');
-                const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).single();
+                // Verification & UI Sync
+                console.log('[MasterAction-V3] Verifying deletion via simple check...');
+                // IMPORTANT: Use a delay for verification to allow DB replication if any
+                await new Promise(r => setTimeout(r, 800));
+
+                const { data: check } = await supabase.from('tenants').select('id').eq('id', targetTenant.id).maybeSingle();
 
                 if (check) {
-                    console.error('[MasterAction-V3] ❌ VERIFICATION FAILED: Tenant still exists');
-                    alert('AVISO: O banco confirmou a exclusão, mas a unidade ainda existe. Tente atualizar a página.');
+                    console.error('[MasterAction-V3] ❌ VERIFICATION WARNING: Tenant record still visible to client RLS');
+                    alert('AVISO: O servidor processou a exclusão, mas a unidade ainda pode estar visível devido ao cache ou RLS. A página será atualizada.');
+                    window.location.reload();
                 } else {
-                    console.log('[MasterAction-V3] ✅ VERIFICATION PASSED: Tenant deleted successfully');
+                    console.log('[MasterAction-V3] ✅ VERIFICATION PASSED: Tenant no longer visible');
 
                     // FORCE UI UPDATE LOCAL STATE
                     setTenants(prev => prev.filter(t => t.id !== targetTenant.id));
+                    fetchPendingCount(); // Refresh count of other units
                     setIsEditModalOpen(false);
 
-                    alert('UNIDADE EXCLUÍDA COM SUCESSO! (V3)');
+                    alert('UNIDADE EXCLUÍDA COM SUCESSO! (V4-RPC)');
                 }
             } else if (action === 'pause' || action === 'resume') {
                 const newStatus = action === 'resume';

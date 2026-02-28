@@ -44,39 +44,43 @@ export async function POST(req: NextRequest) {
         }
 
         if (!allProfiles || allProfiles.length === 0) {
-            console.warn('[HardDelete] No profiles found. Proceeding to delete tenant record only.');
+            console.warn('[HardDelete] No profiles found for this tenant.');
         } else {
-            // ** PROTEÇÃO MASTER E EXECUÇÃO DE EXCLUSÃO **
-            console.log(`[HardDelete] Found ${allProfiles.length} profiles to remove.`);
-
+            // ** PROTEÇÃO MASTER **
+            console.log(`[HardDelete] Checking ${allProfiles.length} profiles for Master protection.`);
             for (const profile of allProfiles) {
                 if (profile.email === 'jrmacbrandt@gmail.com') {
+                    console.error('[HardDelete] 🛑 ABORTED: Master Admin protection triggered!');
                     return NextResponse.json({ error: 'Operação abortada: O Administrador Master está vinculado a esta loja e não pode ser removido.' }, { status: 403 });
-                }
-
-                console.log(`[HardDelete] Removing Auth User: ${profile.email} (${profile.id})`);
-                const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
-
-                if (deleteUserError) {
-                    console.error(`[HardDelete] Failed to delete Auth User ${profile.email}:`, deleteUserError.message);
                 }
             }
         }
 
-        // 3. Delete the Tenant Data (Cascade should handle relations, but we force delete the tenant root)
-        // Using Service Role ensures we bypass any RLS that might block deletion
-        const { error: deleteTenantError } = await supabaseAdmin
-            .from('tenants')
-            .delete()
-            .eq('id', tenant_id);
+        // 3. NUCLEAR DELETE: Call optimized RPC (Deletes all DB dependencies)
+        console.log(`[HardDelete] Invoking SQL RPC 'delete_tenant_cascade' for: ${tenant_id}`);
+        const { error: rpcError } = await supabaseAdmin.rpc('delete_tenant_cascade', {
+            target_tenant_id: tenant_id
+        });
 
-        if (deleteTenantError) {
-            console.error('[HardDelete] Failed to delete Tenant record:', deleteTenantError);
-            return NextResponse.json({ error: 'Failed to delete tenant record' }, { status: 500 });
+        if (rpcError) {
+            console.error('[HardDelete] ❌ RPC FAILURE:', rpcError);
+            return NextResponse.json({ error: 'Falha na exclusão atômica (RPC): ' + rpcError.message }, { status: 500 });
         }
 
-        console.log(`[HardDelete] SUCCESS: Tenant ${tenant_id} and associated user removed.`);
-        return NextResponse.json({ success: true, message: 'Tenant and User deleted permanently' });
+        // 4. CLEANUP AUTH: Remove users from Supabase Auth ONLY if DB records are gone
+        console.log('[HardDelete] Database records cleared. Proceeding to Auth cleanup...');
+        if (allProfiles && allProfiles.length > 0) {
+            for (const profile of allProfiles) {
+                console.log(`[HardDelete] Removing Auth User: ${profile.email} (${profile.id})`);
+                const { error: deleteUserError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+                if (deleteUserError) {
+                    console.warn(`[HardDelete] Failed to delete Auth User ${profile.email}:`, deleteUserError.message);
+                }
+            }
+        }
+
+        console.log(`[HardDelete] SUCCESS: Tenant ${tenant_id} and all dependencies removed.`);
+        return NextResponse.json({ success: true, message: 'Unidade e usuários removidos permanentemente (Cascading Delete OK)' });
 
     } catch (error: any) {
         console.error('[HardDelete] Unexpected error:', error);
