@@ -21,33 +21,33 @@ const IntelligenceCard = ({ title, gross, net, icon, color, subtext, theme }: an
     return (
         <div className="rounded-[2.5rem] p-8 md:p-10 relative overflow-hidden group transition-all shadow-2xl border border-white/5"
             style={{ backgroundColor: theme.cardBg }}>
-            <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-10 pointer-events-none"
+            <div className="absolute top-0 right-0 w-32 h-32 blur-[80px] opacity-[0.08] pointer-events-none group-hover:opacity-15 transition-opacity duration-700"
                 style={{ backgroundColor: color }}
             ></div>
 
             <div className="relative z-10">
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h3 className="text-sm font-black uppercase tracking-[0.2em] opacity-40 mb-1" style={{ color: theme.text }}>{title}</h3>
-                        <div className="size-1 w-8 rounded-full" style={{ backgroundColor: color }}></div>
+                        <h3 className="text-[11px] font-black uppercase tracking-[0.25em] mb-2" style={{ color: 'white' }}>{title}</h3>
+                        <div className="h-1 w-8 rounded-full" style={{ backgroundColor: color }}></div>
                     </div>
-                    <div className="size-12 rounded-2xl flex items-center justify-center bg-white/5 group-hover:scale-110 transition-transform duration-500">
-                        <span className="material-symbols-outlined text-2xl" style={{ color: color }}>{icon}</span>
+                    <div className="size-14 rounded-2xl flex items-center justify-center bg-white/5 border border-white/5 group-hover:scale-110 group-hover:bg-white/10 transition-all duration-500">
+                        <span className="material-symbols-outlined text-3xl" style={{ color: color }}>{icon}</span>
                     </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-6">
                     <div>
-                        <p className="text-[9px] font-black uppercase tracking-widest text-[#64748b] mb-1">Receita Líquida</p>
-                        <h4 className="text-3xl md:text-4xl font-black italic tracking-tighter text-white">
+                        <p className="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 mb-1.5">Receita Líquida</p>
+                        <h4 className="text-4xl md:text-5xl font-black italic tracking-tighter text-white">
                             R$ {net.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </h4>
                     </div>
 
-                    <div className="pt-4 border-t border-white/5 flex justify-between items-end">
-                        <div>
-                            <p className="text-[8px] font-black uppercase tracking-[0.15em] text-[#64748b] mb-0.5">Valor Bruto</p>
-                            <p className="text-xs font-bold text-slate-400">R$ {gross.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                    <div className="pt-6 border-t border-white/5 flex justify-between items-end">
+                        <div className="opacity-90">
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-1">Valor Bruto</p>
+                            <p className="text-sm font-black text-white/80 tracking-tight">R$ {gross.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         </div>
                         {subtext && (
                             <div className="text-right">
@@ -232,16 +232,19 @@ export default function ReportsIntelligencePage() {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="relative">
                     <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-1.5 h-16 rounded-full blur-[2px]" style={{ backgroundColor: theme.primary }}></div>
-                    <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none">
-                        Intelligence <span style={{ color: theme.primary }}>Reports</span>
+                    <h1 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase leading-none text-white">
+                        Intelligence <span className="relative" style={{ color: theme.primary }}>
+                            Reports
+                            <span className="absolute inset-0 blur-xl opacity-50" style={{ color: theme.primary }}>Reports</span>
+                        </span>
                     </h1>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-3" style={{ color: theme.textMuted }}>
+                    <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-3 flex items-center gap-3 text-zinc-400">
                         <span className="size-2 rounded-full animate-pulse bg-emerald-500 shadow-[0_0_10px_#10b981]"></span>
                         Ativo • Atualizando em Tempo Real
                     </p>
                 </div>
 
-                <div className="flex p-1.5 rounded-2xl bg-black/40 border border-white/5 backdrop-blur-xl">
+                <div className="flex p-1.5 rounded-2xl bg-black/40 border border-white/5 backdrop-blur-xl shadow-inner">
                     {[7, 30, 90].map(days => (
                         <button
                             key={days}
@@ -293,9 +296,9 @@ export default function ReportsIntelligencePage() {
                     color="#10b981"
                     theme={theme}
                     subtext={
-                        <div className="text-right">
-                            <p className="text-[8px] font-black uppercase text-zinc-500">Taxas: -R$ {metrics.totalFees.toLocaleString('pt-BR')}</p>
-                            <p className="text-[8px] font-black uppercase text-zinc-500">CMV: -R$ {metrics.cogs.toLocaleString('pt-BR')}</p>
+                        <div className="text-right space-y-1">
+                            <p className="text-[9px] font-black uppercase text-zinc-400">Taxas: <span className="text-white/60">-R$ {metrics.totalFees.toLocaleString('pt-BR')}</span></p>
+                            <p className="text-[9px] font-black uppercase text-zinc-400">CMV: <span className="text-white/60">-R$ {metrics.cogs.toLocaleString('pt-BR')}</span></p>
                         </div>
                     }
                 />
@@ -388,13 +391,13 @@ export default function ReportsIntelligencePage() {
                             </div>
 
                             <div className="space-y-4">
-                                <div className="flex justify-between items-center bg-white/[0.02] p-4 rounded-2xl border border-white/5">
-                                    <span className="text-[10px] font-black uppercase text-zinc-500">Total Taxas Card/Pix</span>
-                                    <span className="font-black text-rose-500 text-lg">R$ {metrics.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <div className="flex justify-between items-center bg-white/[0.04] p-5 rounded-2xl border border-white/5">
+                                    <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Total Taxas Card/Pix</span>
+                                    <span className="font-black text-rose-500 text-xl tracking-tighter">R$ {metrics.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                 </div>
-                                <div className="flex justify-between items-center bg-white/[0.02] p-4 rounded-2xl border border-white/5">
-                                    <span className="text-[10px] font-black uppercase text-zinc-500">Total CMV (Produtos)</span>
-                                    <span className="font-black text-white text-lg">R$ {metrics.cogs.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                                <div className="flex justify-between items-center bg-white/[0.04] p-5 rounded-2xl border border-white/5">
+                                    <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Total CMV (Produtos)</span>
+                                    <span className="font-black text-white text-xl tracking-tighter">R$ {metrics.cogs.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                 </div>
                             </div>
                         </div>
