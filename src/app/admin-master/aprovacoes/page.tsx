@@ -40,63 +40,21 @@ export default function MasterAprovacoesPage() {
     const [couponCode, setCouponCode] = useState('');
     const [processing, setProcessing] = useState<string | null>(null);
 
-    const handleApprove = async (tenantId: string) => {
-        if (!confirm('CONFIRMAR LIBERAÇÃO TOTAL?\n\nEsta ação concederá:\n- Status: ATIVO\n- Plano: ILIMITADO\n- Validade: INDETERMINADA\n\nDeseja continuar?')) return;
+    const handleLiberarAcesso = async (tenantId: string) => {
+        if (!couponCode.trim()) return alert('Por favor, insira um código de cupom válido.');
 
         setProcessing(tenantId);
         try {
-            const { data, error } = await supabase
-                .from('tenants')
-                .update({
-                    status: 'active',
-                    subscription_plan: 'unlimited',
-                    trial_ends_at: null,
-                    active: true,
-                    has_paid: true // Force paid status for unlimited access override
-                })
-                .eq('id', tenantId)
-                .select(); // Request returned data
+            // 1. Validate Coupon via robust RPC (Bypass RLS bug)
+            const { data: coupon, error: couponError } = await supabase.rpc('validate_admin_coupon', {
+                p_code: couponCode.toUpperCase().trim()
+            });
 
-            if (error) throw error;
-
-            if (!data || data.length === 0) {
-                alert('ATENÇÃO: O banco de dados não retornou confirmação da atualização. Pode ser um bloqueio de permissão (RLS). Verifique se você é o "dono" do registro ou Super Admin.');
-                throw new Error('Falha na verificação pós-update (0 registros alterados).');
+            if (couponError || !coupon) {
+                throw new Error(couponError?.message || 'Cupom inválido ou não encontrado.');
             }
 
-            // Success feedback
-            alert(`SUCESSO REAL! Estabelecimento "${data[0].name}" ativado.\nID: ${data[0].id}\nStatus: ${data[0].status}`);
-
-            // Refresh data
-            await fetchPending();
-            router.refresh(); // Forces server components to re-fetch if needed and updates client cache
-
-            // Dispatch custom event to notify other tabs/components if needed (optional but good for syncing)
-            window.dispatchEvent(new Event('tenant-approved'));
-
-        } catch (err: any) {
-            alert('ERRO AO LIBERAR: ' + err.message);
-        } finally {
-            setProcessing(null);
-        }
-    };
-
-    const handleApproveWithCoupon = async (tenantId: string) => {
-        if (!couponCode) return alert('Por favor, digite o código do cupom.');
-
-        setProcessing(tenantId);
-        try {
-            // 1. Validate Coupon
-            const { data: coupon, error: couponError } = await supabase
-                .from('coupons')
-                .select('*')
-                .eq('code', couponCode.toUpperCase().trim())
-                .eq('active', true)
-                .single();
-
-            if (couponError || !coupon) throw new Error('Cupom inválido ou não encontrado.');
-
-            // 2. Determine Plan Rules
+            // 2. Determine Plan Rules based on Coupon Data
             let appliedPlan = 'trial';
             let trialEndsAt = null;
 
@@ -104,7 +62,6 @@ export default function MasterAprovacoesPage() {
                 appliedPlan = 'unlimited';
             } else if (coupon.discount_type === 'trial_30') {
                 // 🛡️ [BLINDADO] LOGIC REFINEMENT: DATA-PARA-DATA (Ex: 02/02 -> 02/03)
-                // Usando utilitário robusto para evitar erros de final de mês
                 trialEndsAt = addMonths(new Date(), 1).toISOString();
             } else if (coupon.discount_type === 'trial_2h') {
                 const d = new Date();
@@ -121,7 +78,7 @@ export default function MasterAprovacoesPage() {
                     trial_ends_at: trialEndsAt,
                     coupon_used: coupon.code,
                     active: true,
-                    has_paid: appliedPlan === 'unlimited' ? true : false // Only set paid if full access, otherwise respect trial logic
+                    has_paid: appliedPlan === 'unlimited' ? true : false
                 })
                 .eq('id', tenantId)
                 .select();
@@ -132,7 +89,7 @@ export default function MasterAprovacoesPage() {
                 throw new Error('RLS BLOCK: O banco não permitiu a alteração deste registro.');
             }
 
-            // 4. Update Coupon Usage (kept for tracking stats)
+            // 4. Update Coupon Usage
             await supabase.from('coupons').update({ used_count: (coupon.used_count || 0) + 1 }).eq('id', coupon.id);
 
             alert(`SUCESSO! Cupom ${coupon.code} aplicado.\nEstabelecimento ativado conforme regras.`);
@@ -228,34 +185,26 @@ export default function MasterAprovacoesPage() {
                                 </div>
 
                                 <div className="mt-auto pt-4 space-y-3">
-                                    {/* Opção 1: Cupom */}
-                                    <div className="bg-white/5 p-3 rounded-xl space-y-2 border border-white/5">
-                                        <label className="text-[9px] font-black uppercase text-slate-500 block">Liberar via Cupom</label>
-                                        <div className="flex gap-2">
+                                    <div className="bg-white/5 p-4 rounded-2xl space-y-4 border border-white/5">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase text-slate-500 block ml-1">Liberar via Cupom</label>
                                             <input
                                                 type="text"
-                                                placeholder="CÓDIGO"
-                                                className="w-full bg-black/50 border border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-white uppercase focus:outline-none focus:border-[#f2b90d]"
+                                                placeholder="DIGITE O CÓDIGO"
+                                                className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-xs font-black text-white uppercase focus:outline-none focus:border-[#f2b90d] transition-all"
                                                 value={couponCode}
                                                 onChange={(e) => setCouponCode(e.target.value)}
                                             />
-                                            <button
-                                                onClick={() => handleApproveWithCoupon(tenant.id)}
-                                                className="bg-white/10 hover:bg-[#f2b90d] hover:text-black text-white p-2 rounded-lg transition-colors"
-                                            >
-                                                <span className="material-symbols-outlined text-lg">check</span>
-                                            </button>
                                         </div>
-                                    </div>
 
-                                    {/* Opção 2: Liberar Total */}
-                                    <button
-                                        onClick={() => handleApprove(tenant.id)}
-                                        disabled={processing === tenant.id}
-                                        className="w-full bg-emerald-500/10 hover:bg-emerald-500 text-emerald-500 hover:text-white font-black uppercase tracking-widest text-[10px] py-3 rounded-xl transition-all border border-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                                    >
-                                        {processing === tenant.id ? 'PROCESSANDO...' : 'LIBERAR ACESSO TOTAL'}
-                                    </button>
+                                        <button
+                                            onClick={() => handleLiberarAcesso(tenant.id)}
+                                            disabled={processing === tenant.id}
+                                            className="w-full bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase tracking-[0.2em] text-[10px] py-4 rounded-xl transition-all shadow-lg shadow-[#f2b90d]/10 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                        >
+                                            {processing === tenant.id ? 'PROCESSANDO...' : 'LIBERAR ACESSO'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         );
