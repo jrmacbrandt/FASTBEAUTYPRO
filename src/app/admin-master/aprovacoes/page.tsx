@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { addMonths } from '@/utils/date-utils';
 
 export default function MasterAprovacoesPage() {
     const [loading, setLoading] = useState(true);
@@ -102,9 +103,9 @@ export default function MasterAprovacoesPage() {
             if (coupon.discount_type === 'full_access') {
                 appliedPlan = 'unlimited';
             } else if (coupon.discount_type === 'trial_30') {
-                const d = new Date();
-                d.setDate(d.getDate() + 30);
-                trialEndsAt = d.toISOString();
+                // 🛡️ [BLINDADO] LOGIC REFINEMENT: DATA-PARA-DATA (Ex: 02/02 -> 02/03)
+                // Usando utilitário robusto para evitar erros de final de mês
+                trialEndsAt = addMonths(new Date(), 1).toISOString();
             } else if (coupon.discount_type === 'trial_2h') {
                 const d = new Date();
                 d.setHours(d.getHours() + 2);

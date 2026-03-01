@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { addMonths } from '@/utils/date-utils';
 
 export default function PendingPaymentPage() {
     const router = useRouter();
@@ -70,9 +71,9 @@ export default function PendingPaymentPage() {
                 appliedHasPaid = true;
             } else if (couponData.discount_type === 'trial_30') {
                 appliedPlan = 'trial';
-                const d = new Date();
-                d.setDate(d.getDate() + 30);
-                trialEndsAt = d.toISOString();
+                // 🛡️ [BLINDADO] LOGIC REFINEMENT: DATA-PARA-DATA (Ex: 02/02 -> 02/03)
+                // Usando utilitário robusto para chegar na data exata do mês que vem
+                trialEndsAt = addMonths(new Date(), 1).toISOString();
             } else if (couponData.discount_type === 'trial_2h') {
                 appliedPlan = 'trial';
                 const d = new Date();

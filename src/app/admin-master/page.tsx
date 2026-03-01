@@ -373,7 +373,8 @@ export default function MasterDashboardPage() {
 
                         if (coupon.discount_type === 'trial_30') {
                             const d = new Date();
-                            d.setDate(d.getDate() + 30);
+                            // 🛡️ [BLINDADO] LOGIC REFINEMENT: DATA-PARA-DATA (Ex: 02/02 -> 02/03)
+                            d.setMonth(d.getMonth() + 1);
                             appliedTrialEndsAt = d.toISOString();
                         } else if (coupon.discount_type === 'trial_2h') {
                             const d = new Date();
