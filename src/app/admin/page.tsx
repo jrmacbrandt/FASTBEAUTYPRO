@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
         setLoading(true);
 
         const now = new Date();
-        const localDateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+        const localDateStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time (ISO format)
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
         try {
@@ -63,8 +63,8 @@ export default function AdminDashboardPage() {
                 supabase.from('orders').select('total_value').eq('status', 'paid').like('finalized_at', `${localDateStr}%`).eq('tenant_id', profile.tenant_id),
                 // Monthly Revenue
                 supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth).eq('tenant_id', profile.tenant_id),
-                // Today Appointments - Using simple string match for reliability
-                supabase.from('appointments').select('status, scheduled_at').like('scheduled_at', `${localDateStr}%`).eq('tenant_id', profile.tenant_id),
+                // Today Appointments - Including service duration for precise idle time calculation
+                supabase.from('appointments').select('status, scheduled_at, services(duration_minutes)').like('scheduled_at', `${localDateStr}%`).eq('tenant_id', profile.tenant_id),
                 // Low Stock Sale Products
                 supabase.from('products').select('*').lte('current_stock', 'min_threshold').eq('active', true).eq('tenant_id', profile.tenant_id),
                 // Low Stock Supplies
@@ -77,17 +77,34 @@ export default function AdminDashboardPage() {
 
             const todayRev = todayOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             const monthRev = monthlyOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
-            
+
             // Filter appointments to only count ACTIVE ones (paid, scheduled or confirmed)
             // Exclude 'absent' and 'cancelled' from the denominator
             const validApps = todayApps?.filter(a => ['paid', 'scheduled', 'confirmed'].includes(a.status)) || [];
             const appsTotal = validApps.length;
             const appsRealized = validApps.filter(a => a.status === 'paid').length;
 
-            // Simple Idle Calculation: Standard 10h workday - (Average 45min per appointment)
-            const workDayMinutes = 600; // 10 hours
-            const busyMinutes = appsTotal * 45;
-            const idleHrs = Math.max(0, (workDayMinutes - busyMinutes) / 60);
+            // Robust Idle Calculation: Uses establishment's actual business hours and service durations
+            let idleHrs = 0;
+            if (profile?.tenant?.business_hours) {
+                const daysMap = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+                const dayKey = daysMap[now.getDay()];
+                const todayHours = profile.tenant.business_hours[dayKey];
+
+                if (todayHours?.isOpen) {
+                    const [openH, openM] = todayHours.open.split(':').map(Number);
+                    const [closeH, closeM] = todayHours.close.split(':').map(Number);
+
+                    const operatingMinutes = (closeH * 60 + closeM) - (openH * 60 + openM);
+
+                    // Sum actual service durations, fallback to 45 mins if missing
+                    const busyMinutes = validApps.reduce((acc, app: any) => {
+                        return acc + (Number(app.services?.duration_minutes) || 45);
+                    }, 0);
+
+                    idleHrs = Math.max(0, (operatingMinutes - busyMinutes) / 60);
+                }
+            }
 
             const newClients = clientStats?.filter(c => (c.total_visits || 0) <= 1).length || 0;
             const recurringClients = clientStats?.filter(c => (c.total_visits || 0) > 1).length || 0;
@@ -131,7 +148,7 @@ export default function AdminDashboardPage() {
 
             {/* Grid Principal */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                
+
                 {/* 1. Card de Faturamento */}
                 <div className="p-8 rounded-[2.5rem] border border-white/5 bg-[#121214] flex flex-col justify-between relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:scale-110 transition-transform">
@@ -149,8 +166,8 @@ export default function AdminDashboardPage() {
                             <span className="text-[10px] font-black text-white italic">{goalProgress.toFixed(1)}%</span>
                         </div>
                         <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                            <div 
-                                className="h-full bg-primary transition-all duration-1000 ease-out" 
+                            <div
+                                className="h-full bg-primary transition-all duration-1000 ease-out"
                                 style={{ width: `${goalProgress}%`, backgroundColor: colors.primary }}
                             />
                         </div>
@@ -218,7 +235,7 @@ export default function AdminDashboardPage() {
                             <span className="material-symbols-outlined text-9xl text-rose-500">warning</span>
                         </div>
                     )}
-                    
+
                     <div>
                         <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Estoque Crítico</p>
                         <h3 className={`text-4xl font-black italic tracking-tighter ${stats.lowStockItems.length > 0 ? 'text-rose-500' : 'text-white'}`}>
