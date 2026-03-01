@@ -11,7 +11,6 @@ export default function MasterCuponsPage() {
     // Form states
     const [code, setCode] = useState('');
     const [discountType, setDiscountType] = useState('full_access');
-    const [maxUses, setMaxUses] = useState(999);
 
     const fetchCoupons = async () => {
         setLoading(true);
@@ -50,7 +49,7 @@ export default function MasterCuponsPage() {
         const { error } = await supabase.from('coupons').insert({
             code: code.toUpperCase().trim(),
             discount_type: discountType,
-            max_uses: maxUses,
+            max_uses: 999999, // Simplified: Unlimited by default
             active: true
         });
 
@@ -90,7 +89,7 @@ export default function MasterCuponsPage() {
             </header>
 
             {/* Create Form */}
-            <div className="bg-[#18181b] border border-white/5 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div className="bg-[#18181b] border border-white/5 rounded-2xl p-6 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
                 <div className="space-y-1">
                     <label className="text-[10px] uppercase font-bold text-slate-500">Código do Cupom</label>
                     <input
@@ -116,15 +115,6 @@ export default function MasterCuponsPage() {
                         <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none group-hover:text-[#f2b90d] transition-colors">expand_more</span>
                     </div>
                 </div>
-                <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-500">Limite de Uso</label>
-                    <input
-                        type="number"
-                        value={maxUses}
-                        onChange={(e) => setMaxUses(parseInt(e.target.value))}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-[#f2b90d] outline-none font-bold"
-                    />
-                </div>
                 <button
                     onClick={handleCreate}
                     className="bg-[#f2b90d] hover:bg-[#d9a50b] text-black font-black uppercase tracking-widest text-xs py-3.5 rounded-xl transition-all shadow-lg hover:shadow-[#f2b90d]/20 active:scale-95"
@@ -140,7 +130,6 @@ export default function MasterCuponsPage() {
                         <tr>
                             <th className="p-4">Código</th>
                             <th className="p-4">Benefício</th>
-                            <th className="p-4">Usos</th>
                             <th className="p-4">Status</th>
                             <th className="p-4 text-right">Ação</th>
                         </tr>
@@ -159,7 +148,6 @@ export default function MasterCuponsPage() {
                                         <span className="text-[9px] opacity-40 uppercase tracking-tighter">Benefício Direto</span>
                                     </div>
                                 </td>
-                                <td className="p-4">{coupon.used_count} / {coupon.max_uses}</td>
                                 <td className="p-4">
                                     <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${coupon.active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                                         {coupon.active ? 'Ativo' : 'Inativo'}
@@ -189,7 +177,7 @@ export default function MasterCuponsPage() {
                         ))}
                         {coupons.length === 0 && (
                             <tr>
-                                <td colSpan={5} className="p-8 text-center text-slate-500 italic">Nenhum cupom criado ainda.</td>
+                                <td colSpan={4} className="p-8 text-center text-slate-500 italic">Nenhum cupom criado ainda.</td>
                             </tr>
                         )}
                     </tbody>

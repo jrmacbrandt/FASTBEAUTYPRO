@@ -94,7 +94,6 @@ export default function MasterAprovacoesPage() {
                 .single();
 
             if (couponError || !coupon) throw new Error('Cupom inválido ou não encontrado.');
-            if (coupon.used_count >= coupon.max_uses) throw new Error('Este cupom atingiu o limite máximo de usos.');
 
             // 2. Determine Plan Rules
             let appliedPlan = 'trial';
@@ -132,8 +131,8 @@ export default function MasterAprovacoesPage() {
                 throw new Error('RLS BLOCK: O banco não permitiu a alteração deste registro.');
             }
 
-            // 4. Update Coupon Usage
-            await supabase.from('coupons').update({ used_count: coupon.used_count + 1 }).eq('id', coupon.id);
+            // 4. Update Coupon Usage (kept for tracking stats)
+            await supabase.from('coupons').update({ used_count: (coupon.used_count || 0) + 1 }).eq('id', coupon.id);
 
             alert(`SUCESSO! Cupom ${coupon.code} aplicado.\nEstabelecimento ativado conforme regras.`);
             setCouponCode('');
