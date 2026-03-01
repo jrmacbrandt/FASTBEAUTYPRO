@@ -19,7 +19,7 @@ export default function MasterAprovacoesPage() {
         const { data, error } = await supabase
             .from('tenants')
             .select(`
-                id, name, slug, status, created_at,
+                id, name, slug, status, phone, created_at,
                 profiles:profiles(full_name, email, phone, cpf)
             `)
             .eq('status', 'pending_approval')
@@ -200,10 +200,31 @@ export default function MasterAprovacoesPage() {
                                     <div className="text-xs text-slate-400 space-y-1 bg-black/20 p-3 rounded-lg border border-white/5">
                                         <p><strong className="text-slate-300">Responsável:</strong> {owner.full_name}</p>
                                         <p><strong className="text-slate-300">Email:</strong> {owner.email}</p>
+                                        <p><strong className="text-slate-300">Telefone:</strong> {tenant.phone || owner.phone || 'N/A'}</p>
                                         <p><strong className="text-slate-300">CPF:</strong> {owner.cpf}</p>
                                         <p><strong className="text-slate-300">Solicitado:</strong> {new Date(tenant.created_at).toLocaleDateString()}</p>
                                     </div>
                                 )}
+
+                                {/* WhatsApp Button */}
+                                <div className="px-1">
+                                    <button
+                                        onClick={() => {
+                                            const phone = tenant.phone || owner?.phone;
+                                            if (!phone) return alert('Telefone não encontrado.');
+
+                                            const name = owner?.full_name || tenant.name;
+                                            const message = `Olá ${name}, notamos que seu cadastro no FastBeauty Pro está aguardando a liberação. Para começar a usar o sistema agora mesmo, basta finalizar seu pagamento pelo link: https://melhorhotelfazendarj.com.br/pagamento-pendente`;
+
+                                            const whatsappUrl = `https://wa.me/55${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`;
+                                            window.open(whatsappUrl, '_blank');
+                                        }}
+                                        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-[#25D366]/10 hover:bg-[#25D366] text-[#25D366] hover:text-white text-[10px] font-black uppercase tracking-widest transition-all border border-[#25D366]/20"
+                                    >
+                                        <span className="material-symbols-outlined text-sm">chat</span>
+                                        Contactar via WhatsApp
+                                    </button>
+                                </div>
 
                                 <div className="mt-auto pt-4 space-y-3">
                                     {/* Opção 1: Cupom */}
