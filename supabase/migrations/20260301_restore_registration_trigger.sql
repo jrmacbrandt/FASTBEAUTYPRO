@@ -33,7 +33,10 @@ BEGIN
         
         -- Extrair dados da loja
         v_shop_name := COALESCE(NEW.raw_user_meta_data->>'shop_name', 'Minha Loja');
-        v_shop_slug := lower(regexp_replace(v_shop_name, '[^a-zA-Z0-9]+', '-', 'g')) || '-' || substr(NEW.id::text, 1, 4);
+        v_shop_slug := lower(regexp_replace(v_shop_name, '[^a-zA-Z0-9]+', '-', 'g'));
+        
+        -- Garante que o slug não termine com hífen
+        v_shop_slug := trim(both '-' from v_shop_slug);
         
         -- Gerar ID único para o Tenant
         new_tenant_id := gen_random_uuid();
