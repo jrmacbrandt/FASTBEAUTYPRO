@@ -373,8 +373,9 @@ export default function MasterDashboardPage() {
 
                 const ownerProfile = targetTenant.profiles?.find((p: any) => p.role === 'owner') || targetTenant.profiles?.[0];
                 if (ownerProfile?.id) {
+                    // [FIX] Using selectedTenant.owner_name directly to ensure it preserves the user's edit
                     await supabase.from('profiles').update({
-                        full_name: data.owner_name,
+                        full_name: selectedTenant.owner_name || data.owner_name,
                         cpf: data.tax_id?.replace(/\D/g, '')
                     }).eq('id', ownerProfile.id);
                 }
@@ -829,18 +830,21 @@ export default function MasterDashboardPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                             <label className="text-[9px] font-black text-slate-500 uppercase ml-1">Cidade / UF</label>
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="grid grid-cols-[2fr_1fr] gap-2">
                                                 <input
                                                     type="text"
                                                     value={selectedTenant.address_city || ''}
                                                     onChange={(e) => setSelectedTenant({ ...selectedTenant, address_city: e.target.value })}
                                                     className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none"
+                                                    placeholder="Cidade"
                                                 />
                                                 <input
                                                     type="text"
                                                     value={selectedTenant.address_state || ''}
-                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, address_state: e.target.value })}
-                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-center text-sm font-bold text-white focus:outline-none"
+                                                    onChange={(e) => setSelectedTenant({ ...selectedTenant, address_state: e.target.value.substring(0, 2).toUpperCase() })}
+                                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-2 py-3 text-center text-sm font-bold text-white focus:outline-none"
+                                                    placeholder="UF"
+                                                    maxLength={2}
                                                 />
                                             </div>
                                         </div>
