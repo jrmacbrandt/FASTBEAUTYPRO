@@ -352,11 +352,34 @@ export default function MasterDashboardPage() {
                     }
                 }
 
+                // [NEW] Master Coupon Activation Logic
+                let appliedHasPaid = data.has_paid;
+                let appliedStatus = targetTenant.status;
+                let couponUsed = data.coupon_used;
+
+                if (data.coupon_code) {
+                    const { data: coupon } = await supabase
+                        .from('coupons')
+                        .select('*')
+                        .eq('code', data.coupon_code.toUpperCase().trim())
+                        .eq('active', true)
+                        .single();
+
+                    if (coupon) {
+                        appliedHasPaid = true;
+                        appliedStatus = 'active';
+                        couponUsed = data.coupon_code.toUpperCase().trim();
+                        alert('Cupom aplicado com sucesso! Acesso liberado.');
+                    } else {
+                        alert('AVISO: Cupom inválido ou expirado. Os outros dados serão salvos, mas o acesso não será liberado via cupom.');
+                    }
+                }
+
                 const { error: tenantUpdateError } = await supabase.from('tenants').update({
                     name: data.name,
                     slug: data.slug,
                     business_type: data.business_type,
-                    has_paid: data.has_paid,
+                    has_paid: appliedHasPaid,
                     phone: data.phone?.replace(/\D/g, ''),
                     tax_id: data.tax_id?.replace(/\D/g, ''),
                     contact_email: data.contact_email,
@@ -367,7 +390,10 @@ export default function MasterDashboardPage() {
                     address_neighborhood: data.address_neighborhood,
                     address_city: data.address_city,
                     address_state: data.address_state,
-                    logo_url: finalLogoUrl
+                    logo_url: finalLogoUrl,
+                    coupon_used: couponUsed,
+                    status: appliedStatus,
+                    active: appliedStatus === 'active'
                 }).eq('id', targetTenant.id);
                 if (tenantUpdateError) throw tenantUpdateError;
 
@@ -771,6 +797,26 @@ export default function MasterDashboardPage() {
                                                 <span className="material-symbols-outlined absolute right-3 top-3 text-white/30 pointer-events-none">expand_more</span>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    {/* [NEW] Master Coupon Activation Field */}
+                                    <div className="space-y-1.5 bg-white/5 p-4 rounded-xl border border-white/10">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className="text-xl">🎟️</span>
+                                            <label className="text-[11px] font-black uppercase text-[#f2b90d]">
+                                                Ativação por Cupom
+                                            </label>
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Inserir código para liberar acesso"
+                                            value={selectedTenant.coupon_code || ''}
+                                            onChange={(e) => setSelectedTenant({ ...selectedTenant, coupon_code: e.target.value.toUpperCase() })}
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-[#f2b90d]/50 transition-all uppercase"
+                                        />
+                                        <p className="text-[8px] text-slate-500 font-bold uppercase mt-1 ml-1 tracking-tighter">
+                                            Se o cupom for válido, a unidade será ativada e o pagamento marcado como OK ao salvar.
+                                        </p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
