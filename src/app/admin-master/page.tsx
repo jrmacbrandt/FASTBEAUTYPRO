@@ -584,14 +584,41 @@ export default function MasterDashboardPage() {
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 text-center border-y" style={{ borderColor: `${colors.text}0d` }}>
-                                                <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase border ${t.status === 'pending_approval'
-                                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                                    : t.active
-                                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                                        : 'bg-red-500/10 text-red-500 border-red-500/20'
-                                                    }`}>
-                                                    {t.status === 'pending_approval' ? 'PENDENTE' : (t.active ? 'ATIVO' : 'PAUSADO')}
-                                                </span>
+                                                {(() => {
+                                                    // BLINDADO: Visual Logic Sync with Middleware/Approvals
+                                                    const isTrialPlan = t.subscription_plan === 'trial' ||
+                                                        t.subscription_plan === 'trial_2h' ||
+                                                        t.subscription_plan === 'trial_30';
+                                                    const isTrialExpired = isTrialPlan && (!t.trial_ends_at || new Date(t.trial_ends_at) < new Date());
+                                                    const isBlockedExt = (isTrialExpired && t.has_paid === false) || t.status === 'suspended';
+
+                                                    if (t.status === 'pending_approval') {
+                                                        return (
+                                                            <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase border bg-amber-500/10 text-amber-500 border-amber-500/20">
+                                                                PENDENTE
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (isBlockedExt) {
+                                                        return (
+                                                            <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase border bg-red-500/10 text-red-500 border-red-500/20">
+                                                                BLOQUEADO
+                                                            </span>
+                                                        );
+                                                    }
+                                                    if (!t.active) {
+                                                        return (
+                                                            <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase border bg-red-500/10 text-red-500 border-red-500/20">
+                                                                PAUSADO
+                                                            </span>
+                                                        );
+                                                    }
+                                                    return (
+                                                        <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                                                            ATIVO
+                                                        </span>
+                                                    );
+                                                })()}
                                             </td>
                                             <td className="py-4 px-6 text-center border-y opacity-50 text-[11px]" style={{ borderColor: `${colors.text}0d` }}>{new Date(t.created_at).toLocaleDateString()}</td>
                                             <td className="py-4 px-8 text-right rounded-r-2xl border-y border-r" style={{ borderColor: `${colors.text}0d` }}>
