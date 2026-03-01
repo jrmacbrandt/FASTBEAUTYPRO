@@ -8,6 +8,8 @@ import { useEffect, useState, useMemo } from 'react';
 
 interface SidebarProps {
     user: {
+        id: string;
+        email: string;
         role: string;
         full_name: string;
         tenant_id?: string;
@@ -40,12 +42,16 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
     // 🛡️ [BLINDADO] Real-time Approvals Badge - Master Only
     useEffect(() => {
         const isMaster = user?.role === 'master' || user?.email === 'jrmacbrandt@gmail.com';
-        if (!isMaster) return;
+        if (!isMaster) {
+            setPendingCount(0);
+            return;
+        }
 
         const fetchCount = async () => {
+            console.log('📊 [Sidebar] Fetching pending count...');
             const { count } = await supabase
                 .from('tenants')
-                .select('*', { count: 'exact', head: true })
+                .select('id', { count: 'exact', head: true })
                 .eq('status', 'pending_approval');
             setPendingCount(count || 0);
         };
@@ -53,7 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
         fetchCount();
 
         const channel = supabase
-            .channel('master_pending_approvals')
+            .channel('master_pending_approvals_sidebar')
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'tenants' },
@@ -67,7 +73,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.id]);
+    }, [user?.id, user?.role]); // Added role to dependency
 
     useLayoutEffect(() => {
         const savedScroll = sessionStorage.getItem('elite_sidebar_scroll');

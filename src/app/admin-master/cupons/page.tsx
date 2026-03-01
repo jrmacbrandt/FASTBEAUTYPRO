@@ -102,15 +102,19 @@ export default function MasterCuponsPage() {
                     />
                 </div>
                 <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-slate-500">Tipo de Benefício</label>
-                    <select
-                        value={discountType}
-                        onChange={(e) => setDiscountType(e.target.value)}
-                        className="w-full bg-black/20 border border-white/10 rounded-xl p-3 text-white focus:border-[#f2b90d] outline-none text-xs font-bold"
-                    >
-                        <option value="full_access">Acesso Total (Vitalício)</option>
-                        <option value="trial_30">Trial 30 Dias</option>
-                    </select>
+                    <label className="text-[10px] uppercase font-bold text-slate-500 ml-1">Tipo de Benefício</label>
+                    <div className="relative group">
+                        <select
+                            value={discountType}
+                            onChange={(e) => setDiscountType(e.target.value)}
+                            className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white focus:border-[#f2b90d] outline-none text-xs font-black appearance-none transition-all cursor-pointer hover:bg-black/60"
+                        >
+                            <option className="bg-[#18181b] text-white" value="full_access">ACESSO TOTAL (VITALÍCIO)</option>
+                            <option className="bg-[#18181b] text-white" value="trial_30">TRIAL 30 DIAS (GRÁTIS)</option>
+                            <option className="bg-[#18181b] text-white" value="trial_2h">ACESSO POR 2 HORAS (DEMO)</option>
+                        </select>
+                        <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-white/30 pointer-events-none group-hover:text-[#f2b90d] transition-colors">expand_more</span>
+                    </div>
                 </div>
                 <div className="space-y-1">
                     <label className="text-[10px] uppercase font-bold text-slate-500">Limite de Uso</label>
@@ -145,7 +149,16 @@ export default function MasterCuponsPage() {
                         {coupons.map(coupon => (
                             <tr key={coupon.id} className="hover:bg-white/5 transition-colors">
                                 <td className="p-4 font-black text-white tracking-wider">{coupon.code}</td>
-                                <td className="p-4">{coupon.discount_type === 'full_access' ? 'Acesso Vitalício' : 'Trial 30 Dias'}</td>
+                                <td className="p-4">
+                                    <div className="flex flex-col">
+                                        <span className="font-bold">
+                                            {coupon.discount_type === 'full_access' ? 'Acesso Vitalício' :
+                                                coupon.discount_type === 'trial_30' ? 'Trial 30 Dias' :
+                                                    coupon.discount_type === 'trial_2h' ? 'Acesso 2 Horas' : 'Outro'}
+                                        </span>
+                                        <span className="text-[9px] opacity-40 uppercase tracking-tighter">Benefício Direto</span>
+                                    </div>
+                                </td>
                                 <td className="p-4">{coupon.used_count} / {coupon.max_uses}</td>
                                 <td className="p-4">
                                     <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wide ${coupon.active ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>

@@ -356,6 +356,7 @@ export default function MasterDashboardPage() {
                 let appliedHasPaid = data.has_paid;
                 let appliedStatus = targetTenant.status;
                 let couponUsed = data.coupon_used;
+                let appliedTrialEndsAt = targetTenant.trial_ends_at;
 
                 if (data.coupon_code) {
                     const { data: coupon } = await supabase
@@ -366,10 +367,23 @@ export default function MasterDashboardPage() {
                         .single();
 
                     if (coupon) {
-                        appliedHasPaid = true;
+                        appliedHasPaid = true; // Still marked as "paid" to bypass payment screen logic
                         appliedStatus = 'active';
                         couponUsed = data.coupon_code.toUpperCase().trim();
-                        alert('Cupom aplicado com sucesso! Acesso liberado.');
+
+                        if (coupon.discount_type === 'trial_30') {
+                            const d = new Date();
+                            d.setDate(d.getDate() + 30);
+                            appliedTrialEndsAt = d.toISOString();
+                        } else if (coupon.discount_type === 'trial_2h') {
+                            const d = new Date();
+                            d.setHours(d.getHours() + 2);
+                            appliedTrialEndsAt = d.toISOString();
+                        } else if (coupon.discount_type === 'full_access') {
+                            appliedTrialEndsAt = null;
+                        }
+
+                        alert('Cupom aplicado com sucesso! Acesso liberado conforme as regras do cupom.');
                     } else {
                         alert('AVISO: Cupom inválido ou expirado. Os outros dados serão salvos, mas o acesso não será liberado via cupom.');
                     }
@@ -393,7 +407,8 @@ export default function MasterDashboardPage() {
                     logo_url: finalLogoUrl,
                     coupon_used: couponUsed,
                     status: appliedStatus,
-                    active: appliedStatus === 'active'
+                    active: appliedStatus === 'active',
+                    trial_ends_at: appliedTrialEndsAt
                 }).eq('id', targetTenant.id);
                 if (tenantUpdateError) throw tenantUpdateError;
 
@@ -485,24 +500,6 @@ export default function MasterDashboardPage() {
 
     return (
         <div className="space-y-12 animate-in fade-in duration-500">
-            {pendingCount > 0 && (
-                <div className="bg-amber-500/10 border border-amber-500/20 rounded-[2rem] p-8 flex items-center justify-between shadow-xl backdrop-blur-sm relative overflow-hidden group">
-                    <div className="absolute top-0 left-0 w-1 h-full bg-amber-500"></div>
-                    <div className="flex items-center gap-6 relative z-10">
-                        <div className="size-16 rounded-full bg-amber-500/20 flex items-center justify-center animate-pulse">
-                            <span className="material-symbols-outlined text-3xl text-amber-500">priority_high</span>
-                        </div>
-                        <div>
-                            <h3 className="text-2xl font-black italic text-white uppercase tracking-tight">Atenção Necessária</h3>
-                            <p className="text-amber-500 font-bold text-sm mt-1">Existem {pendingCount} novas solicitações de adesão pendentes.</p>
-                        </div>
-                    </div>
-                    <Link href="/admin-master/aprovacoes" className="bg-amber-500 text-black px-8 py-4 rounded-xl font-black uppercase tracking-widest text-[10px] hover:scale-105 active:scale-95 transition-all shadow-lg flex items-center gap-2">
-                        Ver Solicitações
-                        <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-                    </Link>
-                </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 {metrics.map((m, i) => (

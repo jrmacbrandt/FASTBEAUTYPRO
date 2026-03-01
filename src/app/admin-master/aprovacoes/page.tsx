@@ -106,6 +106,10 @@ export default function MasterAprovacoesPage() {
                 const d = new Date();
                 d.setDate(d.getDate() + 30);
                 trialEndsAt = d.toISOString();
+            } else if (coupon.discount_type === 'trial_2h') {
+                const d = new Date();
+                d.setHours(d.getHours() + 2);
+                trialEndsAt = d.toISOString();
             }
 
             // 3. Update Tenant

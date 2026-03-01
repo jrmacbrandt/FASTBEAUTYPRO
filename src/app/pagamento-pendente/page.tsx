@@ -73,6 +73,11 @@ export default function PendingPaymentPage() {
                 const d = new Date();
                 d.setDate(d.getDate() + 30);
                 trialEndsAt = d.toISOString();
+            } else if (couponData.discount_type === 'trial_2h') {
+                appliedPlan = 'trial';
+                const d = new Date();
+                d.setHours(d.getHours() + 2);
+                trialEndsAt = d.toISOString();
             }
 
             // [RESTORED/ENHANCED] Full tenant liberation logic
