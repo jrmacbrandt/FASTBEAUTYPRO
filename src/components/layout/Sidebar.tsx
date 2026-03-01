@@ -49,13 +49,22 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         const fetchCount = async () => {
             console.log('📊 [Sidebar] Fetching pending count...');
-            const { count, error } = await supabase
+            const { data, error } = await supabase
                 .from('tenants')
-                .select('id', { count: 'exact', head: true })
-                .eq('status', 'pending_approval');
+                .select('id, status, active, has_paid, subscription_plan, trial_ends_at')
+                .or('status.eq.pending_approval,status.eq.suspended,subscription_plan.in.(trial,trial_2h,trial_30)');
 
-            if (!error) {
-                setPendingCount(count || 0);
+            if (!error && data) {
+                const blockedCount = data.filter(t => {
+                    if (t.status === 'pending_approval' || t.status === 'suspended') return true;
+                    const isTrialPlan = t.subscription_plan === 'trial' ||
+                        t.subscription_plan === 'trial_2h' ||
+                        t.subscription_plan === 'trial_30';
+                    const isTrialExpired = isTrialPlan && (!t.trial_ends_at || new Date(t.trial_ends_at) < new Date());
+                    if (isTrialExpired && t.has_paid === false) return true;
+                    return false;
+                }).length;
+                setPendingCount(blockedCount);
             }
         };
 
