@@ -315,17 +315,17 @@ export default function ReportsIntelligencePage() {
 
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
                         <div>
-                            <h3 className="text-2xl font-black italic uppercase tracking-tighter">Fluxo de Performance</h3>
-                            <p className="text-[9px] font-black uppercase tracking-[0.2em] opacity-40 mt-1">Comparativo Receita Líquida vs Custos Reais</p>
+                            <h3 className="text-2xl font-black italic uppercase tracking-tighter text-white">Fluxo de Performance</h3>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 mt-1">Comparativo Receita Líquida vs Custos Reais</p>
                         </div>
                         <div className="flex gap-6">
                             <div className="flex items-center gap-2">
                                 <span className="size-3 rounded-full shadow-[0_0_8px_#f2b90d]" style={{ backgroundColor: theme.primary }}></span>
-                                <span className="text-[9px] font-black uppercase tracking-widest opacity-50">Receita</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/70">Receita</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="size-3 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
-                                <span className="text-[9px] font-black uppercase tracking-widest opacity-50">Custos</span>
+                                <span className="text-[9px] font-black uppercase tracking-widest text-white/70">Custos</span>
                             </div>
                         </div>
                     </div>
@@ -343,22 +343,22 @@ export default function ReportsIntelligencePage() {
                                         <stop offset="95%" stopColor="#f43f5e" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#27272a" opacity={0.5} />
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#3f3f46" opacity={0.3} />
                                 <XAxis
                                     dataKey="date"
-                                    stroke="#52525b"
+                                    stroke="#a1a1aa"
                                     fontSize={10}
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fontWeight: 800 }}
+                                    tick={{ fontWeight: 800, fill: '#a1a1aa' }}
                                     dy={15}
                                 />
                                 <YAxis
-                                    stroke="#52525b"
+                                    stroke="#a1a1aa"
                                     fontSize={10}
                                     tickLine={false}
                                     axisLine={false}
-                                    tick={{ fontWeight: 800 }}
+                                    tick={{ fontWeight: 800, fill: '#a1a1aa' }}
                                     tickFormatter={(v) => `R$${v}`}
                                 />
                                 <Tooltip
@@ -384,18 +384,18 @@ export default function ReportsIntelligencePage() {
                     <div className="rounded-[2.5rem] p-8 border border-white/5 bg-black/40 relative overflow-hidden h-full flex flex-col justify-between">
                         <div className="space-y-6">
                             <div className="flex items-center gap-3 mb-8">
-                                <div className="size-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
-                                    <span className="material-symbols-outlined text-orange-500 text-xl">account_balance_wallet</span>
+                                <div className="size-11 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shadow-[0_0_15px_rgba(249,115,22,0.1)]">
+                                    <span className="material-symbols-outlined text-orange-500 text-2xl">account_balance_wallet</span>
                                 </div>
-                                <h4 className="text-sm font-black uppercase tracking-widest">Resumo de Taxas Financeiras</h4>
+                                <h4 className="text-sm font-black uppercase tracking-widest text-white">Resumo Financeiro</h4>
                             </div>
 
                             <div className="space-y-4">
-                                <div className="flex justify-between items-center bg-white/[0.04] p-5 rounded-2xl border border-white/5">
+                                <div className="flex justify-between items-center bg-white/[0.04] p-5 rounded-2xl border border-white/5 group-hover:bg-white/[0.06] transition-colors">
                                     <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Total Taxas Card/Pix</span>
                                     <span className="font-black text-rose-500 text-xl tracking-tighter">R$ {metrics.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                 </div>
-                                <div className="flex justify-between items-center bg-white/[0.04] p-5 rounded-2xl border border-white/5">
+                                <div className="flex justify-between items-center bg-white/[0.04] p-5 rounded-2xl border border-white/5 group-hover:bg-white/[0.06] transition-colors">
                                     <span className="text-[10px] font-black uppercase text-zinc-400 tracking-wider">Total CMV (Produtos)</span>
                                     <span className="font-black text-white text-xl tracking-tighter">R$ {metrics.cogs.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                                 </div>
