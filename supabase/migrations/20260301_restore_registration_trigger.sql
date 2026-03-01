@@ -58,7 +58,7 @@ BEGIN
             COALESCE(NEW.raw_user_meta_data->>'business_type', 'barber'),
             true,
             false,
-            'pending',
+            'pending_approval',
             COALESCE(NEW.raw_user_meta_data->>'image_url', '')
         );
     ELSE
