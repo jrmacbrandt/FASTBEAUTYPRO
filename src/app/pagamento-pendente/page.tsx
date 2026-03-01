@@ -59,10 +59,34 @@ export default function PendingPaymentPage() {
                 return;
             }
 
-            // Update Tenant as Paid
+            // 2. Determine Plan Rules based on Coupon Type
+            let appliedPlan = 'trial';
+            let appliedStatus = 'active';
+            let appliedHasPaid = false;
+            let trialEndsAt = null;
+
+            if (couponData.discount_type === 'full_access') {
+                appliedPlan = 'unlimited';
+                appliedHasPaid = true;
+            } else if (couponData.discount_type === 'trial_30') {
+                appliedPlan = 'trial';
+                const d = new Date();
+                d.setDate(d.getDate() + 30);
+                trialEndsAt = d.toISOString();
+            }
+
+            // [RESTORED/ENHANCED] Full tenant liberation logic
             const { error: tError } = await supabase
                 .from('tenants')
-                .update({ has_paid: true, subscription_status: 'active' })
+                .update({
+                    has_paid: appliedHasPaid,
+                    subscription_status: 'active',
+                    status: 'active',
+                    active: true,
+                    subscription_plan: appliedPlan,
+                    trial_ends_at: trialEndsAt,
+                    coupon_used: coupon.toUpperCase().trim()
+                })
                 .eq('id', profile.tenant_id);
 
             if (tError) throw tError;
