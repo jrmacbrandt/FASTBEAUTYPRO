@@ -199,10 +199,19 @@ export async function middleware(request: NextRequest) {
         // User reports "Approved" (Status: Ativo) but middleware was blocking.
         // Also block explicitly if active is false (paused).
         const isStatusActive = tenantObj?.status === 'active';
-        const isApproved = (isActive || isStatusActive) && isActive !== false;
+
+        // [STRICT] Se for TRIAL, verifica data. Se expirou, NÃO está aprovado.
+        const isTrialPlan = tenantObj?.subscription_plan === 'trial' ||
+            tenantObj?.subscription_plan === 'trial_2h' ||
+            tenantObj?.subscription_plan === 'trial_30';
+
+        const isTrialExpired = isTrialPlan && (!trialEndsAt || new Date(trialEndsAt) < new Date());
+
+        const isApproved = (isActive || isStatusActive) && isActive !== false && !isTrialExpired;
 
         if (!isApproved && !isPaymentPage && !isSuspendedPage && !isPausedPage) {
             // Not Approved? -> Payment/Coupon
+            console.log('🚪 LOCKOUT: Trial expired or not approved. Redirecting to payment.');
             url.pathname = '/pagamento-pendente';
             return NextResponse.redirect(url);
         }

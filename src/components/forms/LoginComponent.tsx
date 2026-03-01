@@ -133,16 +133,27 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
                 if (profile.tenant_id) {
                     const { data: tenantData } = await supabase
                         .from('tenants')
-                        .select('has_paid, status')
+                        .select('has_paid, status, subscription_plan, trial_ends_at')
                         .eq('id', profile.tenant_id)
                         .maybeSingle();
 
-                    // 🛡️ [BLINDADO] AUDIT CHECK: Requires Active/Trialing status AND Payment confirmed
-                    const isActiveStatus = tenantData?.status === 'active' || tenantData?.status === 'trialing';
-                    const isPaid = tenantData ? tenantData.has_paid !== false : false;
+                    // 🛡️ [BLINDADO] AUDIT CHECK: Requires Active status AND (Paid OR Trial is valid)
+                    const isStatusActive = tenantData?.status === 'active' || tenantData?.status === 'trialing';
+                    const isPaid = tenantData ? tenantData.has_paid === true : false;
 
-                    if (!isPaid || !isActiveStatus) {
-                        console.warn(`[Login] Access Blocked for Owner. Status: ${tenantData?.status}, Paid: ${isPaid}`);
+                    const isTrialPlan = tenantData?.subscription_plan === 'trial' ||
+                        tenantData?.subscription_plan === 'trial_2h' ||
+                        tenantData?.subscription_plan === 'trial_30';
+
+                    const now = new Date();
+                    const trialEndsAt = tenantData?.trial_ends_at ? new Date(tenantData.trial_ends_at) : null;
+                    const isTrialValid = isTrialPlan && trialEndsAt && trialEndsAt > now;
+
+                    // Acesso liberado se: Status Ativo && (Pago OU Trial Válido OU Plano Ilimitado)
+                    const hasAccess = isStatusActive && (isPaid || isTrialValid || tenantData?.subscription_plan === 'unlimited');
+
+                    if (!hasAccess) {
+                        console.warn(`[Login] Access Blocked for Owner. Status: ${tenantData?.status}, Paid: ${isPaid}, TrialValid: ${isTrialValid}`);
                         router.push('/pagamento-pendente');
                     } else {
                         router.push('/admin');

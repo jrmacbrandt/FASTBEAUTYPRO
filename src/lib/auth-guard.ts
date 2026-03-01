@@ -64,11 +64,23 @@ export class AuthGuard {
         // 3. Decisão Final
         if (isUnlimited) return { canAccess: true, reason: 'master_override', details: { plan, trialEnds: null, hasPaid, active: true } };
 
-        // FIX V4.0: Se estiver ATIVO (Aprovado), libera acesso independente do pagamento.
+        // [STRICT] Se for plano TRIAL, a data de expiração é SOBERANA.
+        if (plan === 'trial' || plan === 'trial_2h' || plan === 'trial_30') {
+            if (!trialEnds || trialEnds < now) {
+                return {
+                    canAccess: false,
+                    reason: 'expired',
+                    redirectPath: '/pagamento-pendente',
+                    details: { plan, trialEnds: tenant.trial_ends_at, hasPaid, active: true }
+                };
+            }
+            return { canAccess: true, reason: 'trial_active', details: { plan, trialEnds: tenant.trial_ends_at, hasPaid, active: true } };
+        }
+
+        // FIX V4.0: Se estiver ATIVO (Aprovado), libera acesso independente do pagamento (para planos pagos que ainda não venceram).
         if (isActiveStatus) return { canAccess: true, reason: 'ok', details: { plan, trialEnds: null, hasPaid, active: true } };
 
         if (hasPaid) return { canAccess: true, reason: 'ok', details: { plan, trialEnds: null, hasPaid, active: true } };
-        if (isTrialValid) return { canAccess: true, reason: 'trial_active', details: { plan, trialEnds: tenant.trial_ends_at, hasPaid, active: true } };
 
         // 4. Fallback (Expirado ou Não Pago)
         return {

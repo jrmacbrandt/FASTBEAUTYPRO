@@ -45,21 +45,23 @@ export default function MasterCuponsPage() {
 
     const handleCreate = async () => {
         if (!code) return;
+        setLoading(true);
 
-        const { error } = await supabase.from('coupons').insert({
-            code: code.toUpperCase().trim(),
-            discount_type: discountType,
-            max_uses: 999999, // Simplified: Unlimited by default
-            active: true
+        const { data, error } = await supabase.rpc('create_admin_coupon', {
+            p_code: code.toUpperCase().trim(),
+            p_discount_type: discountType,
+            p_max_uses: 999999,
+            p_active: true
         });
 
-        if (error) {
-            alert('Erro ao criar cupom: ' + error.message);
+        if (error || (data && !data.success)) {
+            alert('Erro ao criar cupom: ' + (error?.message || data?.message));
         } else {
-            alert('Cupom criado!');
+            alert('Cupom criado com sucesso!');
             setCode('');
             fetchCoupons();
         }
+        setLoading(false);
     };
 
     const toggleStatus = async (id: string, currentStatus: boolean) => {
