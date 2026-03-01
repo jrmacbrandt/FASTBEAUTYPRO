@@ -233,11 +233,18 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
             const slug = normalizeSlug(shopName);
 
             // 3. Auth Sign Up
+            // [RESTORED] Passing metadata to trigger for better initial record creation
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
-                    data: { full_name: fullName, role: 'owner' }
+                    data: {
+                        full_name: fullName,
+                        role: 'owner',
+                        shop_name: shopName,
+                        business_type: businessType,
+                        image_url: imageUrl // This will be used by the trigger as a backup
+                    }
                 }
             });
 

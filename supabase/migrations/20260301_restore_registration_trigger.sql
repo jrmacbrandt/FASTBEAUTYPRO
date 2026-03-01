@@ -49,7 +49,8 @@ BEGIN
             business_type,
             active,
             has_paid,
-            status
+            status,
+            logo_url
         ) VALUES (
             new_tenant_id,
             v_shop_name,
@@ -57,7 +58,8 @@ BEGIN
             COALESCE(NEW.raw_user_meta_data->>'business_type', 'barber'),
             true,
             false,
-            'pending'
+            'pending',
+            COALESCE(NEW.raw_user_meta_data->>'image_url', '')
         );
     ELSE
         -- Lógica para Profissionais (Barber)
