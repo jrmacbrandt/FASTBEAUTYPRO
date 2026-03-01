@@ -40,7 +40,10 @@ export default function PendingPaymentPage() {
                 .eq('id', user.id)
                 .single();
 
-            if (pError || !profile?.tenant_id) throw new Error("Perfil ou estabelecimento não encontrado.");
+            if (pError || !profile?.tenant_id) {
+                console.warn('Profile sync delay:', pError || 'No tenant linked');
+                throw new Error("Sincronizando seu perfil... Por favor, aguarde alguns segundos e atualize a página.");
+            }
 
             // Validate Coupon
             const { data: couponData, error: cError } = await supabase
