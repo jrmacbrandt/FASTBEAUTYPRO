@@ -4,6 +4,7 @@ import React, { useRef, useLayoutEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { useEffect, useState, useMemo } from 'react';
 
 interface SidebarProps {
     user: {
@@ -34,6 +35,39 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
     const pathname = usePathname();
     const router = useRouter();
     const sidebarNavRef = useRef<HTMLElement>(null);
+    const [pendingCount, setPendingCount] = useState(0);
+
+    // 🛡️ [BLINDADO] Real-time Approvals Badge - Master Only
+    useEffect(() => {
+        const isMaster = user?.role === 'master' || user?.email === 'jrmacbrandt@gmail.com';
+        if (!isMaster) return;
+
+        const fetchCount = async () => {
+            const { count } = await supabase
+                .from('tenants')
+                .select('*', { count: 'exact', head: true })
+                .eq('status', 'pending_approval');
+            setPendingCount(count || 0);
+        };
+
+        fetchCount();
+
+        const channel = supabase
+            .channel('master_pending_approvals')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tenants' },
+                () => {
+                    console.log('🔔 [Sidebar] Real-time update detected for tenants');
+                    fetchCount();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.id]);
 
     useLayoutEffect(() => {
         const savedScroll = sessionStorage.getItem('elite_sidebar_scroll');
@@ -60,7 +94,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         if (isMasterArea) return [
             { label: 'Painel Master', icon: 'dashboard', path: '/admin-master' },
-            { label: 'Aprovações', icon: 'check_circle', path: '/admin-master/aprovacoes' },
+            { label: 'Aprovações', icon: 'check_circle', path: '/admin-master/aprovacoes', badge: pendingCount },
             { label: 'Comunicados', icon: 'broadcast_on_personal', path: '/admin-master/comunicados' },
             { label: 'Cupons Globais', icon: 'local_offer', path: '/admin-master/cupons' },
         ];
