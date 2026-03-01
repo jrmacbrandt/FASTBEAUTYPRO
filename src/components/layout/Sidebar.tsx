@@ -49,15 +49,26 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         const fetchCount = async () => {
             console.log('📊 [Sidebar] Fetching pending count...');
-            const { count } = await supabase
+            const { count, error } = await supabase
                 .from('tenants')
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'pending_approval');
-            setPendingCount(count || 0);
+
+            if (!error) {
+                setPendingCount(count || 0);
+            }
         };
 
         fetchCount();
 
+        // 1. Listen for local events (Approvals page actions)
+        const handleLocalUpdate = () => {
+            console.log('🔄 [Sidebar] Local "tenant-approved" event detected');
+            fetchCount();
+        };
+        window.addEventListener('tenant-approved', handleLocalUpdate);
+
+        // 2. Listen for remote database changes (Supabase Realtime)
         const channel = supabase
             .channel('master_pending_approvals_sidebar')
             .on(
@@ -65,15 +76,17 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
                 { event: '*', schema: 'public', table: 'tenants' },
                 () => {
                     console.log('🔔 [Sidebar] Real-time update detected for tenants');
-                    fetchCount();
+                    // Small delay to allow DB state to settle
+                    setTimeout(fetchCount, 500);
                 }
             )
             .subscribe();
 
         return () => {
+            window.removeEventListener('tenant-approved', handleLocalUpdate);
             supabase.removeChannel(channel);
         };
-    }, [user?.id, user?.role]); // Added role to dependency
+    }, [user?.id, user?.role, user?.email]); // Comprehensive dependencies
 
     useLayoutEffect(() => {
         const savedScroll = sessionStorage.getItem('elite_sidebar_scroll');
