@@ -11,23 +11,40 @@ export default function MasterAprovacoesPage() {
 
     const fetchPending = async () => {
         setLoading(true);
-        // Fetch tenants with pending_approval status
-        // We also need profile info, but tenants <-> profiles is 1:N. 
-        // We'll fetch tenants and then maybe get the owner? 
-        // Or fetch profiles where role=owner and tenant.status=pending?
-        // Let's query tenants directly first.
 
+        // Busca ampla: pega pending_approval, suspensas ou que possam estar em trial
         const { data, error } = await supabase
             .from('tenants')
             .select(`
-                id, name, slug, status, phone, created_at,
+                id, name, slug, status, phone, created_at, active, has_paid, subscription_plan, trial_ends_at,
                 profiles:profiles(full_name, email, phone, cpf)
             `)
-            .eq('status', 'pending_approval')
+            .or('status.eq.pending_approval,status.eq.suspended,subscription_plan.in.(trial,trial_2h,trial_30)')
             .order('created_at', { ascending: false });
 
-        if (error) console.error(error);
-        else setPendingTenants(data || []);
+        if (error) {
+            console.error(error);
+            setPendingTenants([]);
+        } else {
+            // Filtra no frontend seguindo a mesma lógica BLINDADA do Middleware
+            const blockedTenants = data?.filter(t => {
+                // 1. Sempre exibe se for estritamente pendente ou suspensa
+                if (t.status === 'pending_approval' || t.status === 'suspended') return true;
+
+                // 2. Verifica se o período Trial acabou (mesma lógica do middleware)
+                const isTrialPlan = t.subscription_plan === 'trial' ||
+                    t.subscription_plan === 'trial_2h' ||
+                    t.subscription_plan === 'trial_30';
+
+                const isTrialExpired = isTrialPlan && (!t.trial_ends_at || new Date(t.trial_ends_at) < new Date());
+
+                // Se o trial acabou e a loja não pagou (has_paid = false), ela está bloqueada e deve aparecer aqui
+                if (isTrialExpired && t.has_paid === false) return true;
+
+                return false;
+            });
+            setPendingTenants(blockedTenants || []);
+        }
 
         setLoading(false);
     };
@@ -144,8 +161,8 @@ export default function MasterAprovacoesPage() {
                                     <div className="size-10 rounded-full bg-white/5 flex items-center justify-center text-white/40 font-bold uppercase">
                                         {tenant.name.substring(0, 2)}
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-amber-500/10 text-amber-500">
-                                        Aguardando
+                                    <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded ${tenant.status === 'pending_approval' ? 'bg-amber-500/10 text-amber-500' : 'bg-red-500/10 text-red-500'}`}>
+                                        {tenant.status === 'pending_approval' ? 'Aguardando' : 'Bloqueada'}
                                     </span>
                                 </div>
 
