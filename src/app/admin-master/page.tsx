@@ -637,18 +637,7 @@ export default function MasterDashboardPage() {
                                                         <span className="material-symbols-outlined text-[20px]">delete_forever</span>
                                                     </button>
 
-                                                    <button
-                                                        onClick={() => {
-                                                            console.log('[DEBUG] Settings clicked for:', t.name);
-                                                            setSelectedTenant(t);
-                                                            setNewLogoFile(null); // Reset file
-                                                            setIsEditModalOpen(true);
-                                                        }}
-                                                        className="size-10 bg-white/5 text-slate-400 rounded-xl flex items-center justify-center transition-all border border-white/5 hover:bg-[#f2b90d] hover:text-black shadow-lg"
-                                                        title="Configurações"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[20px]">settings</span>
-                                                    </button>
+
                                                 </div>
                                             </td>
                                         </tr>
@@ -962,9 +951,9 @@ export default function MasterDashboardPage() {
                                             address_street: selectedTenant.address_street,
                                             address_number: selectedTenant.address_number,
                                             address_complement: selectedTenant.address_complement,
-                                            address_neighborhood: selectedTenant.address_neighborhood,
-                                            address_city: selectedTenant.address_city,
-                                            address_state: selectedTenant.address_state,
+                                            neighborhood: selectedTenant.address_neighborhood,
+                                            city: selectedTenant.address_city,
+                                            state: selectedTenant.address_state,
                                             owner_name: selectedTenant.profiles?.[0]?.full_name,
                                             logo_url: selectedTenant.logo_url
                                         })}
@@ -978,7 +967,8 @@ export default function MasterDashboardPage() {
                     </div>
                 )
             }
+
             {isProcessing && <NuclearLoading message={processMessage} />}
-        </div >
+        </div>
     );
 }
