@@ -43,8 +43,11 @@ export async function GET(req: NextRequest) {
             },
             details: {
                 tenants: tenants,
-                professionals_in_profiles: professionalsInProfiles,
-                // List only non-master users to keep it clean but safe
+                all_profiles: profiles.map(p => ({
+                    email: p.email,
+                    role: p.role,
+                    tenant_id: p.tenant_id
+                })),
                 other_auth_users: users.filter(u => u.email !== 'jrmacbrandt@gmail.com').map(u => ({
                     id: u.id,
                     email: u.email,
