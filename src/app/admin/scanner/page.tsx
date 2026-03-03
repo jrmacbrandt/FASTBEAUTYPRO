@@ -34,7 +34,7 @@ export default function ScannerPage() {
                 .select('*')
                 .eq('tenant_id', profile.tenant_id)
                 .eq('phone', normalizedPhone)
-                .single();
+                .maybeSingle();
 
             if (clientError) {
                 console.error('Database Error:', clientError);

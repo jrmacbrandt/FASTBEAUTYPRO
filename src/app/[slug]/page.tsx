@@ -184,11 +184,11 @@ export default function ShopLandingPage() {
                     metadata: { birth_month: selection.birthMonth }
                 }, { onConflict: 'tenant_id,phone' })
                 .select()
-                .single();
+                .maybeSingle();
 
             if (clientError) {
                 console.error('CRM Error:', clientError);
-                // Continue mesmo com erro no CRM
+                throw new Error('Falha ao registrar cliente no CRM. Por favor, contate o salão. (' + clientError.message + ')');
             }
 
             // 3. Create Appointment in DB (CRÍTICO para gestão, comissões, etc)
