@@ -416,6 +416,10 @@ export default function CashierCheckoutPage() {
 
         setSelected(null);
         if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
+
+        // 🔔 [REAL-TIME] Force Sidebar badge update immediately
+        window.dispatchEvent(new CustomEvent('checkout-completed'));
+
         setIsProcessingPayment(false);
     };
 

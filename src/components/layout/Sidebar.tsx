@@ -115,7 +115,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             if (!error) setOrdersCount(count || 0);
         };
 
-        fetchOrdersCount();
+        const handleLocalUpdate = () => {
+            console.log('🔄 [Sidebar] Local checkout/order event detected - Refreshing badge');
+            fetchOrdersCount();
+        };
+        window.addEventListener('checkout-completed', handleLocalUpdate);
+        window.addEventListener('order-created', handleLocalUpdate);
 
         // Unique channel per tenant to avoid clashes
         const channel = supabase
@@ -130,6 +135,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             .subscribe();
 
         return () => {
+            window.removeEventListener('checkout-completed', handleLocalUpdate);
+            window.removeEventListener('order-created', handleLocalUpdate);
             supabase.removeChannel(channel);
         };
     }, [user?.tenant_id]); // Persistent across all pages
