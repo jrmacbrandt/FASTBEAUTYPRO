@@ -37,7 +37,8 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
     const pathname = usePathname();
     const router = useRouter();
     const sidebarNavRef = useRef<HTMLElement>(null);
-    const [pendingCount, setPendingCount] = useState(0);
+    const [pendingCount, setPendingCount] = useState(0); // For Master Approvals
+    const [ordersCount, setOrdersCount] = useState(0);   // For Admin Checkout orders
 
     // 🛡️ [BLINDADO] Real-time Approvals Badge - Master Only
     useEffect(() => {
@@ -95,7 +96,44 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             window.removeEventListener('tenant-approved', handleLocalUpdate);
             supabase.removeChannel(channel);
         };
-    }, [user?.id, user?.role, user?.email]); // Comprehensive dependencies
+    }, [user?.id, user?.role, user?.email]);
+
+    // 🛡️ [BLINDADO] Real-time Checkout Orders Badge - Admin Only
+    useEffect(() => {
+        const isAdmin = pathname.startsWith('/admin') && user?.tenant_id;
+        if (!isAdmin) {
+            setOrdersCount(0);
+            return;
+        }
+
+        const fetchOrdersCount = async () => {
+            const { count, error } = await supabase
+                .from('orders')
+                .select('*', { count: 'exact', head: true })
+                .eq('tenant_id', user.tenant_id)
+                .eq('status', 'pending_payment');
+
+            if (!error) setOrdersCount(count || 0);
+        };
+
+        fetchOrdersCount();
+
+        const channel = supabase
+            .channel('admin_checkout_orders_sidebar')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${user.tenant_id}` },
+                () => {
+                    // Refresh count when any order changes
+                    fetchOrdersCount();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user?.tenant_id, pathname]);
 
     useLayoutEffect(() => {
         const savedScroll = sessionStorage.getItem('elite_sidebar_scroll');
@@ -132,7 +170,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             { label: 'Clube VIP', icon: 'diamond', path: '/admin/assinaturas' },
             { label: 'Scanner (Check-in)', icon: 'qr_code_scanner', path: '/admin/scanner' },
             { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
-            { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa' },
+            { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa', badge: ordersCount },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/admin/agenda' },
             { label: 'Comissões', icon: 'payments', path: '/admin/comissoes' },
             { label: 'Equipe', icon: 'group', path: '/admin/equipe' }, // Badge removed
