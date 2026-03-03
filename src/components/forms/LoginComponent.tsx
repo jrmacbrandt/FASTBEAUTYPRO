@@ -83,7 +83,10 @@ const LoginComponent: React.FC<LoginProps> = ({ type }) => {
 
         if (authError) {
             console.error('[Login] Auth Error:', authError.message);
-            setError('Credenciais inválidas. Verifique e tente novamente.');
+            // Mostrar a mensagem real do Supabase para diagnóstico preciso (ex: "Email not confirmed")
+            setError(authError.message === 'Invalid login credentials'
+                ? 'Credenciais inválidas. Verifique e tente novamente.'
+                : authError.message);
             setLoading(false);
             return;
         }
