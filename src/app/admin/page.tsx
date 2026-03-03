@@ -46,8 +46,14 @@ export default function AdminDashboardPage() {
         setLoading(true);
 
         const now = new Date();
-        const localDateStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD in local time (ISO format)
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const startOfDay = new Date(now);
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date(now);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        firstDayOfMonth.setHours(0, 0, 0, 0);
 
         try {
             const [
@@ -59,12 +65,12 @@ export default function AdminDashboardPage() {
                 { data: clientStats },
                 { data: loyaltyData }
             ] = await Promise.all([
-                // Today Revenue - Using simple string match for reliability
-                supabase.from('orders').select('total_value').eq('status', 'paid').like('finalized_at', `${localDateStr}%`).eq('tenant_id', profile.tenant_id),
+                // Today Revenue - Using precise date range for the current local day
+                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', startOfDay.toISOString()).lte('finalized_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Monthly Revenue
-                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth).eq('tenant_id', profile.tenant_id),
+                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Today Appointments - Including service duration for precise idle time calculation
-                supabase.from('appointments').select('status, scheduled_at, services(duration_minutes)').like('scheduled_at', `${localDateStr}%`).eq('tenant_id', profile.tenant_id),
+                supabase.from('appointments').select('status, scheduled_at, services(duration_minutes)').gte('scheduled_at', startOfDay.toISOString()).lte('scheduled_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Low Stock Sale Products
                 supabase.from('products').select('*').lte('current_stock', 'min_threshold').eq('active', true).eq('tenant_id', profile.tenant_id),
                 // Low Stock Supplies
@@ -78,11 +84,12 @@ export default function AdminDashboardPage() {
             const todayRev = todayOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             const monthRev = monthlyOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
 
-            // Filter appointments to only count ACTIVE ones (paid, scheduled or confirmed)
-            // Exclude 'absent' and 'cancelled' from the denominator
+            // Atendimentos Total: Agendados para hoje
             const validApps = todayApps?.filter(a => ['paid', 'scheduled', 'confirmed'].includes(a.status)) || [];
             const appsTotal = validApps.length;
-            const appsRealized = validApps.filter(a => a.status === 'paid').length;
+
+            // Atendimentos Concluídos: Total de comandas pagas HOJE (independente da data do agendamento)
+            const appsRealized = todayOrders?.length || 0;
 
             // Robust Idle Calculation: Uses establishment's actual business hours and service durations
             let idleHrs = 0;
