@@ -12,8 +12,7 @@ export default function ScannerPage() {
     const [loading, setLoading] = useState(false);
     const [clientData, setClientData] = useState<any>(null);
     const [error, setError] = useState('');
-    const [editedStamps, setEditedStamps] = useState<number | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
+
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -56,7 +55,7 @@ export default function ScannerPage() {
                 .single();
 
             setClientData({ ...client, client_loyalty: loyalty ? [loyalty] : [] });
-            setEditedStamps(loyalty ? loyalty.stamps_count : 0);
+
 
         } catch (err: any) {
             setError(err.message);
@@ -65,38 +64,7 @@ export default function ScannerPage() {
         }
     };
 
-    const handleSaveLoyalty = async () => {
-        if (!clientData || !profile?.tenant_id || editedStamps === null) return;
 
-        const actualStampsCount = clientData.client_loyalty?.[0]?.stamps_count || 0;
-        if (editedStamps === actualStampsCount) return;
-
-        setIsSaving(true);
-        try {
-            const normalizedPhone = clientData.phone.replace(/\D/g, '');
-
-            // 🛡️ [BLINDADO] Update apenas a contagem de selos
-            const { error: upsertError } = await supabase.from('client_loyalty').upsert({
-                tenant_id: profile.tenant_id,
-                client_phone: normalizedPhone,
-                stamps_count: editedStamps,
-                updated_at: new Date().toISOString()
-            }, { onConflict: 'tenant_id,client_phone' });
-
-            if (upsertError) throw upsertError;
-
-            alert('✅ Fidelidade atualizada com sucesso!');
-            setClientData({
-                ...clientData,
-                client_loyalty: [{ ...clientData.client_loyalty?.[0], stamps_count: editedStamps }]
-            });
-        } catch (err: any) {
-            console.error(err);
-            alert('Erro ao salvar fidelidade: ' + err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
 
     return (
         <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-8 animate-in fade-in duration-700 pb-20">
@@ -190,9 +158,7 @@ export default function ScannerPage() {
 
                             {/* Loyalty Card Grid (Scanner Version) */}
                             {(() => {
-                                const actualStampsCount = clientData.client_loyalty?.[0]?.stamps_count || 0;
-                                const stampsCount = editedStamps !== null ? editedStamps : actualStampsCount;
-                                const hasChanges = stampsCount !== actualStampsCount;
+                                const stampsCount = clientData.client_loyalty?.[0]?.stamps_count || 0;
                                 const loyaltyTarget = profile?.tenant?.loyalty_target || 10;
                                 const isRewardReady = stampsCount >= loyaltyTarget;
 
@@ -214,17 +180,9 @@ export default function ScannerPage() {
                                                 {[...Array(loyaltyTarget)].map((_, i) => (
                                                     <div
                                                         key={i}
-                                                        onClick={() => {
-                                                            // Permitir marcar e desmarcar preenchimentos clicando nas estrelas
-                                                            if (i === stampsCount - 1) {
-                                                                setEditedStamps(i); // desmarcar a última
-                                                            } else {
-                                                                setEditedStamps(i + 1); // preencher até a atual
-                                                            }
-                                                        }}
-                                                        className={`size-10 rounded-xl border-2 flex items-center justify-center transition-all duration-300 cursor-pointer hover:scale-105 active:scale-95 ${i < stampsCount
+                                                        className={`size-10 rounded-xl border-2 flex items-center justify-center transition-all duration-300 ${i < stampsCount
                                                             ? 'border-white/5'
-                                                            : 'border-white/5 bg-white/5 opacity-20 hover:opacity-100'
+                                                            : 'border-white/5 bg-white/5 opacity-20'
                                                             }`}
                                                         style={i < stampsCount ? {
                                                             backgroundColor: `${colors.primary}30`,
@@ -260,20 +218,6 @@ export default function ScannerPage() {
                                                     : `Faltam ${Math.max(0, loyaltyTarget - stampsCount)} selos para a próxima cortesia.`}
                                             </p>
                                         </div>
-
-                                        {hasChanges && (
-                                            <div className="mt-6">
-                                                <button
-                                                    onClick={handleSaveLoyalty}
-                                                    disabled={isSaving}
-                                                    className="w-full font-black py-4 rounded-xl uppercase text-xs tracking-widest transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"
-                                                    style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}
-                                                >
-                                                    {isSaving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
-                                                    {!isSaving && <span className="material-symbols-outlined text-lg">save</span>}
-                                                </button>
-                                            </div>
-                                        )}
                                     </div>
                                 );
                             })()}
