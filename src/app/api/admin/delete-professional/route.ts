@@ -54,7 +54,7 @@ export async function POST(req: Request) {
         }
 
         // 5. MASTER PROTECTION: Never delete the master
-        if (targetProfile.email === 'jrmacbrandt@gmail.com' || targetProfile.email === 'jrmacbrandt@yahoo.com') {
+        if (targetProfile.email === 'jrmacbrandt@gmail.com') {
             return NextResponse.json({ error: 'O Administrador Master é intocável e não pode ser removido' }, { status: 403 });
         }
 
