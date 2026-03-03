@@ -65,30 +65,32 @@ export default function AdminDashboardPage() {
                 { data: clientStats },
                 { data: loyaltyData }
             ] = await Promise.all([
-                // Today Revenue - Using precise date range for the current local day
-                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', startOfDay.toISOString()).lte('finalized_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
+                // Today Revenue & Realized Apps - Using precise date range for the current local day
+                supabase.from('orders').select('id, total_value, appointment_id, client_id').eq('status', 'paid').gte('finalized_at', startOfDay.toISOString()).lte('finalized_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Monthly Revenue
                 supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Today Appointments - Including service duration for precise idle time calculation
-                supabase.from('appointments').select('status, scheduled_at, services(duration_minutes)').gte('scheduled_at', startOfDay.toISOString()).lte('scheduled_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
+                supabase.from('appointments').select('id, status, scheduled_at, services(duration_minutes)').gte('scheduled_at', startOfDay.toISOString()).lte('scheduled_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Low Stock Sale Products
                 supabase.from('products').select('*').lte('current_stock', 'min_threshold').eq('active', true).eq('tenant_id', profile.tenant_id),
                 // Low Stock Supplies
                 supabase.from('supplies').select('*').lte('current_stock', 'min_threshold').eq('tenant_id', profile.tenant_id),
-                // Client Retention
-                supabase.from('clients').select('total_visits').eq('tenant_id', profile.tenant_id),
+                // Client Retention (fetching all to filter by todayClientIds)
+                supabase.from('clients').select('id, total_visits').eq('tenant_id', profile.tenant_id),
                 // Loyalty Points Balance
-                supabase.from('client_loyalty').select('stamps_count').eq('tenant_id', profile.tenant_id)
+                supabase.from('client_loyalty').select('id, client_id, stamps_count').eq('tenant_id', profile.tenant_id)
             ]);
 
             const todayRev = todayOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             const monthRev = monthlyOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
 
-            // Atendimentos Total: Agendados para hoje
+            // Atendimentos Total: Agendamentos Válidos HOJE + Comandas Avulsas Pagas HOJE (Sem Agendamento)
             const validApps = todayApps?.filter(a => ['paid', 'scheduled', 'confirmed'].includes(a.status)) || [];
-            const appsTotal = validApps.length;
+            const scheduledAppIds = new Set(validApps.map(a => a.id));
+            const avulsoOrders = todayOrders?.filter(o => !o.appointment_id) || [];
+            const appsTotal = validApps.length + avulsoOrders.length;
 
-            // Atendimentos Concluídos: Total de comandas pagas HOJE (independente da data do agendamento)
+            // Atendimentos Concluídos: Total de todas as comandas pagas HOJE (agendadas + avulsas)
             const appsRealized = todayOrders?.length || 0;
 
             // Robust Idle Calculation: Uses establishment's actual business hours and service durations
@@ -113,10 +115,17 @@ export default function AdminDashboardPage() {
                 }
             }
 
-            const newClients = clientStats?.filter(c => (c.total_visits || 0) <= 1).length || 0;
-            const recurringClients = clientStats?.filter(c => (c.total_visits || 0) > 1).length || 0;
+            // Clientes Atendidos Hoje (Baseado nas comandas pagas)
+            const todayClientIds = Array.from(new Set(todayOrders?.map(o => o.client_id).filter(id => id != null) || []));
 
-            const totalStamps = loyaltyData?.reduce((acc, curr) => acc + (curr.stamps_count || 0), 0) || 0;
+            // Filtrar apenas os clientes de HOJE para a contagem de Novos vs Recorrentes (Visão Diária)
+            const clientsToday = clientStats?.filter(c => todayClientIds.includes(c.id)) || [];
+            const newClients = clientsToday.filter(c => (c.total_visits || 0) <= 1).length;
+            const recurringClients = clientsToday.filter(c => (c.total_visits || 0) > 1).length;
+
+            // Fidelização gerada HOJE (Selos gerados nas transações de hoje)
+            // Lógica ajustada: Baseado nas comandas de fidelidade de clientes atendidos hoje
+            const totalStamps = loyaltyData?.filter(l => todayClientIds.includes(l.client_id)).reduce((acc, curr) => acc + (curr.stamps_count || 0), 0) || 0;
 
             setStats({
                 todayRevenue: todayRev,
