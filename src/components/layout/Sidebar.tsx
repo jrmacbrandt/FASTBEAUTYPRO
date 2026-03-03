@@ -98,10 +98,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
         };
     }, [user?.id, user?.role, user?.email]);
 
-    // 🛡️ [BLINDADO] Real-time Checkout Orders Badge - Admin Only
+    // 🛡️ [BLINDADO] Real-time Checkout Orders Badge - Admin Only (Persistent)
     useEffect(() => {
-        const isAdmin = pathname.startsWith('/admin') && user?.tenant_id;
-        if (!isAdmin) {
+        if (!user?.tenant_id) {
             setOrdersCount(0);
             return;
         }
@@ -118,13 +117,13 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         fetchOrdersCount();
 
+        // Unique channel per tenant to avoid clashes
         const channel = supabase
-            .channel('admin_checkout_orders_sidebar')
+            .channel(`sidebar_checkout_orders_${user.tenant_id}`)
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'orders', filter: `tenant_id=eq.${user.tenant_id}` },
                 () => {
-                    // Refresh count when any order changes
                     fetchOrdersCount();
                 }
             )
@@ -133,7 +132,7 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user?.tenant_id, pathname]);
+    }, [user?.tenant_id]); // Persistent across all pages
 
     useLayoutEffect(() => {
         const savedScroll = sessionStorage.getItem('elite_sidebar_scroll');
