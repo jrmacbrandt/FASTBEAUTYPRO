@@ -66,7 +66,7 @@ export default function AdminDashboardPage() {
                 { data: loyaltyData }
             ] = await Promise.all([
                 // Today Revenue & Realized Apps - Using precise date range for the current local day
-                supabase.from('orders').select('id, total_value, appointment_id, client_id').eq('status', 'paid').gte('finalized_at', startOfDay.toISOString()).lte('finalized_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
+                supabase.from('orders').select('*').eq('status', 'paid').gte('finalized_at', startOfDay.toISOString()).lte('finalized_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Monthly Revenue
                 supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Today Appointments - Including service duration for precise idle time calculation
