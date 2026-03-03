@@ -1,5 +1,5 @@
 "use client";
-
+// 🛡️ [BLINDADO] - Professional Schedule Settings (Perfect State March 2026)
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';

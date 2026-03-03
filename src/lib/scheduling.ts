@@ -1,4 +1,4 @@
-
+// 🛡️ [BLINDADO] - Core Scheduling Logic (Perfect State March 2026)
 type Schedule = {
     open: string;
     close: string;

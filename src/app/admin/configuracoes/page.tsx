@@ -1,5 +1,5 @@
 "use client";
-
+// 🛡️ [BLINDADO] - Admin Settings (Perfect State March 2026)
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';

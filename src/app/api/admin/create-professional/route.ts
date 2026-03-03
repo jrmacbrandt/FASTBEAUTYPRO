@@ -1,3 +1,4 @@
+// 🛡️ [BLINDADO] - Professional Creation API (Perfect State March 2026)
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
