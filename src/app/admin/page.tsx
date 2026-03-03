@@ -55,26 +55,32 @@ export default function AdminDashboardPage() {
         const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         firstDayOfMonth.setHours(0, 0, 0, 0);
 
+        // ── TIMEZONE BLINDAGE: Adjust for local timezone offset before turning to ISO ──
+        const tzOffsetMs = now.getTimezoneOffset() * 60000;
+
+        const localStart = new Date(startOfDay.getTime() - tzOffsetMs);
+        const localEnd = new Date(endOfDay.getTime() - tzOffsetMs);
+        const localMonthStart = new Date(firstDayOfMonth.getTime() - tzOffsetMs);
+
         try {
             const [
                 { data: todayOrders },
                 { data: monthlyOrders },
                 { data: todayApps },
-                { data: lowStockProducts },
-                { data: lowStockSupplies },
+                { data: allActiveProducts },
+                { data: allSupplies },
                 { data: clientStats },
                 { data: loyaltyData }
             ] = await Promise.all([
-                // Today Revenue & Realized Apps - Using precise date range for the current local day
-                supabase.from('orders').select('*').eq('status', 'paid').gte('finalized_at', startOfDay.toISOString()).lte('finalized_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
+                // Today Revenue & Realized Apps - Using precisely compensated local timezone bounds
+                supabase.from('orders').select('*').eq('status', 'paid').gte('finalized_at', localStart.toISOString()).lte('finalized_at', localEnd.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Monthly Revenue
-                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', firstDayOfMonth.toISOString()).eq('tenant_id', profile.tenant_id),
+                supabase.from('orders').select('total_value').eq('status', 'paid').gte('finalized_at', localMonthStart.toISOString()).eq('tenant_id', profile.tenant_id),
                 // Today Appointments - Including service duration for precise idle time calculation
-                supabase.from('appointments').select('id, status, scheduled_at, services(duration_minutes)').gte('scheduled_at', startOfDay.toISOString()).lte('scheduled_at', endOfDay.toISOString()).eq('tenant_id', profile.tenant_id),
-                // Low Stock Sale Products
-                supabase.from('products').select('*').lte('current_stock', 'min_threshold').eq('active', true).eq('tenant_id', profile.tenant_id),
-                // Low Stock Supplies
-                supabase.from('supplies').select('*').lte('current_stock', 'min_threshold').eq('tenant_id', profile.tenant_id),
+                supabase.from('appointments').select('id, status, scheduled_at, services(duration_minutes)').gte('scheduled_at', localStart.toISOString()).lte('scheduled_at', localEnd.toISOString()).eq('tenant_id', profile.tenant_id),
+                // Fetch all products/supplies to filter critical stock locally (PostgREST doesn't support column vs column in JS client directly)
+                supabase.from('products').select('*').eq('active', true).eq('tenant_id', profile.tenant_id),
+                supabase.from('supplies').select('*').eq('tenant_id', profile.tenant_id),
                 // Client Retention (fetching all to filter by todayClientIds)
                 supabase.from('clients').select('id, total_visits').eq('tenant_id', profile.tenant_id),
                 // Loyalty Points Balance
@@ -125,13 +131,17 @@ export default function AdminDashboardPage() {
             // Lógica ajustada: Baseado nas comandas de fidelidade de clientes atendidos hoje
             const totalStamps = loyaltyData?.filter(l => todayClientIds.includes(l.client_id)).reduce((acc, curr) => acc + (curr.stamps_count || 0), 0) || 0;
 
+            // Calculate low stock items locally to bypass PostgREST column vs column limitation
+            const lowStockProducts = allActiveProducts?.filter(p => (Number(p.current_stock) || 0) <= (Number(p.min_threshold) || 0)) || [];
+            const lowStockSupplies = allSupplies?.filter(s => (Number(s.current_stock) || 0) <= (Number(s.min_threshold) || 0)) || [];
+
             setStats({
                 todayRevenue: todayRev,
                 monthlyRevenue: monthRev,
                 monthlyGoal: profile?.tenant?.monthly_goal || 10000,
                 todayAppointments: { realized: appsRealized, total: appsTotal },
                 idleHours: idleHrs,
-                lowStockItems: [...(lowStockProducts || []), ...(lowStockSupplies || [])],
+                lowStockItems: [...lowStockProducts, ...lowStockSupplies],
                 retention: { new: newClients, recurring: recurringClients },
                 loyaltyPoints: totalStamps
             });
