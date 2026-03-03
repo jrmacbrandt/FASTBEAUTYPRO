@@ -84,13 +84,11 @@ export default function AdminDashboardPage() {
             const todayRev = todayOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             const monthRev = monthlyOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
 
-            // Atendimentos Total: Agendamentos Válidos HOJE + Comandas Avulsas Pagas HOJE (Sem Agendamento)
+            // Atendimentos Total: Todos os agendamentos do dia (concluídos ou ainda na fila)
             const validApps = todayApps?.filter(a => ['paid', 'scheduled', 'confirmed'].includes(a.status)) || [];
-            const scheduledAppIds = new Set(validApps.map(a => a.id));
-            const avulsoOrders = todayOrders?.filter(o => !o.appointment_id) || [];
-            const appsTotal = validApps.length + avulsoOrders.length;
+            const appsTotal = validApps.length;
 
-            // Atendimentos Concluídos: Total de todas as comandas pagas HOJE (agendadas + avulsas)
+            // Atendimentos Concluídos: Total de comandas pagas vinculadas a agendamentos de hoje
             const appsRealized = todayOrders?.length || 0;
 
             // Robust Idle Calculation: Uses establishment's actual business hours and service durations
