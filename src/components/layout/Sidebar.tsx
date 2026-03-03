@@ -173,13 +173,12 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
 
         if (isAdminArea) return [
             { label: 'Dashboard', icon: 'dashboard', path: '/admin' },
-            { label: 'Clube VIP', icon: 'diamond', path: '/admin/assinaturas' },
-            { label: 'Scanner (Check-in)', icon: 'qr_code_scanner', path: '/admin/scanner' },
-            { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
             { label: 'Caixa / Checkout', icon: 'point_of_sale', path: '/admin/caixa', badge: ordersCount },
+            { label: 'Scanner (Check-in)', icon: 'qr_code_scanner', path: '/admin/scanner' },
             { label: 'Agenda Geral', icon: 'calendar_month', path: '/admin/agenda' },
+            { label: 'CRM & Fidelidade', icon: 'campaign', path: '/admin/crm' },
+            { label: 'Equipe', icon: 'group', path: '/admin/equipe' },
             { label: 'Comissões', icon: 'payments', path: '/admin/comissoes' },
-            { label: 'Equipe', icon: 'group', path: '/admin/equipe' }, // Badge removed
 
             { label: 'Mensagem', icon: 'chat_bubble', path: '/admin/mensagens' },
             { label: 'Serviços', icon: 'content_cut', path: '/admin/servicos' },
