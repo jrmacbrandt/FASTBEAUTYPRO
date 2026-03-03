@@ -834,11 +834,11 @@ function CRMContent() {
                 <div className="relative">
                     <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-1 h-12 rounded-full blur-sm opacity-50" style={{ backgroundColor: colors?.primary || '#f2b90d' }}></div>
                     <h1 className="text-4xl font-black italic tracking-tighter uppercase leading-none" style={{ color: colors?.text }}>
-                        CRM <span style={{ color: colors?.primary || '#f2b90d' }}>Intelligence</span>
+                        Prêmio de <span style={{ color: colors?.primary || '#f2b90d' }}>Fidelidade</span>
                     </h1>
                     <p className="text-[10px] font-black uppercase tracking-[0.3em] mt-2 flex items-center gap-2" style={{ color: colors?.textMuted }}>
                         <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                        Gestão de Relacionamento & Fidelidade v4.0
+                        Gestão de Relacionamento & Fidelidade v5.0
                     </p>
                 </div>
                 <button
@@ -852,7 +852,7 @@ function CRMContent() {
             </header>
 
             {/* KPI CARDS - Premium Refined with Real Data */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 gap-6">
                 <MetricCard
                     title="Base Ativa"
                     value={stats.totalClients}
@@ -864,49 +864,7 @@ function CRMContent() {
                     isActive={activeFilter === 'all'}
                     onClick={() => setActiveFilter('all')}
                     colors={colors}
-                />
-                <MetricCard
-                    title="Risco de Evasão"
-                    value={stats.churnRisk}
-                    icon="person_cancel"
-                    color="text-rose-500"
-                    desc="+45 dias sem visita"
-                    alert={stats.churnRisk > 0}
-                    isActive={activeFilter === 'churn'}
-                    onClick={() => setActiveFilter('churn')}
-                    colors={colors}
-                />
-                <MetricCard
-                    title="Aniversariantes"
-                    value={stats.birthdays}
-                    icon="cake"
-                    color="text-pink-500"
-                    desc="No mês atual"
-                    alert={stats.birthdays > 0}
-                    isActive={activeFilter === 'birthdays'}
-                    onClick={() => setActiveFilter('birthdays')}
-                    colors={colors}
-                />
-                <MetricCard
-                    title="Clientes VIP"
-                    value={stats.vipClients}
-                    icon="auto_awesome"
-                    color="text-emerald-400"
-                    desc="LTV > R$ 500"
-                    isActive={activeFilter === 'vip'}
-                    onClick={() => setActiveFilter('vip')}
-                    colors={colors}
-                />
-                <MetricCard
-                    title="Próximos Prêmios"
-                    value={stats.loyaltyPending}
-                    icon="rewarded_ads"
-                    color="text-cyan-400"
-                    desc="> 70% da meta"
-                    alert={stats.loyaltyPending > 0}
-                    isActive={activeFilter === 'loyalty'}
-                    onClick={() => setActiveFilter('loyalty')}
-                    colors={colors}
+                    layout="horizontal"
                 />
             </div>
 
@@ -1021,7 +979,7 @@ function CRMContent() {
                         <div className="relative z-10">
                             <div className="flex items-center justify-between mb-8">
                                 <div>
-                                    <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Prêmios de Fidelidade</h3>
+                                    <h3 className="text-xl font-black italic uppercase mb-1" style={{ color: colors?.text }}>Prêmio de Fidelidade</h3>
                                     <p className="text-[9px] font-bold uppercase tracking-widest" style={{ color: colors?.textMuted }}>Catálogo de Recompensas</p>
                                 </div>
                                 <div className="size-12 rounded-2xl flex items-center justify-center group-hover:rotate-12 transition-transform"
@@ -1109,87 +1067,7 @@ function CRMContent() {
                                     </div>
                                 </div>
 
-                                {/* Produto de Recompensa */}
-                                <div className="space-y-4">
-                                    <div className="flex flex-col gap-4">
-                                        <label className="text-sm font-black uppercase tracking-widest ml-1" style={{ color: colors?.primary }}>Produto de Recompensa</label>
 
-                                        {rewardProduct && (() => {
-                                            const current = products.find(p => p.id === rewardProduct);
-                                            return current ? (
-                                                <div className="bg-[#1a1a1b] border border-white/5 rounded-3xl p-4 flex items-center justify-between animate-in fade-in slide-in-from-left-4 duration-500 shadow-xl group/card">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="size-14 rounded-2xl overflow-hidden bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
-                                                            {current.image_url ? (
-                                                                <img src={current.image_url} alt={current.name} className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-500" />
-                                                            ) : (
-                                                                <span className="material-symbols-outlined text-zinc-700 text-2xl">shopping_bag</span>
-                                                            )}
-                                                        </div>
-                                                        <div>
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                                                <p className="text-[11px] font-black uppercase text-white tracking-tight leading-none">
-                                                                    {current.name}
-                                                                </p>
-                                                            </div>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                                                                    <p className="text-[8px] font-black uppercase text-emerald-400 leading-none">Cortesia</p>
-                                                                </div>
-                                                                <div className="px-2 py-0.5 rounded-full bg-white/5 border border-white/5">
-                                                                    <p className="text-[8px] font-bold uppercase tracking-widest text-zinc-500 leading-none">Estoque: {current.current_stock}</p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <button
-                                                            onClick={() => {
-                                                                setEditingRewardProduct(current);
-                                                                setNewProduct({
-                                                                    name: current.name,
-                                                                    description: current.description || '',
-                                                                    barcode: current.barcode || '',
-                                                                    cost_price: '0,00',
-                                                                    sale_price: '0,00',
-                                                                    current_stock: current.current_stock?.toString() || '',
-                                                                    min_threshold: current.min_threshold?.toString() || '',
-                                                                    unit_type: current.unit_type || 'un',
-                                                                    image_url: current.image_url || ''
-                                                                });
-                                                                setIsProductModalOpen(true);
-                                                            }}
-                                                            className="size-8 rounded-lg flex items-center justify-center bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">edit</span>
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteRewardProduct(current.id, current.image_url)}
-                                                            className="size-8 rounded-lg flex items-center justify-center bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white transition-all"
-                                                        >
-                                                            <span className="material-symbols-outlined text-sm">delete</span>
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            ) : null;
-                                        })()}
-
-                                        {!rewardProduct && (
-                                            <button
-                                                onClick={() => {
-                                                    setEditingRewardProduct(null);
-                                                    setNewProduct({ name: '', description: '', barcode: '', cost_price: '', sale_price: '', current_stock: '', min_threshold: '', unit_type: 'un', image_url: '' });
-                                                    setIsProductModalOpen(true);
-                                                }}
-                                                className="w-1/2 bg-emerald-500 hover:bg-emerald-600 text-black font-black uppercase text-[10px] tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl shadow-emerald-500/10 active:scale-95 flex items-center justify-center gap-2"
-                                            >
-                                                <span className="material-symbols-outlined text-sm">add_circle</span>
-                                                CRIAR
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -1943,7 +1821,9 @@ export default function CRMDashboard() {
 }
 
 
-function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel, isActive, onClick, colors }: any) {
+function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLabel, isActive, onClick, colors, layout = 'vertical' }: any) {
+    const isHorizontal = layout === 'horizontal';
+
     return (
         <div
             onClick={onClick}
@@ -1956,37 +1836,74 @@ function MetricCard({ title, value, icon, color, desc, alert, onAction, actionLa
             }}
         >
             {/* Action Icon (Quick Action Indicator) */}
-            <div className={`absolute top-4 right-4 text-[18px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 ${color}`}>
-                <span className="material-symbols-outlined">north_east</span>
-            </div>
+            {!isHorizontal && (
+                <div className={`absolute top-4 right-4 text-[18px] opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0 ${color}`}>
+                    <span className="material-symbols-outlined">north_east</span>
+                </div>
+            )}
 
             {/* Decoration */}
             <div className={`absolute -bottom-4 -right-4 size-20 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity ${color.replace('text-', 'bg-')}`}>
                 <span className="material-symbols-outlined text-8xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">{icon}</span>
             </div>
 
-            <div className="relative z-10 flex flex-col h-full justify-between">
-                <div className="flex items-center justify-between mb-4">
-                    <span className={`material-symbols-outlined ${color} text-2xl group-hover:scale-110 transition-transform duration-500`}>{icon}</span>
-                    {onAction && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onAction(); }}
-                            className="bg-black/5 hover:text-black hover:bg-opacity-100 border text-[8px] font-black uppercase px-3 py-1.5 rounded-full transition-all"
-                            style={{ borderColor: `${colors?.border || '#27272a'}60`, color: colors?.textMuted || '#64748b' }}
-                        >
-                            {actionLabel}
-                        </button>
-                    )}
-                </div>
-                <div>
-                    <h2 className="text-4xl font-black italic tracking-tighter mb-1 transition-all group-hover:opacity-90" style={{ color: colors?.text || '#fff' }}>
-                        {value}
-                    </h2>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] opacity-40 mb-1 group-hover:opacity-60 transition-opacity" style={{ color: colors?.text || '#fff' }}>{title}</p>
-                    <p className={`text-[7px] font-black uppercase tracking-widest ${alert ? 'text-rose-500' : ''}`} style={{ color: alert ? undefined : (colors?.textMuted || '#64748b') }}>
-                        {desc}
-                    </p>
-                </div>
+            <div className={`relative z-10 flex ${isHorizontal ? 'flex-row items-center gap-6' : 'flex-col h-full justify-between'}`}>
+                {isHorizontal ? (
+                    <>
+                        {/* ICON LEFT */}
+                        <div className={`size-16 rounded-2xl flex items-center justify-center bg-black/20 border border-white/5 transition-transform duration-500 group-hover:scale-110 shadow-inner shrink-0`}>
+                            <span className={`material-symbols-outlined ${color} text-4xl`}>{icon}</span>
+                        </div>
+
+                        {/* CONTENT CENTER */}
+                        <div className="flex-1">
+                            <div className="flex items-baseline gap-3">
+                                <h2 className="text-5xl font-black italic tracking-tighter transition-all group-hover:opacity-90" style={{ color: colors?.text || '#fff' }}>
+                                    {value}
+                                </h2>
+                                <p className="text-[12px] font-extrabold uppercase tracking-[0.2em] opacity-40 group-hover:opacity-60 transition-opacity" style={{ color: colors?.text || '#fff' }}>{title}</p>
+                            </div>
+                            <p className={`text-[9px] font-black uppercase tracking-widest mt-1 ${alert ? 'text-rose-500' : ''}`} style={{ color: alert ? undefined : (colors?.textMuted || '#64748b') }}>
+                                {desc}
+                            </p>
+                        </div>
+
+                        {/* ACTION RIGHT */}
+                        {onAction && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onAction(); }}
+                                className="bg-white/5 hover:text-black hover:bg-white border text-[10px] font-black uppercase px-6 py-3 rounded-xl transition-all shadow-lg active:scale-95 whitespace-nowrap"
+                                style={{ borderColor: `${colors?.border || '#27272a'}60`, color: colors?.text || '#fff' }}
+                            >
+                                {actionLabel}
+                            </button>
+                        )}
+                    </>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between mb-4">
+                            <span className={`material-symbols-outlined ${color} text-2xl group-hover:scale-110 transition-transform duration-500`}>{icon}</span>
+                            {onAction && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); onAction(); }}
+                                    className="bg-black/5 hover:text-black hover:bg-opacity-100 border text-[8px] font-black uppercase px-3 py-1.5 rounded-full transition-all"
+                                    style={{ borderColor: `${colors?.border || '#27272a'}60`, color: colors?.textMuted || '#64748b' }}
+                                >
+                                    {actionLabel}
+                                </button>
+                            )}
+                        </div>
+                        <div>
+                            <h2 className="text-4xl font-black italic tracking-tighter mb-1 transition-all group-hover:opacity-90" style={{ color: colors?.text || '#fff' }}>
+                                {value}
+                            </h2>
+                            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] opacity-40 mb-1 group-hover:opacity-60 transition-opacity" style={{ color: colors?.text || '#fff' }}>{title}</p>
+                            <p className={`text-[7px] font-black uppercase tracking-widest ${alert ? 'text-rose-500' : ''}`} style={{ color: alert ? undefined : (colors?.textMuted || '#64748b') }}>
+                                {desc}
+                            </p>
+                        </div>
+                    </>
+                )}
             </div>
         </div>
     );
