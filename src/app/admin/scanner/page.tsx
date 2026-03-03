@@ -171,7 +171,7 @@ export default function ScannerPage() {
                                         <div className="relative z-10 space-y-4">
                                             <div className="flex justify-between items-center mb-2">
                                                 <h4 className="text-[10px] font-black uppercase tracking-[0.2em]" style={{ color: colors.textMuted }}>Cartão Fidelidade</h4>
-                                                <div className="bg-black/40 px-3 py-1 rounded-full border border-white/5 text-[10px] font-bold">
+                                                <div className="px-3 py-1 rounded-full text-[10px] font-black" style={{ backgroundColor: colors.primary, color: businessType === 'salon' ? 'white' : 'black' }}>
                                                     {stampsCount} / {loyaltyTarget}
                                                 </div>
                                             </div>
