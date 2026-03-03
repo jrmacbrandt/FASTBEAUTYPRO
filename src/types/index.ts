@@ -46,6 +46,7 @@ export interface Profile {
   avatar_url: string;
   service_commission: number;
   product_commission: number;
+  require_password_change?: boolean;
   phone?: string;
   tenant?: any;
 }

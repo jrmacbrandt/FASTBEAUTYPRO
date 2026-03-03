@@ -66,7 +66,8 @@ export async function POST(req: NextRequest) {
             service_commission: Number(service_commission || 0),
             product_commission: Number(product_commission || 0),
             avatar_url: avatar_url || null,
-            status: 'active'
+            status: 'active',
+            require_password_change: true // 🛡️ [BLINDADO] Fix: Forçar troca de senha no primeiro acesso
         };
 
         const { error: profileError } = await supabaseAdmin

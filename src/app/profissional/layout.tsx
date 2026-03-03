@@ -1,4 +1,5 @@
 import Layout from '@/components/layout/Layout';
+import PasswordResetGuard from '@/components/auth/PasswordResetGuard';
 
 export default function ProfessionalLayout({
     children,
@@ -7,7 +8,9 @@ export default function ProfessionalLayout({
 }) {
     return (
         <Layout title="Área do Profissional">
-            {children}
+            <PasswordResetGuard>
+                {children}
+            </PasswordResetGuard>
         </Layout>
     );
 }
