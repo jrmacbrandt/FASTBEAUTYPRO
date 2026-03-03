@@ -254,7 +254,6 @@ export default function EstablishmentSettingsPage() {
                     { id: 'finance', label: 'Pagamentos', icon: 'payments' },
                     { id: 'hours', label: 'Horários', icon: 'schedule' },
                     { id: 'branding', label: 'Página de Agendamento', icon: 'palette' },
-                    { id: 'automation', label: 'Agendamento Direto', icon: 'bolt' },
                     { id: 'security', label: 'Segurança & Acesso', icon: 'lock' }
                 ].map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id as any)} className={`flex items-center gap-2 px-4 md:px-6 py-3 md:py-4 rounded-xl md:rounded-2xl text-[9px] md:text-[11px] font-black uppercase tracking-widest transition-all italic flex-1 sm:flex-none justify-center ${activeTab === tab.id ? 'bg-[#f2b90d] text-black shadow-lg shadow-[#f2b90d]/20 scale-[1.02]' : 'text-slate-400 hover:bg-white/5 hover:text-white'}`}>
@@ -735,56 +734,7 @@ export default function EstablishmentSettingsPage() {
                 </div>
             )}
 
-            {activeTab === 'automation' && (
-                <div className="bg-[#121214] p-6 md:p-10 rounded-[2rem] md:rounded-[3rem] border border-white/5 space-y-6 md:space-y-8 animate-in fade-in text-center">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Agendamento Automático (Existente) */}
-                        <div className="bg-black/20 p-8 rounded-[2rem] border border-white/5 space-y-4">
-                            <div className="size-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500 mx-auto">
-                                <span className="material-symbols-outlined">bolt</span>
-                            </div>
-                            <h4 className="text-sm font-black italic uppercase text-white">Agendamento Automático</h4>
-                            <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest leading-relaxed">Aprovação imediata para novos agendamentos via link público.</p>
-                            <button className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-6 py-2 rounded-xl font-black text-[9px] uppercase tracking-widest">Ativado</button>
-                        </div>
 
-                        {/* Sistema de Fidelidade (Novo) */}
-                        <div className="bg-black/20 p-8 rounded-[2rem] border border-white/5 space-y-6">
-                            <div className="size-12 bg-[#f2b90d]/10 rounded-2xl flex items-center justify-center text-[#f2b90d] mx-auto">
-                                <span className="material-symbols-outlined">loyalty</span>
-                            </div>
-                            <div>
-                                <h4 className="text-sm font-black italic uppercase text-white">Sistema de Fidelidade</h4>
-                                <p className="text-slate-500 text-[9px] font-bold uppercase tracking-widest leading-relaxed">Fidelize clientes com cartões de selos automáticos.</p>
-                            </div>
-
-                            <div className="flex flex-col gap-4">
-                                <div className="flex items-center justify-between bg-black/40 p-4 rounded-2xl border border-white/5">
-                                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Status do Sistema</span>
-                                    <div
-                                        onClick={() => setTenant({ ...tenant, loyalty_enabled: !tenant.loyalty_enabled })}
-                                        className={`w-12 h-6 rounded-full relative cursor-pointer transition-all duration-300 ${tenant.loyalty_enabled ? 'bg-[#f2b90d]' : 'bg-slate-700'}`}
-                                    >
-                                        <div className={`absolute top-1 size-4 bg-white rounded-full transition-all duration-300 ${tenant.loyalty_enabled ? 'right-1' : 'left-1'}`}></div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2 text-left">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-[#f2b90d] ml-1 opacity-70">Meta de Selos (ex: 5 + 1)</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        max="20"
-                                        className="w-full bg-black/40 border border-white/5 rounded-xl p-3 font-bold text-white text-xs outline-none focus:border-[#f2b90d]/50"
-                                        value={tenant.loyalty_target || 5}
-                                        onChange={e => setTenant({ ...tenant, loyalty_target: parseInt(e.target.value) || 5 })}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {activeTab === 'security' && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
