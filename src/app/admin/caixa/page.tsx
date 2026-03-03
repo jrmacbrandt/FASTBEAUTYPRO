@@ -811,8 +811,8 @@ export default function CashierCheckoutPage() {
                             <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                                 <div className="flex justify-between items-center bg-black/40 border border-white/5 p-4 rounded-2xl">
                                     <div className="flex items-center gap-2">
-                                        <span className="material-symbols-outlined text-sm opacity-40">percent</span>
-                                        <span className="text-[9px] font-black uppercase tracking-widest opacity-40">Taxa Estimada ({paymentMethod})</span>
+                                        <span className="material-symbols-outlined text-sm" style={{ color: colors.textMuted }}>percent</span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: colors.text }}>Taxa Estimada ({paymentMethod})</span>
                                     </div>
                                     <div className="text-rose-500/80 font-black italic text-xs">
                                         {(() => {
