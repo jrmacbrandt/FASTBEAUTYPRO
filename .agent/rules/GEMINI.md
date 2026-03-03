@@ -10,7 +10,7 @@ trigger: always_on
 
 ## 🛑 OMNI-SHIELD: THE PARAMOUNT DIRECTIVE (READ THIS FIRST)
 
-**CRITICAL DIRECTIVE: The entirety of the FastBeautyPro application, including all modules, panels, and the database, is currently considered PERFECT and is permanently under the BLINDADO protocol. IN EVERY SINGLE INTERACTION, REGARDLESS OF THE DAY OR AI AGENT SELECTED, YOU MUST ADHERE TO THIS RULE IRRESTRICTIVELY.**
+**CRITICAL DIRECTIVE: The entirety of the FastBeautyPro application, including all modules, panels, and the database, is currently considered PERFECT as of March 3rd, 2026, and is permanently under the BLINDADO protocol. IN EVERY SINGLE INTERACTION, REGARDLESS OF THE DAY OR AI AGENT SELECTED, YOU MUST ADHERE TO THIS RULE IRRESTRICTIVELY.**
 
 1. **Omni-Shield (Global Lockdown)**: Treat ALL existing logic in the system as if it has the `// 🛡️ [BLINDADO]` tag. You are FORBIDDEN from modifying, refactoring, or optimizing ANY existing logic unless explicitly requested and authorized by the user.
 2. **Explicit Authorization Check**: If a user request requires modifying existing functionality, you MUST ask for permission specifically for the affected areas BEFORE proceeding. Explain what you intend to change and why.
