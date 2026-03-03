@@ -39,7 +39,7 @@ export default function CashierCheckoutPage() {
                 status, 
                 finalized_at,
                 items,
-                appointments!appointment_id (
+                appointments:appointment_id (
                     id, 
                     customer_name,
                     customer_whatsapp,
@@ -92,7 +92,9 @@ export default function CashierCheckoutPage() {
     // 🛡️ [BLINDADO] - Histórico de Comandas (90 Dias Max LGPD)
     const fetchHistoryOrders = async (tid: string) => {
         setLoading(true);
-        const ninetyDaysAgo = new Date();
+        const now = new Date();
+        const tzOffsetMs = now.getTimezoneOffset() * 60000;
+        const ninetyDaysAgo = new Date(now.getTime() - tzOffsetMs);
         ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
         const { data, error } = await supabase
@@ -103,7 +105,7 @@ export default function CashierCheckoutPage() {
                 status, 
                 finalized_at,
                 payment_method,
-                appointments!appointment_id (
+                appointments:appointment_id (
                     customer_name,
                     profiles(full_name),
                     services(name)

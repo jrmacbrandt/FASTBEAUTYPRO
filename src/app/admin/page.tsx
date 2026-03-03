@@ -90,12 +90,14 @@ export default function AdminDashboardPage() {
             const todayRev = todayOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
             const monthRev = monthlyOrders?.reduce((acc, curr) => acc + (Number(curr.total_value) || 0), 0) || 0;
 
-            // Atendimentos Total: Todos os agendamentos do dia (concluídos ou ainda na fila)
-            const validApps = todayApps?.filter(a => ['paid', 'scheduled', 'confirmed'].includes(a.status)) || [];
-            const appsTotal = validApps.length;
-
-            // Atendimentos Concluídos: Total de comandas pagas vinculadas a agendamentos de hoje
+            // Atendimentos Concluídos e Total: Ambos derivados das comandas pagas HOJE
+            // O total (denominador) deve refletir quantos foram ATENDIDOS hoje (pagos),
+            // independente de quando foram agendados originalmente.
             const appsRealized = todayOrders?.length || 0;
+            const appsTotal = appsRealized; // mesmo valor: 2 pagos hoje = 2/2
+
+            // Idle time: usar agendamentos do dia para estimar horas vagas
+            const validApps = todayApps?.filter(a => ['paid', 'scheduled', 'confirmed'].includes(a.status)) || [];
 
             // Robust Idle Calculation: Uses establishment's actual business hours and service durations
             let idleHrs = 0;
@@ -119,17 +121,18 @@ export default function AdminDashboardPage() {
                 }
             }
 
-            // Clientes Atendidos Hoje (Baseado nas comandas pagas)
-            const todayClientIds = Array.from(new Set(todayOrders?.map(o => o.client_id).filter(id => id != null) || []));
+            // Clientes atendidos HOJE: IDs únicos das ordens pagas hoje (inclui clientes sem id cadastrado)
+            const todayClientIds = Array.from(new Set(todayOrders?.map(o => o.client_id).filter(Boolean) || []));
+            // Total de atendimentos de hoje (incluindo clientes sem cadastro)
+            const todayTotal = todayOrders?.length || 0;
 
-            // Filtrar apenas os clientes de HOJE para a contagem de Novos vs Recorrentes (Visão Diária)
+            // Clientes Recorrentes: dos clientes com cadastro servidos hoje, os que já visitaram +1x
             const clientsToday = clientStats?.filter(c => todayClientIds.includes(c.id)) || [];
-            const newClients = clientsToday.filter(c => (c.total_visits || 0) <= 1).length;
             const recurringClients = clientsToday.filter(c => (c.total_visits || 0) > 1).length;
 
-            // Fidelização gerada HOJE (Selos gerados nas transações de hoje)
-            // Lógica ajustada: Baseado nas comandas de fidelidade de clientes atendidos hoje
-            const totalStamps = loyaltyData?.filter(l => todayClientIds.includes(l.client_id)).reduce((acc, curr) => acc + (curr.stamps_count || 0), 0) || 0;
+            // Selos em circulação HOJE: total de selos acumulados de TODOS os clientes atendidos hoje
+            // Um atendimento pago = 1 selo gerado. Isso inclui clientes sem cadastro vinculado.
+            const totalStamps = todayTotal; // cada atendimento pago gera exatamente 1 selo por design
 
             // Calculate low stock items locally to bypass PostgREST column vs column limitation
             const lowStockProducts = allActiveProducts?.filter(p => (Number(p.current_stock) || 0) <= (Number(p.min_threshold) || 0)) || [];
@@ -142,7 +145,7 @@ export default function AdminDashboardPage() {
                 todayAppointments: { realized: appsRealized, total: appsTotal },
                 idleHours: idleHrs,
                 lowStockItems: [...lowStockProducts, ...lowStockSupplies],
-                retention: { new: newClients, recurring: recurringClients },
+                retention: { new: todayTotal - recurringClients, recurring: recurringClients },
                 loyaltyPoints: totalStamps
             });
         } catch (err) {
