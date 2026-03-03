@@ -17,7 +17,7 @@ export default function ProfessionalAgendaPage() {
     const [view, setView] = useState<'agenda' | 'command'>('agenda');
     const [businessType, setBusinessType] = useState<'barber' | 'salon'>('barber');
     const [selectedClient, setSelectedClient] = useState<any>(null);
-    const [cart, setCart] = useState<{ id: string; name: string; price: number; qty: number; type: 'service' | 'product' }[]>([]);
+    const [cart, setCart] = useState<{ id: string; name: string; price: number; qty: number; type: 'service' | 'product'; current_stock?: number }[]>([]);
     const [todayAgenda, setTodayAgenda] = useState<any[]>([]);
     const [upcomingAgenda, setUpcomingAgenda] = useState<any[]>([]);
     const [historyAgenda, setHistoryAgenda] = useState<any[]>([]);
@@ -347,6 +347,20 @@ export default function ProfessionalAgendaPage() {
         setCart(prev => prev.filter(i => i.id !== itemId));
     };
 
+    const updateCartQty = (itemId: string, delta: number) => {
+        setCart(prev => prev.map(item => {
+            if (item.id === itemId && item.type === 'product') {
+                const newQty = Math.max(1, (item.qty || 1) + delta);
+                if (delta > 0 && item.current_stock !== undefined && newQty > item.current_stock) {
+                    alert('Quantidade excede o estoque disponível!');
+                    return item;
+                }
+                return { ...item, qty: newQty };
+            }
+            return item;
+        }));
+    };
+
     const toggleSelectItem = (id: string) => {
         setSelectedItems(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
     };
@@ -650,7 +664,14 @@ export default function ProfessionalAgendaPage() {
                                             >
                                                 <span className="material-symbols-outlined text-lg">delete</span>
                                             </button>
-                                            <span className="font-bold text-[11px] md:text-xs uppercase opacity-70" style={{ color: colors.textMuted }}>{item.name} (x{item.qty})</span>
+                                            <div className="flex flex-col">
+                                                <span className="font-bold text-[11px] md:text-xs uppercase opacity-70 truncate max-w-[120px]" style={{ color: colors.textMuted }}>{item.name}</span>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <button onClick={() => updateCartQty(item.id, -1)} className="size-5 rounded-md bg-white/5 flex items-center justify-center hover:bg-white/10 text-[10px] font-black">-</button>
+                                                    <span className="text-[10px] font-black italic" style={{ color: colors.primary }}>{item.qty}x</span>
+                                                    <button onClick={() => updateCartQty(item.id, 1)} className="size-5 rounded-md bg-white/5 flex items-center justify-center hover:bg-white/10 text-[10px] font-black">+</button>
+                                                </div>
+                                            </div>
                                         </div>
                                         <span className="font-black text-sm" style={{ color: colors.text }}>R$ {(item.price * item.qty).toFixed(2)}</span>
                                     </div>

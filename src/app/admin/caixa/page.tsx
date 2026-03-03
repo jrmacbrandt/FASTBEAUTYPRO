@@ -286,6 +286,54 @@ export default function CashierCheckoutPage() {
         setIsUpdatingOrder(false);
     };
 
+    const handleUpdateQty = async (idx: number, delta: number) => {
+        if (!selected || isUpdatingOrder) return;
+
+        const currentItems = [...(selected.raw.items || [])];
+        const item = currentItems[idx];
+        if (item.type !== 'product') return;
+
+        const newQty = Math.max(1, (item.qty || 1) + delta);
+        if (newQty === item.qty) return;
+
+        currentItems[idx] = { ...item, qty: newQty };
+
+        const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
+        const mainService = availableServices.find(s => s.id === mainServiceId);
+        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
+
+        let newServiceTotal = mainServicePrice;
+        let newProductTotal = 0;
+
+        currentItems.forEach((i: any) => {
+            const itemVal = Number(i.price) * (i.qty || 1);
+            if (i.type === 'service') newServiceTotal += itemVal;
+            else newProductTotal += itemVal;
+        });
+
+        const newTotalValue = newServiceTotal + newProductTotal;
+        const sRate = Number(selected.barber_commission?.service || 50) / 100;
+        const pRate = Number(selected.barber_commission?.product || 10) / 100;
+        const newCommission = (newServiceTotal * sRate) + (newProductTotal * pRate);
+
+        const updatePayload = {
+            items: currentItems,
+            service_total: newServiceTotal,
+            product_total: newProductTotal,
+            total_value: newTotalValue,
+            commission_amount: newCommission
+        };
+
+        setSelected({
+            ...selected,
+            total_price: newTotalValue,
+            commission: newCommission,
+            raw: { ...selected.raw, ...updatePayload }
+        });
+
+        await supabase.from('orders').update(updatePayload).eq('id', selected.id);
+    };
+
     const handleUpdateMainService = async (serviceId: string) => {
         if (!selected || !selected.raw.appointments || isUpdatingOrder) return;
         setIsUpdatingOrder(true);
@@ -777,8 +825,17 @@ export default function CashierCheckoutPage() {
                                                         <span className="material-symbols-outlined text-lg">delete</span>
                                                     </button>
                                                     <div className="flex flex-col">
-                                                        <p className="text-[10px] font-black uppercase italic truncate max-w-[150px]" style={{ color: colors.text }}>{item.qty > 1 && `${item.qty}x `}{item.name}</p>
-                                                        <p className="text-[8px] font-bold opacity-40 uppercase tracking-widest" style={{ color: colors.textMuted }}>{item.type === 'service' ? 'SERVIÇO' : 'PRODUTO'}</p>
+                                                        <p className="text-[10px] font-black uppercase italic truncate max-w-[150px]" style={{ color: colors.text }}>{item.name}</p>
+                                                        {item.type === 'product' ? (
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <button onClick={() => handleUpdateQty(idx, -1)} className="size-4 rounded-md bg-white/5 flex items-center justify-center hover:bg-white/10 text-[8px] font-black group-hover/item:bg-white/10">-</button>
+                                                                <span className="text-[9px] font-black italic" style={{ color: colors.primary }}>{item.qty}x</span>
+                                                                <button onClick={() => handleUpdateQty(idx, 1)} className="size-4 rounded-md bg-white/5 flex items-center justify-center hover:bg-white/10 text-[8px] font-black group-hover/item:bg-white/10">+</button>
+                                                                <span className="text-[7px] font-bold opacity-30 uppercase tracking-[0.2em] ml-1" style={{ color: colors.textMuted }}>PRODUTO</span>
+                                                            </div>
+                                                        ) : (
+                                                            <p className="text-[8px] font-bold opacity-40 uppercase tracking-widest mt-1" style={{ color: colors.textMuted }}>SERVIÇO</p>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <p className="text-xs font-black italic" style={{ color: colors.textMuted }}>R$ {(item.price * item.qty).toFixed(2)}</p>
