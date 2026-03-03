@@ -1,0 +1,26 @@
+{
+    "snapshot_name": "v-perfeita-2026-03-02-alpha",
+    "timestamp": "2026-03-02T22:56:00-03:00",
+    "git_hash": "25b46ccc96de990b7b236264df08947cbc984006",
+    "environment": "Produção (Vercel/Supabase Live)",
+    "audit_status": "STABLE / PERFECT",
+    "core_files": {
+        "middleware": "src/middleware.ts",
+        "auth_guard": "src/lib/auth-guard.ts",
+        "supabase_client": "src/lib/supabase.ts"
+    },
+    "database": {
+        "last_migration": "20260301_rpc_validate_admin_coupon.sql",
+        "rls_version": "v5.0 (Definitivo)",
+        "auth_trigger": "v12.0 (Restored)"
+    },
+    "storage": {
+        "buckets": [
+            "products",
+            "services",
+            "logos"
+        ],
+        "integrity_manifest": true
+    },
+    "restoration_protocol": "Manual Git Rollback + SQL Infrastructure Apply (if needed). Dynamic data preserved."
+}
