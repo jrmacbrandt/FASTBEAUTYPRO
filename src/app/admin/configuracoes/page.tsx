@@ -39,8 +39,21 @@ export default function EstablishmentSettingsPage() {
 
     useEffect(() => {
         if (profile?.tenant_id) {
+            const dayKeys = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+            const currentHours = profile.tenant?.business_hours || {};
+            const filledHours: any = {};
+
+            dayKeys.forEach(day => {
+                filledHours[day] = currentHours[day] || {
+                    open: '09:00',
+                    close: '19:00',
+                    isOpen: !['sabado', 'domingo'].includes(day)
+                };
+            });
+
             setTenant({
                 ...profile.tenant,
+                business_hours: filledHours,
                 owner_name: profile.full_name
             });
             setUserEmail(profile.email || '');
@@ -410,7 +423,7 @@ export default function EstablishmentSettingsPage() {
                                         const val = e.target.value;
                                         const masked = maskCurrency(val);
                                         setMaskedGoal(masked);
-                                        
+
                                         // Unmask for DB: "1.000,00" -> 1000
                                         const numericValue = parseFloat(masked.replace(/\./g, '').replace(',', '.')) || 0;
                                         setTenant({ ...tenant, monthly_goal: numericValue });

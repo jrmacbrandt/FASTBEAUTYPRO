@@ -37,12 +37,13 @@ export function getAvailableSlots(
     const isToday = dateStr === spDateStr;
 
     // 2. Get Rules
-    if (!tenantHours || !tenantHours[dayKey]) return { slots: [] };
+    if (!tenantHours || !tenantHours[dayKey]) return { slots: [], reason: 'Fechado (Loja)' };
 
     const tSchedule = tenantHours[dayKey];
     if (!tSchedule.isOpen) return { slots: [], reason: 'Fechado (Loja)' };
 
-    let bSchedule = (barberHours && barberHours[dayKey]) || tSchedule;
+    // Se o profissional não tiver horário definido para este dia, herdamos o da loja (correlação)
+    let bSchedule = (barberHours && barberHours[dayKey]) ? barberHours[dayKey] : tSchedule;
     if (!bSchedule.isOpen) return { slots: [], reason: 'Fechado (Profissional)' };
 
     const toMin = (t?: string) => {

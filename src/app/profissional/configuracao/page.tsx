@@ -47,16 +47,18 @@ export default function ProfessionalSettingsPage() {
                 return;
             }
 
-            if (profile?.work_hours) {
-                setSchedule(profile.work_hours);
-            } else {
-                // Default schedule
-                const defaultSchedule: any = {};
-                dayKeys.forEach(key => {
-                    defaultSchedule[key] = { open: '09:00', close: '19:00', isOpen: true };
-                });
-                setSchedule(defaultSchedule);
-            }
+            const dayKeys = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+            const currentHours = profile?.work_hours || {};
+            const filledHours: any = {};
+
+            dayKeys.forEach(key => {
+                filledHours[key] = currentHours[key] || {
+                    open: '09:00',
+                    close: '19:00',
+                    isOpen: !['sabado', 'domingo'].includes(key)
+                };
+            });
+            setSchedule(filledHours);
         } catch (error) {
             console.error('Error:', error);
         } finally {
