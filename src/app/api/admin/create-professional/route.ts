@@ -67,7 +67,16 @@ export async function POST(req: NextRequest) {
             product_commission: Number(product_commission || 0),
             avatar_url: avatar_url || null,
             status: 'active',
-            require_password_change: true // 🛡️ [BLINDADO] Fix: Forçar troca de senha no primeiro acesso
+            require_password_change: true, // 🛡️ [BLINDADO] Fix: Forçar troca de senha no primeiro acesso
+            work_hours: {
+                "segunda": { "open": "09:00", "close": "19:00", "isOpen": true },
+                "terca": { "open": "09:00", "close": "19:00", "isOpen": true },
+                "quarta": { "open": "09:00", "close": "19:00", "isOpen": true },
+                "quinta": { "open": "09:00", "close": "19:00", "isOpen": true },
+                "sexta": { "open": "09:00", "close": "19:00", "isOpen": true },
+                "sabado": { "open": "09:00", "close": "19:00", "isOpen": false },
+                "domingo": { "open": "09:00", "close": "19:00", "isOpen": false }
+            }
         };
 
         const { error: profileError } = await supabaseAdmin
