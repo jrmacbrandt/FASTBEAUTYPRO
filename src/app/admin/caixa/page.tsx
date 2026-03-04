@@ -325,11 +325,24 @@ export default function CashierCheckoutPage() {
         const newQty = Math.max(1, (item.qty || 1) + delta);
         if (newQty === item.qty) return;
 
+        // 🛡️ [CORREÇÃO] Validação de estoque em tempo real
+        if (delta > 0) {
+            const { data: stockData } = await supabase
+                .from('products')
+                .select('current_stock')
+                .eq('id', item.id)
+                .single();
+
+            if (stockData && newQty > stockData.current_stock) {
+                alert(`Estoque insuficiente! Disponível: ${stockData.current_stock}`);
+                return;
+            }
+        }
+
         currentItems[idx] = { ...item, qty: newQty };
 
-        const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
-        const mainService = availableServices.find(s => s.id === mainServiceId);
-        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
+        // 🛡️ [CORREÇÃO] Sempre usar o preço original do agendamento para evitar discrepâncias com mudanças nas configurações
+        const mainServicePrice = Number(selected.raw.appointments?.services?.price || selected.raw.appointments?.service_price || 0);
 
         let newServiceTotal = mainServicePrice;
         let newProductTotal = 0;
@@ -414,7 +427,8 @@ export default function CashierCheckoutPage() {
             await supabase.from('orders').update({
                 service_total: newServiceTotal,
                 total_value: newTotalValue,
-                commission_amount: newCommission
+                commission_amount: newCommission,
+                items: currentItems // Garantir que items não suma ao trocar o serviço principal
             }).eq('id', selected.id);
         } catch (err: any) {
             console.error('Error syncing main service:', err);
@@ -485,7 +499,9 @@ export default function CashierCheckoutPage() {
         });
 
         if (rpcError || !rpcResult?.success) {
-            alert('Erro ao processar pagamento.');
+            const errorMsg = rpcError?.message || rpcResult?.error || 'Erro desconhecido';
+            console.error('Checkout error details:', rpcError || rpcResult);
+            alert('Não foi possível processar o pagamento: ' + errorMsg);
             setIsProcessingPayment(false);
             return;
         }
@@ -525,18 +541,35 @@ export default function CashierCheckoutPage() {
         });
 
         const currentItems = [...(selected.raw.items || [])];
-        itemsToAdd.forEach(item => {
+        for (const item of itemsToAdd) {
             const existing = currentItems.find(i => i.id === item.id);
             if (existing) {
+                if (item.type === 'product') {
+                    // Fetch real-time stock
+                    const { data: stockData } = await supabase.from('products').select('current_stock').eq('id', item.id).single();
+                    if (stockData && (existing.qty + 1) > stockData.current_stock) {
+                        alert(`Estoque insuficiente para ${item.name}! Disponível: ${stockData.current_stock}`);
+                        setIsUpdatingOrder(false);
+                        return;
+                    }
+                }
                 existing.qty = (existing.qty || 1) + 1;
             } else {
+                if (item.type === 'product') {
+                    // Fetch real-time stock
+                    const { data: stockData } = await supabase.from('products').select('current_stock').eq('id', item.id).single();
+                    if (stockData && stockData.current_stock < 1) {
+                        alert(`Produto ${item.name} sem estoque disponível!`);
+                        setIsUpdatingOrder(false);
+                        return;
+                    }
+                }
                 currentItems.push(item);
             }
-        });
+        }
 
-        const mainServiceId = selected.raw.appointments?.service_id || selected.raw.appointments?.services?.id;
-        const mainService = availableServices.find(s => s.id === mainServiceId);
-        const mainServicePrice = mainService ? Number(mainService.price) : Number(selected.raw.appointments?.services?.price || 0);
+        // 🛡️ [CORREÇÃO] Preço original do agendamento para consistência
+        const mainServicePrice = Number(selected.raw.appointments?.services?.price || selected.raw.appointments?.service_price || 0);
 
         let newServiceTotal = mainServicePrice;
         let newProductTotal = 0;

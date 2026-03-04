@@ -275,8 +275,10 @@ export default function ProfessionalAgendaPage() {
 
         if (!barberProfile) return setLoading(false);
 
-        const serviceTotal = parseFloat(selectedClient?.services?.price?.toString() || '0');
-        const productTotal = cart.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+        const baseServicePrice = parseFloat(selectedClient?.services?.price?.toString() || '0');
+        const extraServicesTotal = cart.filter(i => i.type === 'service').reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
+        const serviceTotal = baseServicePrice + extraServicesTotal;
+        const productTotal = cart.filter(i => i.type === 'product').reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
         const totalValue = serviceTotal + productTotal;
 
         // Upsert order as draft (items only, status pending_payment ONLY on Finalize)
@@ -366,7 +368,13 @@ export default function ProfessionalAgendaPage() {
 
         setCart(prev => {
             const existing = prev.find(i => i.id === item.id);
-            if (existing) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+            if (existing) {
+                if (type === 'product' && existing.current_stock !== undefined && (existing.qty + 1) > existing.current_stock) {
+                    alert('Quantidade excede o estoque disponível!');
+                    return prev;
+                }
+                return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+            }
             return [...prev, { ...item, price: itemPrice, type, qty: 1 }];
         });
         setSelectedItems([]); // Clear multi-select when adding
