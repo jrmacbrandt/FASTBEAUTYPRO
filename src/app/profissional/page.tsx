@@ -354,6 +354,7 @@ export default function ProfessionalAgendaPage() {
         alert('Comanda finalizada e enviada para o caixa!');
         setLoading(false);
         fetchAgenda();
+        window.dispatchEvent(new CustomEvent('order-created'));
         setView('agenda');
     };
 

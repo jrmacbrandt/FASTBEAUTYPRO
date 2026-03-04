@@ -448,6 +448,7 @@ export default function CashierCheckoutPage() {
             if (!error && data?.success) {
                 setSelected(null);
                 if (profile?.tenant_id) fetchPendingOrders(profile.tenant_id);
+                window.dispatchEvent(new CustomEvent('checkout-completed'));
             }
         } catch (err) {
             console.error('Return Error:', err);

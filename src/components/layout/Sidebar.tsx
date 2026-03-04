@@ -119,6 +119,9 @@ const Sidebar: React.FC<SidebarProps> = ({ user, theme, businessType, isOpen, on
             console.log('🔄 [Sidebar] Local checkout/order event detected - Refreshing badge');
             fetchOrdersCount();
         };
+
+        fetchOrdersCount(); // 🟢 [CORREÇÃO] Carregamento inicial obrigatório
+
         window.addEventListener('checkout-completed', handleLocalUpdate);
         window.addEventListener('order-created', handleLocalUpdate);
 
