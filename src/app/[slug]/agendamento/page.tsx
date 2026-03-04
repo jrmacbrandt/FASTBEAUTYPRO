@@ -284,8 +284,8 @@ Aguardo sua confirmação!`;
                     tenant_id: tenant.id,
                     client_phone: cleanPhoneSuccess,
                     client_id: clientData?.id ?? null,
-                    stamps_count: 0 // Initialize at 0; upsert won't overwrite existing count
-                }, { onConflict: 'tenant_id,client_phone', ignoreDuplicates: false })
+                    stamps_count: 0 // Initialize at 0 for NEW clients only (ignoreDuplicates: true prevents reset for recurring clients)
+                }, { onConflict: 'tenant_id,client_phone', ignoreDuplicates: true })
                 .select('stamps_count')
                 .single();
 
