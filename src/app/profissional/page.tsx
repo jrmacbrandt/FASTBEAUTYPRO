@@ -27,6 +27,9 @@ export default function ProfessionalAgendaPage() {
     const [inclusionTab, setInclusionTab] = useState<'services' | 'products'>('services');
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [currentTab, setCurrentTab] = useState<'hoje' | 'proximos' | 'historico'>('hoje');
+    const [clientLoyalty, setClientLoyalty] = useState<{ stamps_count: number } | null>(null);
+    const [loyaltyTarget, setLoyaltyTarget] = useState(5);
+    const [rewardServiceName, setRewardServiceName] = useState<string | null>(null);
 
     // Definida ANTES dos useEffects para evitar stale closure no Realtime
     const fetchAgenda = async () => {
@@ -159,12 +162,48 @@ export default function ProfessionalAgendaPage() {
         }
     };
 
-    const handleOpenCommand = (appointment: any) => {
+    const handleOpenCommand = async (appointment: any) => {
         setSelectedClient(appointment);
         // Load custom items from order if exists
         const savedItems = appointment.orders?.[0]?.items || [];
         setCart(savedItems);
         setView('command');
+
+        // Fetch Loyalty Info
+        if (appointment.customer_whatsapp) {
+            const cleanPhone = appointment.customer_whatsapp.replace(/\D/g, '');
+            const { data: loyaltyData } = await supabase
+                .from('client_loyalty')
+                .select('stamps_count')
+                .eq('tenant_id', appointment.tenant_id)
+                .eq('client_phone', cleanPhone)
+                .maybeSingle();
+
+            setClientLoyalty(loyaltyData || { stamps_count: 0 });
+
+            const { data: tenantData } = await supabase
+                .from('tenants')
+                .select('loyalty_target, loyalty_reward_service_id')
+                .eq('id', appointment.tenant_id)
+                .single();
+
+            if (tenantData) {
+                setLoyaltyTarget(tenantData.loyalty_target || 5);
+                if (tenantData.loyalty_reward_service_id) {
+                    const { data: rewardData } = await supabase
+                        .from('loyalty_rewards_services')
+                        .select('name')
+                        .eq('id', tenantData.loyalty_reward_service_id)
+                        .maybeSingle();
+                    setRewardServiceName(rewardData?.name || null);
+                } else {
+                    setRewardServiceName(null);
+                }
+            }
+        } else {
+            setClientLoyalty(null);
+            setRewardServiceName(null);
+        }
     };
 
     const handleMarkAbsent = async (id: string) => {
@@ -485,6 +524,54 @@ export default function ProfessionalAgendaPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* LOYALTY CARD SECTION */}
+                {clientLoyalty && (
+                    <div className="p-6 md:p-8 rounded-3xl border animate-in slide-in-from-left duration-700" style={{ backgroundColor: colors.cardBg, borderColor: `${colors.primary}33` }}>
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-4">
+                                <div className="size-12 rounded-2xl flex items-center justify-center bg-primary/10 text-primary border border-primary/20">
+                                    <span className="material-symbols-outlined text-2xl" style={{ color: colors.primary }}>loyalty</span>
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black uppercase italic tracking-widest" style={{ color: colors.text }}>Cartão Fidelidade</h4>
+                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60" style={{ color: colors.textMuted }}>
+                                        {clientLoyalty.stamps_count >= loyaltyTarget
+                                            ? <span className="text-emerald-500">Prêmio disponível!</span>
+                                            : `Cliente possui ${clientLoyalty.stamps_count} de ${loyaltyTarget} selos`}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-2">
+                                {[...Array(loyaltyTarget)].map((_, i) => (
+                                    <div
+                                        key={i}
+                                        className="size-8 md:size-10 rounded-xl flex items-center justify-center border transition-all"
+                                        style={{
+                                            backgroundColor: i < clientLoyalty.stamps_count ? colors.primary : 'transparent',
+                                            borderColor: i < clientLoyalty.stamps_count ? colors.primary : 'rgba(255,255,255,0.1)',
+                                            boxShadow: i < clientLoyalty.stamps_count ? `0 0 15px ${colors.primary}40` : 'none'
+                                        }}
+                                    >
+                                        <span className="material-symbols-outlined text-lg" style={{
+                                            color: i < clientLoyalty.stamps_count ? '#000' : 'rgba(255,255,255,0.2)',
+                                            fontVariationSettings: i < clientLoyalty.stamps_count ? "'FILL' 1" : "'FILL' 0"
+                                        }}>
+                                            {i < clientLoyalty.stamps_count ? 'star' : 'star_outline'}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {clientLoyalty.stamps_count >= loyaltyTarget && (
+                                <div className="px-6 py-3 rounded-2xl bg-emerald-500 text-black font-black text-[10px] uppercase tracking-widest animate-pulse italic">
+                                    RECOMPENSA: {rewardServiceName || 'Serviço Grátis'}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 <div className="px-2 md:px-0 space-y-8">
                     {/* EDIT SERVICE SECTION */}

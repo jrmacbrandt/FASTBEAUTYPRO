@@ -33,6 +33,7 @@ export default function DynamicBookingPage() {
 
     const [clientLoyalty, setClientLoyalty] = useState<{ stamps_count: number } | null>(null);
     const [loyaltyTarget, setLoyaltyTarget] = useState(5);
+    const [rewardServiceName, setRewardServiceName] = useState<string | null>(null);
 
     const [services, setServices] = useState<any[]>([]);
     const [barbers, setBarbers] = useState<any[]>([]);
@@ -83,6 +84,16 @@ export default function DynamicBookingPage() {
 
                 // Fetch Loyalty Settings
                 setLoyaltyTarget(tenantData.loyalty_target || 5);
+
+                // Fetch Reward Service Name
+                if (tenantData.loyalty_reward_service_id) {
+                    const { data: rewardData } = await supabase
+                        .from('loyalty_rewards_services')
+                        .select('name')
+                        .eq('id', tenantData.loyalty_reward_service_id)
+                        .maybeSingle();
+                    if (rewardData) setRewardServiceName(rewardData.name);
+                }
             }
             setLoading(false);
         }
@@ -637,8 +648,8 @@ Aguardo sua confirmação!`;
                                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '1rem' }}>
                                         <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'rgba(255,255,255,0.6)', lineHeight: 1.6, fontStyle: 'italic', margin: '0 0 0.75rem' }}>
                                             {(clientLoyalty?.stamps_count || 0) >= (loyaltyTarget || 5)
-                                                ? 'Parabéns! Você completou o cartão. Apresente ao profissional para resgatar.'
-                                                : `Faltam ${Math.max(0, (loyaltyTarget || 5) - (clientLoyalty?.stamps_count || 0))} selos para sua próxima cortesia.`}
+                                                ? `Parabéns! Você completou o cartão e ganhou: ${rewardServiceName || 'um prêmio especial'}. Apresente ao profissional para resgatar.`
+                                                : `Faltam ${Math.max(0, (loyaltyTarget || 5) - (clientLoyalty?.stamps_count || 0))} selos para ganhar seu(sua): ${rewardServiceName || 'prêmio'}.`}
                                         </p>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.375rem 0.75rem', borderRadius: '0.5rem', backgroundColor: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', width: 'fit-content' }}>
                                             <div style={{ width: '0.375rem', height: '0.375rem', borderRadius: '50%', backgroundColor: '#10b981' }}></div>

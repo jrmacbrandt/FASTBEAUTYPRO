@@ -14,6 +14,7 @@ export default function CashierCheckoutPage() {
     const [voucher, setVoucher] = useState<any>(null);
     const [paymentMethod, setPaymentMethod] = useState<string>('DINHEIRO');
     const [tenantFees, setTenantFees] = useState<any>({ pix: 0, cash: 0, credit: 4.99, debit: 1.99 });
+    const [rewardServiceName, setRewardServiceName] = useState<string | null>(null);
 
     // States for adding items
     const [availableServices, setAvailableServices] = useState<any[]>([]);
@@ -132,22 +133,43 @@ export default function CashierCheckoutPage() {
     };
 
     const checkLoyaltyVoucher = async (clientId: string) => {
-        if (!clientId) return;
-        const { data: client } = await supabase.from('clients').select('phone').eq('id', clientId).single();
-        if (!client?.phone || !profile?.tenant_id) return;
+        if (!clientId || !profile?.tenant_id) return;
 
         try {
-            const { LoyaltyService } = await import('@/lib/loyalty');
-            const hasReward = await LoyaltyService.checkReward(profile.tenant_id, client.phone);
+            const { data: client } = await supabase.from('clients').select('phone').eq('id', clientId).single();
+            if (!client?.phone) return;
 
-            if (hasReward) {
+            const { LoyaltyService } = await import('@/lib/loyalty');
+            const result = await LoyaltyService.checkReward(profile.tenant_id, client.phone);
+
+            if (result.reward_granted) {
                 setVoucher({ type: 'loyalty_reward', phone: client.phone });
+
+                // Fetch Reward Name
+                const { data: tenantData } = await supabase
+                    .from('tenants')
+                    .select('loyalty_reward_service_id')
+                    .eq('id', profile.tenant_id)
+                    .single();
+
+                if (tenantData?.loyalty_reward_service_id) {
+                    const { data: rewardData } = await supabase
+                        .from('loyalty_rewards_services')
+                        .select('name')
+                        .eq('id', tenantData.loyalty_reward_service_id)
+                        .maybeSingle();
+                    setRewardServiceName(rewardData?.name || 'Corte Grátis');
+                } else {
+                    setRewardServiceName('Corte Grátis');
+                }
             } else {
                 setVoucher(null);
+                setRewardServiceName(null);
             }
         } catch (err) {
             console.error('Error checking loyalty reward:', err);
             setVoucher(null);
+            setRewardServiceName(null);
         }
     };
 
@@ -174,6 +196,13 @@ export default function CashierCheckoutPage() {
     useEffect(() => {
         if (selected && availableServices.length === 0 && profile?.tenant_id) {
             fetchCatalog(profile.tenant_id);
+        }
+
+        if (selected?.client_id) {
+            checkLoyaltyVoucher(selected.client_id);
+        } else {
+            setVoucher(null);
+            setRewardServiceName(null);
         }
     }, [selected]);
 
@@ -894,8 +923,8 @@ export default function CashierCheckoutPage() {
                                     <div className="flex items-center gap-3">
                                         <span className="material-symbols-outlined text-emerald-500">card_giftcard</span>
                                         <div>
-                                            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">Corte Grátis Disponível</p>
-                                            <p className="text-emerald-500/60 text-[8px] font-bold">Fidelidade Atingida</p>
+                                            <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest">{rewardServiceName || 'Recompensa Disponível'}</p>
+                                            <p className="text-emerald-500/60 text-[8px] font-bold">Resgate Autorizado</p>
                                         </div>
                                     </div>
                                     <button
